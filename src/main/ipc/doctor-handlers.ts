@@ -1,0 +1,76 @@
+import { ipcMain } from 'electron';
+import { getPrismaClient } from '../database/sqlite-client';
+import { log } from '../logger';
+
+function ipcSafe<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
+
+export function setupDoctorHandlers(): void {
+  ipcMain.handle('doctors:getAll', async () => {
+    try {
+      const prisma = getPrismaClient();
+      const doctors = await prisma.doctor.findMany({
+        orderBy: { fullName: 'asc' },
+      });
+      return ipcSafe(doctors);
+    } catch (error) {
+      log.error('[doctors:getAll]', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('doctors:getActive', async () => {
+    try {
+      const prisma = getPrismaClient();
+      const doctors = await prisma.doctor.findMany({
+        where: { active: true },
+        orderBy: { fullName: 'asc' },
+      });
+      return ipcSafe(doctors);
+    } catch (error) {
+      log.error('[doctors:getActive]', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('doctors:create', async (_event, data: Record<string, unknown>) => {
+    try {
+      const prisma = getPrismaClient();
+      const { randomUUID } = await import('crypto');
+      const doctor = await prisma.doctor.create({
+        data: {
+          id: randomUUID(),
+          fullName: data.fullName as string,
+          phone: (data.phone as string) || null,
+          specialty: (data.specialty as string) || null,
+          licenseNo: (data.licenseNo as string) || null,
+        },
+      });
+      return ipcSafe(doctor);
+    } catch (error) {
+      log.error('[doctors:create]', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('doctors:update', async (_event, id: string, data: Record<string, unknown>) => {
+    try {
+      const prisma = getPrismaClient();
+      const doctor = await prisma.doctor.update({
+        where: { id },
+        data: {
+          fullName: data.fullName as string | undefined,
+          phone: data.phone as string | null | undefined,
+          specialty: data.specialty as string | null | undefined,
+          licenseNo: data.licenseNo as string | null | undefined,
+          active: data.active as boolean | undefined,
+        },
+      });
+      return ipcSafe(doctor);
+    } catch (error) {
+      log.error('[doctors:update]', error);
+      throw error;
+    }
+  });
+}
