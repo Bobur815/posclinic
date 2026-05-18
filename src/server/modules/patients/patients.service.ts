@@ -1,64 +1,65 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type {
+  PatientDetailResponse,
+  PatientListResponse,
+  PatientMutationResponse,
+} from '../../common/interfaces';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Gender } from '@prisma/client';
+import type { CreatePatientDto } from './dto/create-patient.dto';
+import type { UpdatePatientDto } from './dto/update-patient.dto';
 
 @Injectable()
 export class PatientsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(clinicId: string, query?: string) {
-    return this.prisma.patient.findMany({
+  async findAll(clinicId: string, search?: string): Promise<PatientListResponse> {
+    const rows = await this.prisma.patient.findMany({
       where: {
         clinicId,
-        ...(query
+        active: true,
+        ...(search
           ? {
               OR: [
-                { fullName: { contains: query, mode: 'insensitive' } },
-                { phone: { contains: query } },
-                { patientCode: { contains: query, mode: 'insensitive' } },
+                { fullName: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search } },
+                { patientCode: { contains: search, mode: 'insensitive' } },
               ],
             }
           : {}),
       },
       orderBy: { createdAt: 'desc' },
     });
+    return rows as unknown as PatientListResponse;
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<PatientDetailResponse> {
     const patient = await this.prisma.patient.findUnique({
       where: { id },
       include: {
         appointments: {
-          include: { doctor: true },
+          include: {
+            doctor: { select: { fullName: true, specialty: true } },
+            items: true,
+          },
           orderBy: { appointmentDate: 'desc' },
           take: 20,
         },
       },
     });
     if (!patient) throw new NotFoundException('Patient not found');
-    return patient;
+    return patient as unknown as PatientDetailResponse;
   }
 
-  async create(clinicId: string, data: {
-    fullName: string;
-    phone: string;
-    birthDate?: string;
-    gender?: Gender;
-    bloodType?: string;
-    allergies?: string;
-    address?: string;
-    city?: string;
-    notes?: string;
-  }) {
+  async create(clinicId: string, data: CreatePatientDto): Promise<PatientMutationResponse> {
     const count = await this.prisma.patient.count({ where: { clinicId } });
-    const patientCode = `P-${String(count + 1).padStart(4, '0')}`;
+    const patientCode = `P-${String(count + 1).padStart(6, '0')}`;
 
-    return this.prisma.patient.create({
+    const row = await this.prisma.patient.create({
       data: {
+        clinicId,
+        patientCode,
         fullName: data.fullName,
         phone: data.phone,
-        patientCode,
-        clinicId,
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
         gender: data.gender ?? null,
         bloodType: data.bloodType,
@@ -68,32 +69,21 @@ export class PatientsService {
         notes: data.notes,
       },
     });
+    return row as unknown as PatientMutationResponse;
   }
 
-  async update(id: string, data: Partial<{
-    fullName: string;
-    phone: string;
-    birthDate: string;
-    gender: Gender;
-    bloodType: string;
-    allergies: string;
-    address: string;
-    city: string;
-    notes: string;
-  }>) {
-    return this.prisma.patient.update({
+  async update(id: string, data: UpdatePatientDto): Promise<PatientMutationResponse> {
+    const patient = await this.prisma.patient.findUnique({ where: { id } });
+    if (!patient) throw new NotFoundException('Patient not found');
+
+    const row = await this.prisma.patient.update({
       where: { id },
       data: {
-        fullName: data.fullName,
-        phone: data.phone,
-        gender: data.gender ?? undefined,
-        bloodType: data.bloodType,
-        allergies: data.allergies,
-        address: data.address,
-        city: data.city,
-        notes: data.notes,
+        ...data,
         birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+        gender: data.gender ?? undefined,
       },
     });
+    return row as unknown as PatientMutationResponse;
   }
 }

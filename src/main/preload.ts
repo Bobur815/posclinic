@@ -3,8 +3,8 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 contextBridge.exposeInMainWorld('electronAPI', {
   // Authentication
   auth: {
-    login: (phone: string, password: string) =>
-      ipcRenderer.invoke('auth:login', phone, password),
+    login: (email: string, password: string) =>
+      ipcRenderer.invoke('auth:login', email, password),
     logout: () => ipcRenderer.invoke('auth:logout'),
     getProfile: () => ipcRenderer.invoke('auth:getProfile'),
     restoreSession: (token: string) =>
@@ -104,6 +104,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }) => ipcRenderer.invoke('config:updateLocalConfig', data),
   },
 
+  // Setup wizard
+  setup: {
+    complete: (data: {
+      clinicId: string;
+      terminalId: string;
+      clinicName: string;
+      apiUrl: string;
+      token: string;
+      email: string;
+      password: string;
+      user: { id: string; email: string; firstName: string; lastName: string; role: string };
+    }) => ipcRenderer.invoke('setup:complete', data),
+    launchApp: () => ipcRenderer.invoke('setup:launchApp'),
+  },
+
   // Logger
   logger: {
     error: (msg: string) => ipcRenderer.send('log:renderer', 'error', msg),
@@ -116,10 +131,10 @@ declare global {
   interface Window {
     electronAPI: {
       auth: {
-        login: (phone: string, password: string) => Promise<{ success: boolean; user?: { id: string; fullName: string; phone: string; role: string; clinicId: string | null }; token?: string; error?: string }>;
+        login: (email: string, password: string) => Promise<{ success: boolean; user?: { id: string; fullName: string; email: string; role: string; clinicId: string | null }; token?: string; error?: string }>;
         logout: () => Promise<{ success: boolean }>;
-        getProfile: () => Promise<{ id: string; fullName: string; phone: string; role: string; clinicId: string | null } | null>;
-        restoreSession: (token: string) => Promise<{ id: string; fullName: string; phone: string; role: string; clinicId: string | null } | null>;
+        getProfile: () => Promise<{ id: string; fullName: string; email: string; role: string; clinicId: string | null } | null>;
+        restoreSession: (token: string) => Promise<{ id: string; fullName: string; email: string; role: string; clinicId: string | null } | null>;
         changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
       };
       patients: {
@@ -171,6 +186,10 @@ declare global {
       config: {
         getLocalConfig: () => Promise<{ clinicId: string; apiUrl: string; clinicName: string; terminalId: string } | null>;
         updateLocalConfig: (data: { clinicId?: string; apiUrl?: string; clinicName?: string; terminalId?: string }) => Promise<{ requiresRestart?: boolean }>;
+      };
+      setup: {
+        complete: (data: { clinicId: string; terminalId: string; clinicName: string; apiUrl: string; token: string; email: string; password: string; user: { id: string; email: string; firstName: string; lastName: string; role: string } }) => Promise<{ success: boolean; error?: string }>;
+        launchApp: () => Promise<void>;
       };
       logger: {
         error: (msg: string) => void;

@@ -9,6 +9,27 @@ datasource db {
 
 // ==================== ENUMS ====================
 
+enum Platform {
+  WEB
+  ELECTRON
+}
+
+enum SubscriptionTier {
+  FREE
+  TRIAL
+  START
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+}
+
 enum ClinicType {
   GENERAL
   DENTAL
@@ -22,11 +43,16 @@ enum ClinicType {
 }
 
 enum UserRole {
-  SUPER_ADMIN
-  CLINIC_ADMIN
-  DOCTOR
+  PLATFORM_ADMIN
+  SUPERADMIN
+  ADMIN
   NURSE
-  RECEPTIONIST
+  PATIENT
+}
+
+enum OtpType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
 }
 
 enum Gender {
@@ -55,10 +81,62 @@ enum PaymentMethod {
   INSURANCE
 }
 
+// ==================== TENANT ====================
+
+model Tenant {
+  id                 String             @id @default(cuid())
+
+  // Organization details
+  organizationName   String
+  organizationNameUz String?            @map("organization_name_uz")
+  organizationNameRu String?            @map("organization_name_ru")
+  slug               String             @unique
+  clinicCode         String             @unique @map("clinic_code") // 8-char: PC-A1B2C3
+
+  // Contact
+  contactEmail       String             @unique @map("contact_email")
+  contactPhone       String?            @map("contact_phone")
+  address            String?
+  city               String             @default("Tashkent")
+  region             String?
+
+  // Subscription
+  subscriptionTier   SubscriptionTier   @default(TRIAL) @map("subscription_tier")
+  subscriptionStatus SubscriptionStatus @default(TRIAL) @map("subscription_status")
+  trialEndsAt        DateTime?          @map("trial_ends_at")
+  subscriptionEndsAt DateTime?          @map("subscription_ends_at")
+
+  // Limits
+  maxServicePoints   Int                @default(2) @map("max_service_points")
+  maxNurses          Int                @default(5) @map("max_nurses")
+  maxMonthlyVisits   Int                @default(100) @map("max_monthly_visits")
+
+  // Platform tracking
+  primaryPlatform    Platform           @default(WEB) @map("primary_platform")
+  lastAccessedAt     DateTime           @default(now()) @map("last_accessed_at")
+
+  // Metadata
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  isActive           Boolean            @default(true) @map("is_active")
+
+  // Relations
+  users              User[]
+  clinics            Clinic[]
+
+  @@index([clinicCode])
+  @@index([contactEmail])
+  @@index([subscriptionStatus])
+  @@index([city])
+  @@map("tenants")
+}
+
 // ==================== CLINIC ====================
 
 model Clinic {
   id          String      @id @default(cuid())
+  tenantId    String      @map("tenant_id")
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   type        ClinicType  @default(GENERAL)
   address     String?
@@ -78,27 +156,39 @@ model Clinic {
   auditLogs    AuditLog[]
   heartbeats   TerminalHeartbeat[]
 
+  @@index([tenantId])
   @@map("clinics")
 }
 
 // ==================== USERS ====================
 
 model User {
-  id        String    @id @default(cuid())
-  clinicId  String    @map("clinic_id")
-  clinic    Clinic    @relation(fields: [clinicId], references: [id])
-  fullName  String    @map("full_name")
-  phone     String    @unique
-  password  String
-  role      UserRole  @default(RECEPTIONIST)
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(cuid())
+  tenantId            String    @map("tenant_id")
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId            String?   @map("clinic_id")
+  clinic              Clinic?   @relation(fields: [clinicId], references: [id])
+  email               String
+  password            String
+  googleId            String?   @map("google_id")
+  firstName           String    @map("first_name")
+  lastName            String    @map("last_name")
+  phone               String?
+  role                UserRole  @default(NURSE)
+  isActive            Boolean   @default(true) @map("is_active")
+  emailVerified       Boolean   @default(false) @map("email_verified")
+  lastLoginAt         DateTime? @map("last_login_at")
+  lastLoginPlatform   Platform? @map("last_login_platform")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   sessions  UserSession[]
   auditLogs AuditLog[]
 
+  @@unique([tenantId, email])
+  @@index([tenantId])
   @@index([clinicId])
+  @@index([email])
   @@map("users")
 }
 
@@ -113,6 +203,19 @@ model UserSession {
 
   @@index([userId])
   @@map("user_sessions")
+}
+
+model OtpVerification {
+  id        String    @id @default(cuid())
+  email     String
+  code      String
+  type      OtpType   @default(EMAIL_VERIFICATION)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([email, type])
+  @@map("otp_verifications")
 }
 
 // ==================== PATIENTS ====================
@@ -286,13 +389,13 @@ model AuditLog {
 // ==================== TERMINAL HEARTBEAT ====================
 
 model TerminalHeartbeat {
-  id          String   @id @default(cuid())
-  clinicId    String   @map("clinic_id")
-  clinic      Clinic   @relation(fields: [clinicId], references: [id])
-  terminalId  String   @map("terminal_id")
-  lastSyncAt  DateTime @map("last_sync_at")
-  unsyncedCount Int    @default(0) @map("unsynced_count")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  clinicId      String   @map("clinic_id")
+  clinic        Clinic   @relation(fields: [clinicId], references: [id])
+  terminalId    String   @map("terminal_id")
+  lastSyncAt    DateTime @map("last_sync_at")
+  unsyncedCount Int      @default(0) @map("unsynced_count")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@unique([clinicId, terminalId])
   @@index([clinicId])

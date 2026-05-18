@@ -49,6 +49,7 @@
     "login": "Войти",
     "logout": "Выйти",
     "logoutConfirm": "Вы уверены, что хотите выйти?",
+    "email": "Email",
     "phone": "Номер телефона",
     "password": "Пароль",
     "showPassword": "Показать пароль",

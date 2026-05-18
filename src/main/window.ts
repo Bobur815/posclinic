@@ -7,8 +7,8 @@ const iconPath = app.isPackaged
 
 export function createSetupWindow(): BrowserWindow {
   const setupWindow = new BrowserWindow({
-    width: 600,
-    height: 500,
+    width: 1000,
+    height: 800,
     center: true,
     resizable: false,
     maximizable: false,
@@ -68,6 +68,7 @@ export function createWindow(): BrowserWindow {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
+      devTools: process.env.NODE_ENV === 'development',
     },
     show: false,
     title: 'POSCLINIC',

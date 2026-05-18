@@ -141,7 +141,7 @@ export function UserSettingsPage() {
     }
     setIsSaving(true);
     try {
-      await window.electronAPI.auth.changePassword({ currentPassword, newPassword });
+      await window.electronAPI.auth.changePassword(currentPassword, newPassword);
       toast.success(t('common.success'));
       setCurrentPassword('');
       setNewPassword('');
@@ -164,8 +164,8 @@ export function UserSettingsPage() {
             <ProfileValue>{user.fullName}</ProfileValue>
           </ProfileRow>
           <ProfileRow>
-            <ProfileLabel>{t('patients.phone')}</ProfileLabel>
-            <ProfileValue>{user.phone}</ProfileValue>
+            <ProfileLabel>{t('auth.email')}</ProfileLabel>
+            <ProfileValue>{user.email}</ProfileValue>
           </ProfileRow>
           <ProfileRow>
             <ProfileLabel>{t('users.role')}</ProfileLabel>

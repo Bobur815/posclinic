@@ -29,7 +29,8 @@ model LocalConfig {
 
 model User {
   id        String   @id @default(cuid())
-  phone     String   @unique
+  email     String   @unique
+  phone     String?
   password  String
   role      String   @default("RECEPTIONIST")
   fullName  String   @map("full_name")

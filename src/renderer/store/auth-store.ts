@@ -6,7 +6,7 @@ export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST
 export interface User {
   id: string;
   fullName: string;
-  phone: string;
+  email: string;
   role: UserRole;
   clinicId: string | null;
 }

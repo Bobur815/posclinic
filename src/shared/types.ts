@@ -1,6 +1,18 @@
 // Shared types used across main, renderer, and server
 
-export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'NURSE' | 'RECEPTIONIST';
+export type UserRole =
+  // New multi-tenant roles
+  | 'PLATFORM_ADMIN'
+  | 'SUPERADMIN'
+  | 'ADMIN'
+  | 'NURSE'
+  | 'PATIENT'
+  // Legacy Electron roles (kept for backward compatibility)
+  | 'SUPER_ADMIN'
+  | 'CLINIC_ADMIN'
+  | 'DOCTOR'
+  | 'RECEPTIONIST';
+
 export type Gender = 'MALE' | 'FEMALE';
 export type AppointmentStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID';
@@ -8,10 +20,16 @@ export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'INSURANCE';
 
 export interface User {
   id: string;
-  fullName: string;
-  phone: string;
+  // New fields (web / multi-tenant)
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  tenantId?: string;
+  // Legacy fields (Electron / phone-based auth)
+  fullName?: string;
+  phone?: string;
   role: UserRole;
-  clinicId: string | null;
+  clinicId?: string | null;
 }
 
 export interface Patient {

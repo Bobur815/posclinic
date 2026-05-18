@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, net } from 'electron';
+import bcrypt from 'bcryptjs';
 import { createWindow, createSetupWindow } from './window';
 import { setupIpcHandlers } from './ipc/handlers';
 import { SyncService } from './sync/sync-service';
@@ -6,6 +7,7 @@ import {
   initializeDatabase,
   readClinicBootstrap,
   writeClinicBootstrap,
+  reinitializeDatabaseForClinic,
   getPrismaClient,
 } from './database/sqlite-client';
 import { getAppConfig, updateConfig } from './config/app-config';
@@ -114,10 +116,19 @@ function registerCoreHandlers(): void {
     clinicName: string;
     apiUrl: string;
     token: string;
+    email: string;
+    password: string;
+    user: { id: string; email: string; firstName: string; lastName: string; role: string };
   }) => {
     try {
-      const prisma = getPrismaClient();
-      await prisma.localConfig.upsert({
+      writeClinicBootstrap(data.clinicId);
+
+      // Switch the DB connection to the clinic-specific file now
+      await reinitializeDatabaseForClinic(data.clinicId);
+      const clinicPrisma = getPrismaClient();
+
+      // Write config to the clinic-specific DB (used on all subsequent startups)
+      await clinicPrisma.localConfig.upsert({
         where: { id: 'config' },
         update: {
           clinicId: data.clinicId,
@@ -134,7 +145,14 @@ function registerCoreHandlers(): void {
         },
       });
 
-      writeClinicBootstrap(data.clinicId);
+      // Create the local admin user so they can log in offline
+      const passwordHash = await bcrypt.hash(data.password, 10);
+      const fullName = `${data.user.firstName} ${data.user.lastName}`.trim();
+      await clinicPrisma.$executeRaw`
+        INSERT OR REPLACE INTO users (id, email, password, role, full_name, active, clinic_id, created_at, updated_at)
+        VALUES (${data.user.id}, ${data.email}, ${passwordHash}, ${data.user.role}, ${fullName}, 1, ${data.clinicId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `;
+
       updateConfig({
         clinicId: data.clinicId,
         clinicName: data.clinicName,

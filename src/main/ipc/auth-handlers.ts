@@ -6,7 +6,7 @@ import { log } from '../logger';
 interface AuthUser {
   id: string;
   fullName: string;
-  phone: string;
+  email: string;
   role: string;
   clinicId: string | null;
 }
@@ -18,10 +18,10 @@ export function getCurrentUser(): AuthUser | null {
 }
 
 export function setupAuthHandlers(): void {
-  ipcMain.handle('auth:login', async (_event, phone: string, password: string) => {
+  ipcMain.handle('auth:login', async (_event, email: string, password: string) => {
     try {
       const prisma = getPrismaClient();
-      const user = await prisma.user.findUnique({ where: { phone } });
+      const user = await prisma.user.findUnique({ where: { email } });
 
       if (!user) {
         return { success: false, error: 'user_not_found' };
@@ -39,17 +39,17 @@ export function setupAuthHandlers(): void {
       currentUser = {
         id: user.id,
         fullName: user.fullName,
-        phone: user.phone,
+        email: user.email,
         role: user.role,
         clinicId: user.clinicId,
       };
 
-      log.info(`[auth] User logged in: ${user.phone} (${user.role})`);
+      log.info(`[auth] User logged in: ${user.email} (${user.role})`);
 
       return {
         success: true,
         user: currentUser,
-        token: Buffer.from(JSON.stringify({ id: user.id, role: user.role, phone: user.phone })).toString('base64'),
+        token: Buffer.from(JSON.stringify({ id: user.id, role: user.role, email: user.email })).toString('base64'),
       };
     } catch (error) {
       log.error('[auth] Login error:', error);
@@ -68,7 +68,7 @@ export function setupAuthHandlers(): void {
 
   ipcMain.handle('auth:restoreSession', async (_event, token: string) => {
     try {
-      const payload = JSON.parse(Buffer.from(token, 'base64').toString('utf-8')) as { id: string; role: string; phone: string };
+      const payload = JSON.parse(Buffer.from(token, 'base64').toString('utf-8')) as { id: string; role: string; email: string };
       const prisma = getPrismaClient();
       const user = await prisma.user.findUnique({ where: { id: payload.id } });
 
@@ -79,7 +79,7 @@ export function setupAuthHandlers(): void {
       currentUser = {
         id: user.id,
         fullName: user.fullName,
-        phone: user.phone,
+        email: user.email,
         role: user.role,
         clinicId: user.clinicId,
       };

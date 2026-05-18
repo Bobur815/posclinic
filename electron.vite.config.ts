@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: 'dist-renderer'
       },
+      define: envDefines,
       plugins: [
         {
           name: 'remove-crossorigin',

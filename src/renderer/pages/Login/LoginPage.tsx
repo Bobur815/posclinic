@@ -5,7 +5,6 @@ import styled from 'styled-components';
 import { Stethoscope, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../../store/auth-store';
 import { useTheme } from '../../theme/ThemeProvider';
-import { useToast } from '../../context/ToastContext';
 
 const Page = styled.div`
   min-height: 100vh;
@@ -14,6 +13,53 @@ const Page = styled.div`
   justify-content: center;
   background: ${({ theme }) => theme.colors.background};
   padding: ${({ theme }) => theme.spacing.md};
+`;
+
+const LeftPanel = styled.div`
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: ${({ theme }) => theme.spacing.xl};
+  background-color: ${({ theme }) => theme.colors.surface};
+`;
+
+const RightPanel = styled.div<{ $imageUrl?: string }>`
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: ${({ $imageUrl }) =>
+    $imageUrl
+      ? `url(${JSON.stringify($imageUrl)}) center / cover no-repeat`
+      : "linear-gradient(135deg, #1976d2 0%, #dc004e 100%)"};
+  display: flex;
+  align-items: flex-end;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const RightOverlay = styled.div`
+  width: 100%;
+  padding: 32px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+`;
+
+const RightTitle = styled.h2`
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+`;
+
+const RightSubtitle = styled.p`
+  margin: 0;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
 `;
 
 const Card = styled.div`
@@ -106,6 +152,16 @@ const TogglePasswordBtn = styled.button`
   &:hover { color: ${({ theme }) => theme.colors.primary}; }
 `;
 
+const RememberRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  user-select: none;
+`;
+
 const SubmitButton = styled.button`
   padding: 12px;
   background: ${({ theme }) => theme.colors.primary};
@@ -168,15 +224,28 @@ const LangBtn = styled.button<{ $active: boolean }>`
   cursor: pointer;
 `;
 
+const SAVED_KEY = 'login_saved_pos';
+
+function loadSaved(): { email: string; password: string } | null {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY);
+    if (raw) return JSON.parse(raw) as { email: string; password: string };
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export function LoginPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const { mode, toggleTheme } = useTheme();
-  const toast = useToast();
+  const [saved] = useState(loadSaved);
 
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(saved?.email || '');
+  const [password, setPassword] = useState(saved?.password || '');
+  const [rememberMe, setRememberMe] = useState(!!saved);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -187,17 +256,23 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await window.electronAPI.auth.login(phone, password);
+      const result = await window.electronAPI.auth.login(email, password);
       if (result.success && result.user && result.token) {
+        if (rememberMe) {
+          localStorage.setItem(SAVED_KEY, JSON.stringify({ email, password }));
+        } else {
+          localStorage.removeItem(SAVED_KEY);
+        }
+
         login(
           {
             id: result.user.id,
             fullName: result.user.fullName,
-            phone: result.user.phone,
+            email: result.user.email,
             role: result.user.role as 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST',
             clinicId: result.user.clinicId,
           },
-          result.token
+          result.token,
         );
         navigate('/');
       } else {
@@ -232,13 +307,13 @@ export function LoginPage() {
           {error && <ErrorMsg>{error}</ErrorMsg>}
 
           <div>
-            <Label>{t('auth.phone')}</Label>
+            <Label>{t('auth.email')}</Label>
             <InputWrapper>
               <Input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+998 90 123 45 67"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@clinic.uz"
                 required
                 autoFocus
               />
@@ -264,6 +339,14 @@ export function LoginPage() {
               </TogglePasswordBtn>
             </InputWrapper>
           </div>
+          <RememberRow>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            {t('auth.rememberMe')}
+          </RememberRow>
 
           <SubmitButton type="submit" disabled={isLoading}>
             {isLoading ? t('common.loading') : t('auth.login')}
@@ -272,8 +355,12 @@ export function LoginPage() {
 
         <BottomBar>
           <LangBtns>
-            <LangBtn $active={i18n.language === 'uz'} onClick={() => changeLanguage('uz')}>UZ</LangBtn>
-            <LangBtn $active={i18n.language === 'ru'} onClick={() => changeLanguage('ru')}>RU</LangBtn>
+            <LangBtn $active={i18n.language === 'uz'} onClick={() => changeLanguage('uz')}>
+              UZ
+            </LangBtn>
+            <LangBtn $active={i18n.language === 'ru'} onClick={() => changeLanguage('ru')}>
+              RU
+            </LangBtn>
           </LangBtns>
           <IconBtn onClick={toggleTheme}>
             {mode === 'dark' ? <Sun size={14} /> : <Moon size={14} />}

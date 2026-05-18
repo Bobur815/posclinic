@@ -1,32 +1,54 @@
-import { Controller, Get, Post, Put, Body, Param, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { DoctorDetailResponse, DoctorListResponse } from '../../common/interfaces';
+import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { DoctorsService } from './doctors.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { CreateDoctorDto } from './dto/create-doctor.dto';
+import type { UpdateDoctorDto } from './dto/update-doctor.dto';
 
+interface ClinicRequest {
+  user: { tenantId: string; clinicId: string };
+}
+
+@ApiTags('doctors')
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('doctors')
 export class DoctorsController {
   constructor(private doctorsService: DoctorsService) {}
 
   @Get()
-  findAll(@Request() req: { user: { clinicId: string } }) {
+  @ApiOperation({ summary: 'List all doctors in the clinic' })
+  findAll(@Request() req: ClinicRequest): Promise<DoctorListResponse> {
     return this.doctorsService.findAll(req.user.clinicId);
   }
 
   @Get('active')
-  findActive(@Request() req: { user: { clinicId: string } }) {
+  @ApiOperation({ summary: 'List only active doctors (used for appointment dropdowns)' })
+  findActive(@Request() req: ClinicRequest): Promise<DoctorListResponse> {
     return this.doctorsService.findActive(req.user.clinicId);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get doctor by ID' })
+  @ApiResponse({ status: 404, description: 'Doctor not found' })
+  findById(@Param('id') id: string): Promise<DoctorDetailResponse> {
+    return this.doctorsService.findById(id);
+  }
+
   @Post()
+  @ApiOperation({ summary: 'Add a new doctor to the clinic' })
+  @ApiResponse({ status: 201, description: 'Doctor created' })
   create(
-    @Request() req: { user: { clinicId: string } },
-    @Body() body: { fullName: string; specialty?: string; phone?: string; isActive?: boolean },
-  ) {
-    return this.doctorsService.create(req.user.clinicId, body);
+    @Request() req: ClinicRequest,
+    @Body() dto: CreateDoctorDto,
+  ): Promise<DoctorDetailResponse> {
+    return this.doctorsService.create(req.user.clinicId, dto);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: Record<string, unknown>) {
-    return this.doctorsService.update(id, body as Parameters<DoctorsService['update']>[1]);
+  @ApiOperation({ summary: 'Update doctor (toggle active, update specialty, etc.)' })
+  update(@Param('id') id: string, @Body() dto: UpdateDoctorDto): Promise<DoctorDetailResponse> {
+    return this.doctorsService.update(id, dto);
   }
 }

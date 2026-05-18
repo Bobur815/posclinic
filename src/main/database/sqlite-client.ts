@@ -74,11 +74,49 @@ export async function initializeDatabase(): Promise<void> {
   }
 }
 
+async function migrateUsersTableIfNeeded(prisma: PrismaClientType): Promise<void> {
+  const cols = await prisma.$queryRaw<{ name: string }[]>`
+    PRAGMA table_info(users)
+  `;
+  const hasEmail = cols.some((c: { name: string }) => c.name === 'email');
+  if (hasEmail) return;
+
+  // Old schema uses phone as unique key — recreate with email
+  await prisma.$executeRaw`
+    CREATE TABLE users_new (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      phone TEXT,
+      password TEXT NOT NULL,
+      role TEXT DEFAULT 'RECEPTIONIST',
+      full_name TEXT NOT NULL,
+      active INTEGER DEFAULT 1,
+      clinic_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  // Carry existing rows over; use phone value as email placeholder so auth still works
+  // until the sync overwrites with real email values from the VPS
+  await prisma.$executeRaw`
+    INSERT INTO users_new (id, email, phone, password, role, full_name, active, clinic_id, created_at, updated_at)
+    SELECT id, phone, phone, password, role, full_name, active, clinic_id, created_at, updated_at FROM users
+  `;
+  await prisma.$executeRaw`DROP TABLE users`;
+  await prisma.$executeRaw`ALTER TABLE users_new RENAME TO users`;
+  console.log('[db] Migrated users table: phone → email');
+}
+
 async function createSchemaIfNeeded(prisma: PrismaClientType): Promise<void> {
   const rows = await prisma.$queryRaw<{ name: string }[]>`
     SELECT name FROM sqlite_master WHERE type='table' AND name='local_config'
   `;
-  if (rows.length > 0) return;
+
+  if (rows.length > 0) {
+    // DB already exists — run any pending column migrations
+    await migrateUsersTableIfNeeded(prisma);
+    return;
+  }
 
   await prisma.$executeRaw`
     CREATE TABLE IF NOT EXISTS local_config (
@@ -94,7 +132,8 @@ async function createSchemaIfNeeded(prisma: PrismaClientType): Promise<void> {
   await prisma.$executeRaw`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      phone TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      phone TEXT,
       password TEXT NOT NULL,
       role TEXT DEFAULT 'RECEPTIONIST',
       full_name TEXT NOT NULL,
@@ -217,6 +256,19 @@ export async function closeDatabase(): Promise<void> {
     await prisma.$disconnect();
     prisma = null;
   }
+}
+
+export async function reinitializeDatabaseForClinic(clinicId: string): Promise<void> {
+  await closeDatabase();
+  const userDataPath = app.getPath('userData');
+  const dbPath = path.join(userDataPath, `clinic-${clinicId}.db`);
+  process.env.SQLITE_DATABASE_URL = `file:${dbPath}`;
+  prisma = new PrismaClient({
+    datasources: { db: { url: `file:${dbPath}` } },
+    log: ['error'],
+  });
+  await prisma.$connect();
+  await createSchemaIfNeeded(prisma);
 }
 
 export { prisma };

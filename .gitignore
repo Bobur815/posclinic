@@ -11,6 +11,7 @@ src/generated/
 
 # Environment variables
 .env
+.env.pos
 .env.local
 .env.*.local
 

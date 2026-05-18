@@ -1,43 +1,56 @@
-import { Controller, Get, Post, Put, Body, Param, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type {
+  PatientDetailResponse,
+  PatientListResponse,
+  PatientMutationResponse,
+} from '../../common/interfaces';
+import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import type { CreatePatientDto } from './dto/create-patient.dto';
+import type { UpdatePatientDto } from './dto/update-patient.dto';
 import { PatientsService } from './patients.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Gender } from '@prisma/client';
 
+interface ClinicRequest {
+  user: { tenantId: string; clinicId: string };
+}
+
+@ApiTags('patients')
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 @Controller('patients')
 export class PatientsController {
   constructor(private patientsService: PatientsService) {}
 
   @Get()
-  findAll(@Request() req: { user: { clinicId: string } }, @Query('q') q?: string) {
-    return this.patientsService.findAll(req.user.clinicId, q);
+  @ApiOperation({ summary: 'List patients, optionally search by name / phone / code' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search query' })
+  findAll(
+    @Request() req: ClinicRequest,
+    @Query('search') search?: string,
+  ): Promise<PatientListResponse> {
+    return this.patientsService.findAll(req.user.clinicId, search);
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Get patient with last 20 appointments' })
+  @ApiResponse({ status: 404, description: 'Patient not found' })
+  findById(@Param('id') id: string): Promise<PatientDetailResponse> {
     return this.patientsService.findById(id);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Register a new patient (auto-generates patient code)' })
+  @ApiResponse({ status: 201, description: 'Patient created' })
   create(
-    @Request() req: { user: { clinicId: string } },
-    @Body() body: {
-      fullName: string;
-      phone: string;
-      birthDate?: string;
-      gender?: Gender;
-      bloodType?: string;
-      allergies?: string;
-      address?: string;
-      city?: string;
-      notes?: string;
-    },
-  ) {
-    return this.patientsService.create(req.user.clinicId, body);
+    @Request() req: ClinicRequest,
+    @Body() dto: CreatePatientDto,
+  ): Promise<PatientMutationResponse> {
+    return this.patientsService.create(req.user.clinicId, dto);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: Record<string, unknown>) {
-    return this.patientsService.update(id, body as Parameters<PatientsService['update']>[1]);
+  @ApiOperation({ summary: 'Update patient record' })
+  update(@Param('id') id: string, @Body() dto: UpdatePatientDto): Promise<PatientMutationResponse> {
+    return this.patientsService.update(id, dto);
   }
 }

@@ -1,31 +1,40 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { ClinicDetailResponse, ClinicListResponse } from '../../common/interfaces';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ClinicType } from '@prisma/client';
+import type { UpdateClinicDto } from './dto/update-clinic.dto';
 
 @Injectable()
 export class ClinicsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.clinic.findMany({ orderBy: { name: 'asc' } });
+  async findAll(): Promise<ClinicListResponse> {
+    return this.prisma.clinic.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        _count: { select: { users: true, patients: true, appointments: true } },
+      },
+    }) as unknown as Promise<ClinicListResponse>;
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<ClinicDetailResponse> {
+    const clinic = await this.prisma.clinic.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { users: true, patients: true, appointments: true } },
+      },
+    });
+    if (!clinic) throw new NotFoundException('Clinic not found');
+    return clinic as unknown as ClinicDetailResponse;
+  }
+
+  async update(id: string, data: UpdateClinicDto): Promise<ClinicDetailResponse> {
     const clinic = await this.prisma.clinic.findUnique({ where: { id } });
     if (!clinic) throw new NotFoundException('Clinic not found');
-    return clinic;
-  }
-
-  async create(data: {
-    name: string;
-    phone?: string;
-    address?: string;
-    type?: ClinicType;
-  }) {
-    return this.prisma.clinic.create({ data });
-  }
-
-  async update(id: string, data: Partial<{ name: string; phone: string; address: string; active: boolean }>) {
-    return this.prisma.clinic.update({ where: { id }, data });
+    const updated = await this.prisma.clinic.update({
+      where: { id },
+      data,
+      include: { _count: { select: { users: true, patients: true, appointments: true } } },
+    });
+    return updated as unknown as ClinicDetailResponse;
   }
 }

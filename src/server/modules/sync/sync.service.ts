@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import type { SyncPullResponse, SyncPushResponse } from '../../common/interfaces';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { SyncAppointmentDto } from './dto/sync-push.dto';
 
 @Injectable()
 export class SyncService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Pull endpoint — returns data for the terminal to pull down:
-   * patients, doctors, services for a given clinic.
-   */
-  async pullData(clinicId: string, lastSyncTime?: string) {
+  async pullData(clinicId: string, lastSyncTime?: string): Promise<SyncPullResponse> {
     const since = lastSyncTime ? new Date(lastSyncTime) : new Date(0);
 
     const [patients, doctors, services] = await Promise.all([
@@ -27,34 +25,18 @@ export class SyncService {
       }),
     ]);
 
-    return { patients, doctors, services, syncTime: new Date().toISOString() };
+    return {
+      patients,
+      doctors,
+      services,
+      syncTime: new Date().toISOString(),
+    } as unknown as SyncPullResponse;
   }
 
-  /**
-   * Push endpoint — terminals push their locally-created appointments to the server.
-   */
-  async pushAppointments(clinicId: string, appointments: Array<{
-    id: string;
-    appointmentNumber: string;
-    patientId: string;
-    doctorId: string;
-    appointmentDate: string;
-    status: string;
-    paymentStatus: string;
-    paymentMethod: string | null;
-    totalAmount: number;
-    paidAmount: number;
-    diagnosis: string | null;
-    prescription: string | null;
-    notes: string | null;
-    items: Array<{
-      serviceId: string;
-      serviceName: string;
-      quantity: number;
-      unitPrice: number;
-      total: number;
-    }>;
-  }>) {
+  async pushAppointments(
+    clinicId: string,
+    appointments: SyncAppointmentDto[],
+  ): Promise<SyncPushResponse> {
     const results: string[] = [];
 
     for (const appt of appointments) {
