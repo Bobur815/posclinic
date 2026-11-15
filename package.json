@@ -1,7 +1,7 @@
 {
   "name": "posclinic",
-  "version": "1.0.0",
-  "description": "Clinic Management POS System - Offline-first",
+  "version": "2.0.0",
+  "description": "Parasitology clinic POS - offline-first, licensed by posgro",
   "main": "dist-electron/main/index.js",
   "scripts": {
     "dev:pos": "cross-env APP_MODE=pos electron-vite dev",
@@ -17,7 +17,9 @@
     "prisma:studio:sqlite": "prisma studio --schema=prisma/schema.sqlite.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
     "lint": "eslint src --ext .ts,.tsx",
-    "format": "prettier --write \"src/**/*.{ts,tsx,json}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

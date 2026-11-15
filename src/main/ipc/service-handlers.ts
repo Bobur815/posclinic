@@ -1,13 +1,9 @@
-import { ipcMain } from 'electron';
+import { handle, ipcSafe } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 
-function ipcSafe<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}
-
 export function setupServiceHandlers(): void {
-  ipcMain.handle('services:getAll', async () => {
+  handle('services:getAll', async () => {
     try {
       const prisma = getPrismaClient();
       const services = await prisma.service.findMany({
@@ -20,7 +16,7 @@ export function setupServiceHandlers(): void {
     }
   });
 
-  ipcMain.handle('services:getActive', async () => {
+  handle('services:getActive', async () => {
     try {
       const prisma = getPrismaClient();
       const services = await prisma.service.findMany({
@@ -34,7 +30,7 @@ export function setupServiceHandlers(): void {
     }
   });
 
-  ipcMain.handle('services:search', async (_event, query: string) => {
+  handle('services:search', async (_event, query: string) => {
     try {
       const prisma = getPrismaClient();
       const q = `%${query}%`;
@@ -52,7 +48,7 @@ export function setupServiceHandlers(): void {
     }
   });
 
-  ipcMain.handle('services:create', async (_event, data: Record<string, unknown>) => {
+  handle('services:create', async (_event, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const { randomUUID } = await import('crypto');
@@ -73,7 +69,7 @@ export function setupServiceHandlers(): void {
     }
   });
 
-  ipcMain.handle('services:update', async (_event, id: string, data: Record<string, unknown>) => {
+  handle('services:update', async (_event, id: string, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const service = await prisma.service.update({

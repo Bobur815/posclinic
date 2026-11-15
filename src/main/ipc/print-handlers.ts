@@ -1,9 +1,9 @@
-import { ipcMain } from 'electron';
+import { handle } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 
 export function setupPrintHandlers(): void {
-  ipcMain.handle('print:serviceReceipt', async (_event, appointmentId: string) => {
+  handle('print:serviceReceipt', async (_event, appointmentId: string) => {
     try {
       const prisma = getPrismaClient();
       const appointment = await prisma.appointment.findUnique({
@@ -22,7 +22,7 @@ export function setupPrintHandlers(): void {
     }
   });
 
-  ipcMain.handle('print:prescription', async (_event, appointmentId: string) => {
+  handle('print:prescription', async (_event, appointmentId: string) => {
     try {
       const prisma = getPrismaClient();
       const appointment = await prisma.appointment.findUnique({

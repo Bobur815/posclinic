@@ -74,19 +74,12 @@ export async function initializeDatabase(): Promise<void> {
   }
 }
 
-async function migrateUsersTableIfNeeded(prisma: PrismaClientType): Promise<void> {
-  const cols = await prisma.$queryRaw<{ name: string }[]>`
-    PRAGMA table_info(users)
-  `;
-  const hasEmail = cols.some((c: { name: string }) => c.name === 'email');
-  if (hasEmail) return;
-
-  // Old schema uses phone as unique key — recreate with email
-  await prisma.$executeRaw`
-    CREATE TABLE users_new (
+/** Staff log in by phone; email is optional and not unique. */
+const usersTableSql = (name: string) => `
+    CREATE TABLE IF NOT EXISTS ${name} (
       id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      phone TEXT,
+      phone TEXT UNIQUE NOT NULL,
+      email TEXT,
       password TEXT NOT NULL,
       role TEXT DEFAULT 'RECEPTIONIST',
       full_name TEXT NOT NULL,
@@ -94,17 +87,33 @@ async function migrateUsersTableIfNeeded(prisma: PrismaClientType): Promise<void
       clinic_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
+    )`;
+
+/**
+ * v2.0.0: v1 tables have `email UNIQUE NOT NULL` and an optional phone. Rebuild them with
+ * `phone UNIQUE NOT NULL` and an optional email, in one transaction. A row without a phone (v1
+ * dev data only: no v1 till was ever deployed) keeps its email in the phone column so the row
+ * survives. Idempotent: does nothing once the table has the v2 shape.
+ */
+async function migrateUsersTableIfNeeded(prisma: PrismaClientType): Promise<void> {
+  const rows = await prisma.$queryRaw<{ sql: string }[]>`
+    SELECT sql FROM sqlite_master WHERE type='table' AND name='users'
   `;
-  // Carry existing rows over; use phone value as email placeholder so auth still works
-  // until the sync overwrites with real email values from the VPS
-  await prisma.$executeRaw`
-    INSERT INTO users_new (id, email, phone, password, role, full_name, active, clinic_id, created_at, updated_at)
-    SELECT id, phone, phone, password, role, full_name, active, clinic_id, created_at, updated_at FROM users
-  `;
-  await prisma.$executeRaw`DROP TABLE users`;
-  await prisma.$executeRaw`ALTER TABLE users_new RENAME TO users`;
-  console.log('[db] Migrated users table: phone → email');
+  const ddl = rows[0]?.sql ?? '';
+  if (!ddl || /phone\s+TEXT\s+UNIQUE\s+NOT\s+NULL/i.test(ddl)) return;
+
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe(usersTableSql('users_v2')),
+    prisma.$executeRawUnsafe(`
+      INSERT INTO users_v2 (id, phone, email, password, role, full_name, active, clinic_id, created_at, updated_at)
+      SELECT id, COALESCE(NULLIF(phone, ''), email, id), email, password, role, full_name, active,
+             clinic_id, created_at, updated_at
+      FROM users
+    `),
+    prisma.$executeRawUnsafe('DROP TABLE users'),
+    prisma.$executeRawUnsafe('ALTER TABLE users_v2 RENAME TO users'),
+  ]);
+  console.log('[db] Migrated users table: login by phone');
 }
 
 async function createSchemaIfNeeded(prisma: PrismaClientType): Promise<void> {
@@ -129,20 +138,7 @@ async function createSchemaIfNeeded(prisma: PrismaClientType): Promise<void> {
     )
   `;
 
-  await prisma.$executeRaw`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      phone TEXT,
-      password TEXT NOT NULL,
-      role TEXT DEFAULT 'RECEPTIONIST',
-      full_name TEXT NOT NULL,
-      active INTEGER DEFAULT 1,
-      clinic_id TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `;
+  await prisma.$executeRawUnsafe(usersTableSql('users'));
 
   await prisma.$executeRaw`
     CREATE TABLE IF NOT EXISTS patients (

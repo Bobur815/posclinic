@@ -5,14 +5,16 @@ import { loadEnv } from 'vite'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode || 'pos', process.cwd(), '')
 
-  const APP_ENV_KEYS = [
-    'DATABASE_URL', 'VPS_API_URL', 'TERMINAL_ID', 'CLINIC_ID', 'CLINIC_NAME',
-    'JWT_SECRET', 'SYNC_INTERVAL_MS',
-  ]
+  // Baked into the bundle and extractable: never add secrets here. POSCLINIC_API_URL is honoured
+  // only by unpackaged (dev) builds (src/main/license/license-service.ts licenseApiUrl).
+  const APP_ENV_KEYS = ['POSCLINIC_API_URL']
+  // Define every key (as `undefined` when unset) so renderer code like
+  // `process.env.X ?? fallback` never references the missing `process` global.
   const envDefines = Object.fromEntries(
-    APP_ENV_KEYS
-      .filter(k => env[k] !== undefined)
-      .map(k => [`process.env.${k}`, JSON.stringify(env[k])])
+    APP_ENV_KEYS.map(k => [
+      `process.env.${k}`,
+      env[k] !== undefined ? JSON.stringify(env[k]) : 'undefined',
+    ])
   )
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,11 +1,7 @@
-import { ipcMain } from 'electron';
+import { handle, ipcSafe } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 import { randomUUID } from 'crypto';
-
-function ipcSafe<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}
 
 async function getNextPatientCode(prisma: ReturnType<typeof getPrismaClient>): Promise<string> {
   const last = await prisma.patient.findFirst({
@@ -20,7 +16,7 @@ async function getNextPatientCode(prisma: ReturnType<typeof getPrismaClient>): P
 }
 
 export function setupPatientHandlers(): void {
-  ipcMain.handle('patients:getAll', async (_event, filters?: { active?: boolean }) => {
+  handle('patients:getAll', async (_event, filters?: { active?: boolean }) => {
     try {
       const prisma = getPrismaClient();
       const where: Record<string, unknown> = {};
@@ -38,7 +34,7 @@ export function setupPatientHandlers(): void {
     }
   });
 
-  ipcMain.handle('patients:search', async (_event, query: string) => {
+  handle('patients:search', async (_event, query: string) => {
     try {
       const prisma = getPrismaClient();
       const q = `%${query}%`;
@@ -56,7 +52,7 @@ export function setupPatientHandlers(): void {
     }
   });
 
-  ipcMain.handle('patients:getById', async (_event, id: string) => {
+  handle('patients:getById', async (_event, id: string) => {
     try {
       const prisma = getPrismaClient();
       const patient = await prisma.patient.findUnique({
@@ -76,7 +72,7 @@ export function setupPatientHandlers(): void {
     }
   });
 
-  ipcMain.handle('patients:create', async (_event, data: Record<string, unknown>) => {
+  handle('patients:create', async (_event, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const patientCode = await getNextPatientCode(prisma);
@@ -104,7 +100,7 @@ export function setupPatientHandlers(): void {
     }
   });
 
-  ipcMain.handle('patients:update', async (_event, id: string, data: Record<string, unknown>) => {
+  handle('patients:update', async (_event, id: string, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const patient = await prisma.patient.update({

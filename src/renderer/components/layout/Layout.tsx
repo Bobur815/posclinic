@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import styled from 'styled-components';
 import { AppBar, APP_BAR_HEIGHT } from './AppBar';
+import { LicenseBanner } from './LicenseBanner';
 import { Sidebar } from './Sidebar';
 import { SidebarProvider, useSidebar } from '../../context/SidebarContext';
 
@@ -25,6 +26,7 @@ function LayoutContent() {
       <AppBar />
       <Sidebar />
       <Main $collapsed={isCollapsed}>
+        <LicenseBanner />
         <Outlet />
       </Main>
     </>

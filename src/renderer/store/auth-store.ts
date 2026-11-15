@@ -6,7 +6,9 @@ export type UserRole = 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST
 export interface User {
   id: string;
   fullName: string;
-  email: string;
+  /** Login identity, `+998XXXXXXXXX`. */
+  phone: string;
+  email: string | null;
   role: UserRole;
   clinicId: string | null;
 }

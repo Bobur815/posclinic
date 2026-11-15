@@ -224,16 +224,23 @@ const LangBtn = styled.button<{ $active: boolean }>`
   cursor: pointer;
 `;
 
-const SAVED_KEY = 'login_saved_pos';
+/** Only the phone is remembered; a password is never stored on the till. */
+const ForgotHint = styled.p`
+  margin: 0;
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
 
-function loadSaved(): { email: string; password: string } | null {
+const SAVED_KEY = 'login_saved_phone';
+const LEGACY_SAVED_KEY = 'login_saved_pos'; // v1 kept email + plaintext password here
+
+function loadSavedPhone(): string {
   try {
-    const raw = localStorage.getItem(SAVED_KEY);
-    if (raw) return JSON.parse(raw) as { email: string; password: string };
+    localStorage.removeItem(LEGACY_SAVED_KEY);
+    return localStorage.getItem(SAVED_KEY) ?? '';
   } catch {
-    /* ignore */
+    return '';
   }
-  return null;
 }
 
 export function LoginPage() {
@@ -241,11 +248,11 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const { mode, toggleTheme } = useTheme();
-  const [saved] = useState(loadSaved);
+  const [savedPhone] = useState(loadSavedPhone);
 
-  const [email, setEmail] = useState(saved?.email || '');
-  const [password, setPassword] = useState(saved?.password || '');
-  const [rememberMe, setRememberMe] = useState(!!saved);
+  const [phone, setPhone] = useState(savedPhone);
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(!!savedPhone);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -256,10 +263,10 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await window.electronAPI.auth.login(email, password);
+      const result = await window.electronAPI.auth.login(phone, password);
       if (result.success && result.user && result.token) {
         if (rememberMe) {
-          localStorage.setItem(SAVED_KEY, JSON.stringify({ email, password }));
+          localStorage.setItem(SAVED_KEY, result.user.phone);
         } else {
           localStorage.removeItem(SAVED_KEY);
         }
@@ -268,6 +275,7 @@ export function LoginPage() {
           {
             id: result.user.id,
             fullName: result.user.fullName,
+            phone: result.user.phone,
             email: result.user.email,
             role: result.user.role as 'SUPER_ADMIN' | 'CLINIC_ADMIN' | 'DOCTOR' | 'RECEPTIONIST',
             clinicId: result.user.clinicId,
@@ -307,15 +315,17 @@ export function LoginPage() {
           {error && <ErrorMsg>{error}</ErrorMsg>}
 
           <div>
-            <Label>{t('auth.email')}</Label>
+            <Label>{t('auth.phone')}</Label>
             <InputWrapper>
               <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@clinic.uz"
+                type="tel"
+                inputMode="tel"
+                autoComplete="username"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder={t('auth.phonePlaceholder')}
                 required
-                autoFocus
+                autoFocus={!savedPhone}
               />
             </InputWrapper>
           </div>
@@ -329,6 +339,7 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                autoFocus={!!savedPhone}
               />
               <TogglePasswordBtn
                 type="button"
@@ -347,6 +358,7 @@ export function LoginPage() {
             />
             {t('auth.rememberMe')}
           </RememberRow>
+          <ForgotHint>{t('auth.forgotHint')}</ForgotHint>
 
           <SubmitButton type="submit" disabled={isLoading}>
             {isLoading ? t('common.loading') : t('auth.login')}

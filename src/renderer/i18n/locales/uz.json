@@ -59,8 +59,11 @@
       "invalid_credentials": "Telefon yoki parol noto'g'ri",
       "user_not_found": "Foydalanuvchi topilmadi",
       "user_deactivated": "Foydalanuvchi hisobi o'chirilgan",
-      "login_failed": "Kirish xatosi"
-    }
+      "login_failed": "Kirish xatosi",
+      "invalid_phone": "Telefon raqam noto'g'ri. Masalan: +998 90 123 45 67"
+    },
+    "phonePlaceholder": "+998 90 123 45 67",
+    "forgotHint": "Parolni unutdingizmi? Klinika administratoriga murojaat qiling"
   },
   "nav": {
     "dashboard": "Bosh sahifa",
@@ -284,18 +287,8 @@
     "apiUrl": "Server URL",
     "appName": "Dastur nomi",
     "developer": "Ishlab chiquvchi",
-    "userSettings": "Foydalanuvchi sozlamalari"
-  },
-  "sync": {
-    "syncing": "Sinxronlanmoqda...",
-    "notSynced": "Sinxronlanmagan",
-    "lastSync": "Oxirgi sinx",
-    "syncFailed": "Sinxronlashtirish xatosi",
-    "syncSuccess": "Sinxronlashtirildi",
-    "status": "Holat",
-    "neverSynced": "Hali sinxronlanmagan",
-    "syncCompleted": "Sinxronlashtirish tugadi",
-    "syncNow": "Hozir sinxronlashtirish"
+    "userSettings": "Foydalanuvchi sozlamalari",
+    "licenseServer": "Litsenziya serveri"
   },
   "print": {
     "receipt": "Chek",
@@ -313,7 +306,7 @@
   },
   "setup": {
     "title": "Xush kelibsiz",
-    "subtitle": "POSCLINIC ni sozlash",
+    "subtitle": "Parazitologiya klinikasi terminalini sozlash",
     "step": "Qadam",
     "of": "dan",
     "clinicInfo": {
@@ -339,7 +332,36 @@
       "invalid_credentials": "Telefon yoki parol noto'g'ri",
       "network_error": "Serverga ulanishda xato",
       "login_failed": "Kirish xatosi",
-      "required_fields": "Barcha maydonlarni to'ldiring"
+      "required_fields": "Barcha maydonlarni to'ldiring",
+      "fullName": "Ismni kiriting (kamida 2 belgi)",
+      "phone": "Telefon raqam noto'g'ri",
+      "email": "Email noto'g'ri",
+      "password": "Parol kamida 6 belgidan iborat bo'lishi kerak",
+      "failed": "Sozlashda xatolik yuz berdi",
+      "invalid": "Ma'lumotlar noto'g'ri"
+    },
+    "link": {
+      "title": "Klinikani ulash",
+      "subtitle": "Administrator bergan aktivlashtirish kodini va klinika egasining telefon raqamini kiriting",
+      "phone": "Klinika egasining telefoni",
+      "code": "Aktivlashtirish kodi",
+      "codeHint": "Kod 8 belgidan iborat (masalan: AB12-CD34). Bir marta ishlatiladi, 7 kun amal qiladi.",
+      "submit": "Ulash",
+      "checking": "Tekshirilmoqda...",
+      "linked": "Klinika ulandi: {{name}}"
+    },
+    "admin": {
+      "title": "Administrator",
+      "subtitle": "Shu terminalga kiradigan birinchi administratorni yarating",
+      "fullName": "To'liq ism",
+      "phone": "Telefon raqam (login)",
+      "email": "Email (ixtiyoriy)",
+      "password": "Parol (kamida 6 belgi)",
+      "submit": "Sozlashni yakunlash"
+    },
+    "done": {
+      "title": "Tayyor!",
+      "subtitle": "Ilova ishga tushirilmoqda..."
     }
   },
   "users": {
@@ -372,5 +394,92 @@
     "noInternet": "Internet aloqasi yo'q",
     "serverError": "Server xatosi",
     "unknownError": "Noma'lum xato"
+  },
+  "license": {
+    "title": "Obuna",
+    "plan": "Tarif",
+    "status": "Holat",
+    "expires": "Amal qilish muddati",
+    "never": "Muddatsiz",
+    "daysLeft": "{{count}} kun qoldi",
+    "lastCheckin": "Oxirgi tekshiruv",
+    "checkinBy": "Internetga ulanish kerak bo'lgan sana",
+    "checkNow": "Hozir tekshirish",
+    "checking": "Tekshirilmoqda...",
+    "checked": "Obuna yangilandi",
+    "features": "Imkoniyatlar",
+    "comingSoon": "tez orada",
+    "unlimited": "cheksiz",
+    "limits": {
+      "staff": "Xodimlar",
+      "monthlyVisits": "Oylik qabullar"
+    },
+    "plans": {
+      "TRIAL": "Sinov",
+      "START": "Start",
+      "PRO": "Pro",
+      "ENTERPRISE": "Enterprise",
+      "VIP": "VIP"
+    },
+    "reasons": {
+      "active": "Faol",
+      "trial": "Sinov davri",
+      "warning": "Muddati tugayapti",
+      "grace": "Muddati tugagan, imtiyozli davr",
+      "unlimited": "Faol (muddatsiz)",
+      "blocked": "Bloklangan: obuna muddati tugagan",
+      "checkin-required": "Internetga ulanish kerak",
+      "no-seat": "Tarifdagi terminallar soni tugagan",
+      "setup": "Ulanmagan"
+    },
+    "featureName": {
+      "reports": "Bir kundan uzun hisobotlar",
+      "multiDoctor": "Bir nechta shifokor",
+      "printPrescription": "Retsept chop etish",
+      "debt": "Qisman to'lov / qarz",
+      "labResults": "Laboratoriya natijalari",
+      "telegramBot": "Telegram bot"
+    },
+    "refused": {
+      "setup": "Avval klinikani ulang (internet kerak)",
+      "blocked": "Obuna muddati tugagan: yangi bemor va qabul qo'shib bo'lmaydi. Sozlamalar → Obuna",
+      "checkin-required": "Dastur uzoq vaqt internetga ulanmagan: yangi qabul qo'shib bo'lmaydi. Internetga ulang va Sozlamalar → Obuna → «Hozir tekshirish»",
+      "no-seat": "Tarifdagi terminallar soni tugagan: bu terminalda yangi qabul qo'shib bo'lmaydi",
+      "invalid": "Noto'g'ri summa"
+    },
+    "feature": {
+      "reports": "Bir kundan uzun hisobotlar tarifingizda yo'q (Pro va undan yuqori)",
+      "multiDoctor": "Bir nechta shifokor tarifingizda yo'q (Pro va undan yuqori)",
+      "printPrescription": "Retsept chop etish tarifingizda yo'q (Pro va undan yuqori)",
+      "debt": "Qisman to'lov (qarz) tarifingizda yo'q: to'liq summani kiriting",
+      "labResults": "Laboratoriya natijalari tarifingizda yo'q",
+      "telegramBot": "Telegram bot tarifingizda yo'q"
+    },
+    "limit": {
+      "monthlyVisits": "Tarifingizdagi oylik qabullar soni tugagan"
+    },
+    "banner": {
+      "warning": "Obuna muddati {{count}} kundan keyin tugaydi",
+      "grace": "Obuna muddati tugagan. {{count}} kundan keyin terminal bloklanadi",
+      "readonly": "{{reason}}. Faqat ko'rish va to'lov qabul qilish mumkin"
+    },
+    "errors": {
+      "offline": "Internetga ulanib bo'lmadi. Ulanishni tekshirib qayta urinib ko'ring",
+      "unknown": "Server xatosi. Keyinroq urinib ko'ring",
+      "bad_answer": "Serverdan noto'g'ri javob keldi",
+      "bad_license": "Litsenziya imzosi noto'g'ri",
+      "stale_license": "Eski litsenziya qabul qilinmadi",
+      "already_setup": "Terminal allaqachon sozlangan",
+      "invalid_phone": "Telefon raqam noto'g'ri",
+      "invalid_code": "Aktivlashtirish kodi noto'g'ri yoki muddati o'tgan",
+      "store_inactive": "Klinika faol emas. Administratorga murojaat qiling",
+      "no_seat": "Tarifdagi terminallar soni tugagan",
+      "disabled": "Litsenziya xizmati vaqtincha ishlamayapti",
+      "invalid_license": "Litsenziya yaroqsiz. Administratorga murojaat qiling",
+      "store_not_found": "Klinika topilmadi. Administratorga murojaat qiling",
+      "not_configured": "Litsenziya xizmati sozlanmagan. Administratorga murojaat qiling",
+      "terminal_missing": "Terminal identifikatori topilmadi",
+      "other_clinic": "Bu kod boshqa klinikaga tegishli. Terminal faqat o'z klinikasiga qayta ulanadi"
+    }
   }
 }

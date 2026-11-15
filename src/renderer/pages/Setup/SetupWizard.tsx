@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Stethoscope, Mail, Hash, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Stethoscope, KeyRound, UserPlus, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -216,103 +217,121 @@ const SuccessBox = styled.div`
   color: ${({ theme }) => theme.colors.primary};
 `;
 
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const API_URL = process.env.VPS_API_URL ?? 'http://localhost:4000/api';
+const LangRow = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+`;
 
+const LangBtn = styled.button<{ $active: boolean }>`
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  background: none;
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.textSecondary)};
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+`;
+
+/**
+ * First run, two steps:
+ * 1. Link the till to the clinic the posgro super admin created: owner phone + one-time
+ *    activation code. Main calls posgro and stores the signed licence.
+ * 2. Create the clinic's first admin (phone login), which also seeds parasitology services.
+ * A till already linked but without an admin (closed mid-setup) resumes at step 2, because the
+ * activation code is spent.
+ */
 export function SetupWizard() {
+  const { t, i18n } = useTranslation();
   const toast = useToast();
-
   const [step, setStep] = useState<1 | 2>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isDone, setIsDone] = useState(false);
+  const [clinicName, setClinicName] = useState('');
 
   // Step 1
+  const [ownerPhone, setOwnerPhone] = useState('');
+  const [code, setCode] = useState('');
+
+  // Step 2
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Step 2
-  const [clinicCode, setClinicCode] = useState('');
+  useEffect(() => {
+    window.electronAPI.license.status().then((s) => {
+      if (s.linked) {
+        setClinicName(s.storeName ?? '');
+        setStep(2);
+      }
+    });
+  }, []);
 
-  // ── Step 1: validate locally and advance ───────────────────────────────────
-  const handleStep1 = (e: React.FormEvent) => {
+  const handleLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email || !password) {
-      setError('Email va parolni kiriting');
-      return;
-    }
-    setStep(2);
-  };
-
-  // ── Step 2: call VPS electron/setup, then save config ─────────────────────
-  const handleStep2 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    const code = clinicCode.trim().toUpperCase();
-    if (!code) {
-      setError('Klinika kodini kiriting');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/auth/electron/setup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clinicCode: code, email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const msg = data?.message ?? 'Xatolik yuz berdi';
-        setError(Array.isArray(msg) ? msg.join(', ') : String(msg));
+      const result = await window.electronAPI.license.activate(ownerPhone, code);
+      if (!result.ok) {
+        setError(t(result.error, t('license.errors.unknown')));
         return;
       }
-
-      const { token, tenant, user: vpsUser } = data as {
-        token: string;
-        tenant: { id: string; name: string; clinicCode: string };
-        user: { id: string; email: string; firstName: string; lastName: string; role: string };
-      };
-
-      const terminalId = `${code}-T1`;
-
-      const result = await window.electronAPI.setup.complete({
-        clinicId: tenant.id,
-        clinicName: tenant.name,
-        terminalId,
-        apiUrl: API_URL,
-        token,
-        email,
-        password,
-        user: vpsUser,
-      });
-
-      if (!result.success) {
-        setError(result.error ?? 'Konfiguratsiya saqlashda xatolik');
+      setClinicName(result.storeName);
+      if (result.recovered) {
+        setIsDone(true);
+        setTimeout(() => void window.electronAPI.setup.launchApp(), 1500);
         return;
       }
-
-      setIsDone(true);
-      toast.success("Sozlash muvaffaqiyatli yakunlandi!");
-
-      setTimeout(() => {
-        window.electronAPI.setup.launchApp();
-      }, 1500);
-
+      if (result.ownerName && !fullName) setFullName(result.ownerName);
+      if (!phone) setPhone(ownerPhone);
+      toast.success(t('setup.link.linked', { name: result.storeName }));
+      setStep(2);
     } catch {
-      setError("Server bilan bog'lanib bo'lmadi. Internet aloqasini tekshiring.");
+      setError(t('license.errors.offline'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Success screen ─────────────────────────────────────────────────────────
+  const handleAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      const result = await window.electronAPI.setup.createAdmin({
+        fullName,
+        phone,
+        email: email || undefined,
+        password,
+        lang: i18n.language === 'ru' ? 'ru' : 'uz',
+      });
+      if (!result.success) {
+        setError(t(result.error ?? 'setup.errors.failed', t('setup.errors.failed')));
+        return;
+      }
+      setIsDone(true);
+      setTimeout(() => void window.electronAPI.setup.launchApp(), 1500);
+    } catch {
+      setError(t('setup.errors.failed'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    localStorage.setItem('language', lang);
+  };
+
   if (isDone) {
     return (
       <Page>
@@ -320,8 +339,8 @@ export function SetupWizard() {
           <SuccessBox>
             <CheckCircle size={56} />
             <div>
-              <Title>Tayyor!</Title>
-              <Subtitle>Ilova ishga tushirilmoqda...</Subtitle>
+              <Title>{t('setup.done.title')}</Title>
+              <Subtitle>{t('setup.done.subtitle')}</Subtitle>
             </div>
           </SuccessBox>
         </Card>
@@ -337,44 +356,150 @@ export function SetupWizard() {
             <Stethoscope size={28} />
           </IconCircle>
           <Title>POSCLINIC</Title>
-          <Subtitle>Terminal sozlash</Subtitle>
+          <Subtitle>{clinicName || t('setup.subtitle')}</Subtitle>
+          <LangRow>
+            <LangBtn
+              type="button"
+              $active={i18n.language === 'uz'}
+              onClick={() => changeLanguage('uz')}
+            >
+              UZ
+            </LangBtn>
+            <LangBtn
+              type="button"
+              $active={i18n.language === 'ru'}
+              onClick={() => changeLanguage('ru')}
+            >
+              RU
+            </LangBtn>
+          </LangRow>
         </Header>
 
-        {/* Step indicator */}
         <StepBar>
-          <StepDot $active={step === 1} $done={step > 1}>{step > 1 ? '✓' : '1'}</StepDot>
+          <StepDot $active={step === 1} $done={step > 1}>
+            {step > 1 ? '✓' : '1'}
+          </StepDot>
           <StepLine $done={step > 1} />
-          <StepDot $active={step === 2} $done={false}>2</StepDot>
+          <StepDot $active={step === 2} $done={false}>
+            2
+          </StepDot>
         </StepBar>
 
-        {/* ── Step 1: Email + Password ── */}
         {step === 1 && (
-          <Form onSubmit={handleStep1}>
+          <Form onSubmit={handleLink}>
             <StepHeading>
-              <h2><Mail size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Admin hisobi</h2>
-              <p>Web versiyada ro'yxatdan o'tgan email va parolni kiriting</p>
+              <h2>
+                <KeyRound size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                {t('setup.link.title')}
+              </h2>
+              <p>{t('setup.link.subtitle')}</p>
             </StepHeading>
 
             <FormGroup>
-              <Label>Email</Label>
+              <Label>{t('setup.link.phone')}</Label>
               <Input
-                type="email"
-                placeholder="owner@clinic.uz"
-                value={email}
-                onChange={(e) => { setError(''); setEmail(e.target.value); }}
+                type="tel"
+                inputMode="tel"
+                placeholder={t('auth.phonePlaceholder')}
+                value={ownerPhone}
+                onChange={(e) => {
+                  setError('');
+                  setOwnerPhone(e.target.value);
+                }}
                 required
                 autoFocus
               />
             </FormGroup>
 
             <FormGroup>
-              <Label>Parol</Label>
+              <Label>{t('setup.link.code')}</Label>
+              <CodeInput
+                type="text"
+                placeholder="XXXX-XXXX"
+                value={code}
+                onChange={(e) => {
+                  setError('');
+                  setCode(e.target.value.toUpperCase());
+                }}
+                maxLength={9}
+                required
+              />
+            </FormGroup>
+
+            <HintBox>{t('setup.link.codeHint')}</HintBox>
+
+            {error && <ErrorMsg>{error}</ErrorMsg>}
+
+            <SubmitBtn
+              type="submit"
+              disabled={isLoading || code.replace(/[\s-]/g, '').length !== 8}
+            >
+              {isLoading ? t('setup.link.checking') : `${t('setup.link.submit')} →`}
+            </SubmitBtn>
+          </Form>
+        )}
+
+        {step === 2 && (
+          <Form onSubmit={handleAdmin}>
+            <StepHeading>
+              <h2>
+                <UserPlus size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                {t('setup.admin.title')}
+              </h2>
+              <p>{t('setup.admin.subtitle')}</p>
+            </StepHeading>
+
+            <FormGroup>
+              <Label>{t('setup.admin.fullName')}</Label>
+              <Input
+                value={fullName}
+                onChange={(e) => {
+                  setError('');
+                  setFullName(e.target.value);
+                }}
+                required
+                autoFocus
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>{t('setup.admin.phone')}</Label>
+              <Input
+                type="tel"
+                inputMode="tel"
+                placeholder={t('auth.phonePlaceholder')}
+                value={phone}
+                onChange={(e) => {
+                  setError('');
+                  setPhone(e.target.value);
+                }}
+                required
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>{t('setup.admin.email')}</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setError('');
+                  setEmail(e.target.value);
+                }}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>{t('setup.admin.password')}</Label>
               <InputWrapper>
                 <PasswordInput
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Parolni kiriting"
                   value={password}
-                  onChange={(e) => { setError(''); setPassword(e.target.value); }}
+                  onChange={(e) => {
+                    setError('');
+                    setPassword(e.target.value);
+                  }}
+                  minLength={6}
                   required
                 />
                 <EyeBtn type="button" onClick={() => setShowPassword((v) => !v)}>
@@ -385,40 +510,8 @@ export function SetupWizard() {
 
             {error && <ErrorMsg>{error}</ErrorMsg>}
 
-            <SubmitBtn type="submit">Davom etish →</SubmitBtn>
-          </Form>
-        )}
-
-        {/* ── Step 2: Clinic Code ── */}
-        {step === 2 && (
-          <Form onSubmit={handleStep2}>
-            <StepHeading>
-              <h2><Hash size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />Klinika kodi</h2>
-              <p>Web versiyada ro'yxatdan o'tgandan so'ng ko'rsatilgan kodni kiriting</p>
-            </StepHeading>
-
-            <FormGroup>
-              <Label>Klinika kodi</Label>
-              <CodeInput
-                type="text"
-                placeholder="PC-XXXXXX"
-                value={clinicCode}
-                onChange={(e) => { setError(''); setClinicCode(e.target.value.toUpperCase()); }}
-                maxLength={9}
-                required
-                autoFocus
-              />
-            </FormGroup>
-
-            <HintBox>
-              Kod <strong>PC-</strong> bilan boshlanadi va 9 belgidan iborat (masalan: <strong>PC-BTKIAS</strong>).
-              Uni web versiyaning ro'yxatdan o'tish jarayoni oxirida ko'rasiz.
-            </HintBox>
-
-            {error && <ErrorMsg>{error}</ErrorMsg>}
-
-            <SubmitBtn type="submit" disabled={isLoading || clinicCode.length < 9}>
-              {isLoading ? 'Tekshirilmoqda...' : 'Sozlashni yakunlash →'}
+            <SubmitBtn type="submit" disabled={isLoading}>
+              {isLoading ? t('common.loading') : `${t('setup.admin.submit')} →`}
             </SubmitBtn>
           </Form>
         )}

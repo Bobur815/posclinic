@@ -2,7 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Project:** Clinic Management POS System (`posclinic`) — developed on Linux Ubuntu.
+> **Project:** Parasitology clinic POS (`posclinic`) — developed on Linux Ubuntu.
+> **Since v2.0.0** the till is offline-only and **licensed by posgro** (same pattern as SavdoChef). Clinics are created and managed only in the posgro super-admin dashboard. Contract: `.claude/rules/licensing.md`.
 
 ---
 
@@ -10,9 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development
 ```bash
-npm run dev:server        # NestJS VPS server (watch mode)
-npm run dev:pos           # Electron POS app (electron-vite)
-cd src/web && npm run dev # Super-admin web dashboard
+npm run dev:pos           # Electron till; POSCLINIC_API_URL in .env.pos points a dev build at posgro staging
+# Frozen legacy (do not extend): npm run dev:server, src/web
 ```
 
 ## Build & Deploy
@@ -36,8 +36,8 @@ npm run prisma:seed             # Seed PostgreSQL database
 ```bash
 npm run lint     # ESLint on src/**/*.ts,tsx
 npm run format   # Prettier on src/**/*.{ts,tsx,json}
-npm test         # Jest (ts-jest, matches **/*.test.ts)
-npm run test:watch
+npm test         # node:test via tsx, matches src/**/*.test.ts
+npm run typecheck
 ```
 
 ---
@@ -45,20 +45,19 @@ npm run test:watch
 # Architecture
 
 ## System Overview
-Offline-first multi-tenant clinic POS system with three deployable targets:
-- **Electron POS app** — runs on Linux Ubuntu terminal, stores data in SQLite, syncs to VPS
-- **NestJS server** — runs on VPS, multi-tenant PostgreSQL, serves web dashboard
-- **React web dashboard** (`src/web/`) — built separately, served as static files from `/web` route
+- **Electron till** — offline-only; all clinic data (patients, visits, services) lives in its SQLite file and never leaves it.
+- **posgro** (separate repo, module `src/server/modules/posclinic/`) — the clinic is a `Store` with `product = POSCLINIC`. The super admin creates it, sets the plan (`TRIAL | START | PRO | ENTERPRISE | VIP`) and issues a one-time activation code. posgro only licenses the till; it never receives clinic data.
+- **Frozen legacy:** `src/server/` (NestJS), `src/web/`, `prisma/schema.prisma` (PostgreSQL). Superseded by posgro; kept until the posgro module is verified on staging, then to be deleted.
 
 ## Source Layout
 | Path | Purpose |
 |------|---------|
-| `src/main/` | Electron main process (IPC handlers, sync, printer, scale, updater) |
+| `src/main/` | Electron main process (IPC handlers, licence, printer) |
+| `src/main/license/` | posgro licence: verify (Ed25519), till state, per-call gate, trusted clock |
 | `src/renderer/` | React UI for POS terminal |
-| `src/server/` | NestJS backend (VPS) |
-| `src/web/` | Super-admin web dashboard (separate Vite project) |
+| `src/server/`, `src/web/` | Frozen legacy server + dashboard |
 | `src/shared/` | Types, utils, constants shared across all targets |
-| `src/generated/prisma-sqlite/` | Generated SQLite Prisma client (committed, bundled in Electron) |
+| `src/generated/prisma-sqlite/` | Generated SQLite Prisma client (gitignored; `npm run prisma:generate:sqlite`) |
 | `prisma/schema.prisma` | PostgreSQL schema (VPS) |
 | `prisma/schema.sqlite.prisma` | SQLite schema (POS terminal) |
 
@@ -70,27 +69,27 @@ Renderer (React) → hooks → ipc-client.ts → preload.ts (contextBridge) → 
 - `src/main/ipc/` contains handler files per domain (products, sales, auth, settings, etc.)
 - Never call `ipcRenderer` directly; always go through `window.electronAPI`
 
-## Data Sync Flow
-1. POS terminal writes to SQLite (offline-first)
-2. `src/main/sync/sync-service.ts` runs periodic background sync
-3. Sales queue → `upload-sync.ts` POSTs to VPS API
-4. Products/categories pull down from VPS → overwrite local SQLite
-5. `queue-manager.ts` handles auth tokens, retries, and backoff
+## Licensing Flow (no data sync)
+1. Setup wizard: owner phone + activation code → main `license:activate` → posgro `POST /posclinic/activate` → signed licence stored in `userData/license-state.json`; the clinic DB `clinic-<storeId>.db` is opened.
+2. Setup step 2 creates the first admin (phone login) and seeds parasitology services (`src/main/database/seed-parasitology.ts`).
+3. Check-in `POST /posclinic/licenses/renew`: 20 s after start, every 6 h, and Settings → Subscription → "check now". Missing `checkinBy` makes the till read-only.
+4. Every domain IPC handler is registered with `handle()` (`src/main/ipc/ipc-safe.ts`), which runs the licence gate (`license-core.ts` `refusal`) first: read-only mode, plan features (`reports`, `multiDoctor`, `printPrescription`, `debt`) and limits (`monthlyVisits`).
+5. Identity is the phone (`+998XXXXXXXXX`, `src/shared/phone.ts`); email is optional; no OTP or verification; password recovery is done by the clinic admin (Telegram login planned).
 
 ## Two Prisma Schemas
 - PostgreSQL: `prisma/schema.prisma` → generates to `node_modules/.prisma/client`
 - SQLite: `prisma/schema.sqlite.prisma` → generates to `src/generated/prisma-sqlite/`
-- To add a SQLite field: edit schema → `npm run prisma:push:sqlite` → `npm run prisma:generate:sqlite`
-- To add a PostgreSQL field: edit schema → `npm run prisma:migrate:dev`
+- To add a SQLite field: edit the schema **and** the raw-SQL create/upgrade in `src/main/database/sqlite-client.ts`, then `npm run prisma:generate:sqlite` (needs `SQLITE_DATABASE_URL` set to anything, e.g. `file:./dev.db`). See skill `prisma-migration`.
+- The PostgreSQL schema is frozen.
 
 ## Environment Files
-- `.env.pos` — baked into Electron bundle at build time via `electron.vite.config.ts`; vars: `DATABASE_URL`, `VPS_API_URL`, `TERMINAL_ID`, `STORE_ID`, `JWT_SECRET`, `PRINTER_NAME`, `PRINTER_TYPE`
-- `.env` / `.env.server` — NestJS server config: `DATABASE_URL`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, `PORT`
+- `.env.pos` — baked into the bundle (`electron.vite.config.ts`) and extractable: no secrets. Only `POSCLINIC_API_URL`, honoured only by unpackaged builds; packaged builds always use `https://api.posgro.uz/api`.
+- posgro needs `POSCLINIC_ENABLED=true` and `POSCLINIC_LICENSE_SIGNING_KEY` (private half of the key in `src/main/license/license-public-key.ts`; never in any repo).
 - See `.env.example` for all required variables
 
 ## Key Patterns
-- **Serialization:** `serializeProduct()` in `products-handlers.ts` converts Prisma `Decimal` → `number` via `.toNumber()` before IPC
-- **IPC safety:** `ipcSafe(value)` = `JSON.parse(JSON.stringify(value))` strips non-cloneable types
+- **IPC:** register handlers with `handle()` from `src/main/ipc/ipc-safe.ts` (licence gate) and return `ipcSafe(value)` (strips Decimal/Date). A refusal throws and also emits `license:refused` with an i18n key, which `LicenseBanner` toasts.
+- **Licence in the UI:** `useLicenseStore` / `useLicensed(feature)` only hide controls; main enforces.
 - **State:** Zustand stores in `src/renderer/store/`; hooks in `src/renderer/hooks/` wrap store + IPC calls
 - **Styling:** Styled Components with theme tokens (`spacing`, `colors`, `borderRadius`, `shadows`)
 - **Routing:** HashRouter (required for Electron — no BrowserRouter)

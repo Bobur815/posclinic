@@ -1,12 +1,8 @@
-import { ipcMain } from 'electron';
+import { handle, ipcSafe } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
 import { randomUUID } from 'crypto';
-
-function ipcSafe<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}
 
 async function getNextAppointmentNumber(prisma: ReturnType<typeof getPrismaClient>): Promise<string> {
   const today = new Date();
@@ -24,7 +20,7 @@ async function getNextAppointmentNumber(prisma: ReturnType<typeof getPrismaClien
 }
 
 export function setupAppointmentHandlers(): void {
-  ipcMain.handle('appointments:create', async (_event, data: Record<string, unknown>) => {
+  handle('appointments:create', async (_event, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const config = getAppConfig();
@@ -71,21 +67,28 @@ export function setupAppointmentHandlers(): void {
     }
   });
 
-  ipcMain.handle('appointments:getAll', async (_event, filters?: {
+  handle('appointments:getAll', async (_event, filters?: {
     status?: string;
     startDate?: string;
     endDate?: string;
     today?: boolean;
+    /** One calendar day, `YYYY-MM-DD` (Daily report). */
+    date?: string;
   }) => {
     try {
       const prisma = getPrismaClient();
       const where: Record<string, unknown> = {};
 
       if (filters?.status) where.status = filters.status;
-      if (filters?.today) {
-        const start = new Date();
+      const day = filters?.today
+        ? new Date()
+        : filters?.date && /^\d{4}-\d{2}-\d{2}$/.test(filters.date)
+          ? new Date(`${filters.date}T00:00:00`)
+          : null;
+      if (day) {
+        const start = new Date(day);
         start.setHours(0, 0, 0, 0);
-        const end = new Date();
+        const end = new Date(day);
         end.setHours(23, 59, 59, 999);
         where.appointmentDate = { gte: start, lte: end };
       } else if (filters?.startDate || filters?.endDate) {
@@ -107,7 +110,7 @@ export function setupAppointmentHandlers(): void {
     }
   });
 
-  ipcMain.handle('appointments:getById', async (_event, id: string) => {
+  handle('appointments:getById', async (_event, id: string) => {
     try {
       const prisma = getPrismaClient();
       const appointment = await prisma.appointment.findUnique({
@@ -121,7 +124,7 @@ export function setupAppointmentHandlers(): void {
     }
   });
 
-  ipcMain.handle('appointments:update', async (_event, id: string, data: Record<string, unknown>) => {
+  handle('appointments:update', async (_event, id: string, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const appointment = await prisma.appointment.update({
@@ -131,9 +134,6 @@ export function setupAppointmentHandlers(): void {
           diagnosis: data.diagnosis as string | null | undefined,
           prescription: data.prescription as string | null | undefined,
           notes: data.notes as string | null | undefined,
-          paymentStatus: data.paymentStatus as string | undefined,
-          paymentMethod: data.paymentMethod as string | null | undefined,
-          paidAmount: data.paidAmount as number | undefined,
         },
         include: { patient: true, doctor: true, items: true },
       });
@@ -144,7 +144,7 @@ export function setupAppointmentHandlers(): void {
     }
   });
 
-  ipcMain.handle('appointments:getTodaySummary', async () => {
+  handle('appointments:getTodaySummary', async () => {
     try {
       const prisma = getPrismaClient();
       const start = new Date();
@@ -171,7 +171,10 @@ export function setupAppointmentHandlers(): void {
         }),
       ]);
 
-      const revenue = paid.reduce((sum, a) => sum + Number(a.paidAmount), 0);
+      const revenue = paid.reduce(
+        (sum: number, a: { paidAmount: unknown }) => sum + Number(a.paidAmount),
+        0,
+      );
 
       return ipcSafe({
         total,
@@ -186,7 +189,7 @@ export function setupAppointmentHandlers(): void {
     }
   });
 
-  ipcMain.handle('appointments:checkout', async (_event, id: string, data: {
+  handle('appointments:checkout', async (_event, id: string, data: {
     paymentMethod: string;
     paidAmount: number;
   }) => {
@@ -209,7 +212,7 @@ export function setupAppointmentHandlers(): void {
           status: paymentStatus === 'PAID' ? 'COMPLETED' : undefined,
           paymentStatus,
           paymentMethod: data.paymentMethod,
-          paidAmount: data.paidAmount,
+          paidAmount,
         },
         include: { patient: true, doctor: true, items: true },
       });

@@ -17,6 +17,7 @@ export function createSetupWindow(): BrowserWindow {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
+      devTools: !app.isPackaged,
     },
     show: false,
     title: 'POSCLINIC - Setup',
@@ -29,7 +30,7 @@ export function createSetupWindow(): BrowserWindow {
     setupWindow.focus();
   });
 
-  globalShortcut.register('CommandOrControl+Shift+I', () => {
+  if (!app.isPackaged) globalShortcut.register('CommandOrControl+Shift+I', () => {
     if (!setupWindow.isDestroyed()) setupWindow.webContents.toggleDevTools();
   });
 
@@ -68,7 +69,7 @@ export function createWindow(): BrowserWindow {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      devTools: process.env.NODE_ENV === 'development',
+      devTools: !app.isPackaged,
     },
     show: false,
     title: 'POSCLINIC',
@@ -83,7 +84,7 @@ export function createWindow(): BrowserWindow {
     mainWindow.focus();
   });
 
-  globalShortcut.register('CommandOrControl+Shift+I', () => {
+  if (!app.isPackaged) globalShortcut.register('CommandOrControl+Shift+I', () => {
     mainWindow.webContents.toggleDevTools();
   });
 

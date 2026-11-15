@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
+import { formatPhone } from '../../../shared/phone';
 import { Save, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
@@ -164,9 +165,15 @@ export function UserSettingsPage() {
             <ProfileValue>{user.fullName}</ProfileValue>
           </ProfileRow>
           <ProfileRow>
-            <ProfileLabel>{t('auth.email')}</ProfileLabel>
-            <ProfileValue>{user.email}</ProfileValue>
+            <ProfileLabel>{t('auth.phone')}</ProfileLabel>
+            <ProfileValue>{formatPhone(user.phone)}</ProfileValue>
           </ProfileRow>
+          {user.email && (
+            <ProfileRow>
+              <ProfileLabel>{t('auth.email')}</ProfileLabel>
+              <ProfileValue>{user.email}</ProfileValue>
+            </ProfileRow>
+          )}
           <ProfileRow>
             <ProfileLabel>{t('users.role')}</ProfileLabel>
             <ProfileValue>{t(`users.roles.${user.role}`, user.role)}</ProfileValue>

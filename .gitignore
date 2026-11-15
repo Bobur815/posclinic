@@ -40,3 +40,6 @@ Thumbs.db
 
 # Electron builder
 release/
+
+# Claude Code personal settings
+.claude/settings.local.json

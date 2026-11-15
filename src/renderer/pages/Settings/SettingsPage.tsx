@@ -1,22 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Sun, Moon, Globe, Monitor, RefreshCw, Info } from 'lucide-react';
+import { SubscriptionSection } from './SubscriptionSection';
+import { Sun, Moon, Globe, Monitor, Info } from 'lucide-react';
 import { useTheme } from '../../theme/ThemeProvider';
-import { useToast } from '../../context/ToastContext';
 
 interface LocalConfig {
   clinicId: string;
   clinicName: string;
   terminalId: string;
   apiUrl: string;
-  lastSync: string | null;
-}
-
-interface SyncStatus {
-  isSyncing: boolean;
-  lastSyncTime: string | null;
-  lastError: string | null;
 }
 
 const Page = styled.div`
@@ -115,22 +108,6 @@ const InfoValue = styled.span`
   font-weight: 500;
 `;
 
-const SyncBtn = styled.button<{ $syncing?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: white;
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius};
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
-`;
-
 const Input = styled.input`
   padding: 8px 10px;
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -144,41 +121,22 @@ const Input = styled.input`
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const toast = useToast();
   const { mode, toggleTheme } = useTheme();
 
   const setMode = (newMode: 'light' | 'dark') => {
     if (newMode !== mode) toggleTheme();
   };
   const [localConfig, setLocalConfig] = useState<LocalConfig | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-
+  const [appVersion, setAppVersion] = useState('');
   useEffect(() => {
     window.electronAPI.config.getLocalConfig().then((cfg) => setLocalConfig(cfg as LocalConfig));
-    window.electronAPI.sync.getStatus().then((s) => setSyncStatus(s as SyncStatus));
+    window.electronAPI.app.getVersion().then(setAppVersion);
   }, []);
 
   const handleLangChange = (lang: string) => {
     i18n.changeLanguage(lang);
     localStorage.setItem('language', lang);
   };
-
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      await window.electronAPI.sync.trigger();
-      const s = await window.electronAPI.sync.getStatus();
-      setSyncStatus(s as SyncStatus);
-      toast.success(t('sync.syncCompleted'));
-    } catch {
-      toast.error(t('common.error'));
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const appVersion = '1.0.0';
 
   return (
     <Page>
@@ -237,36 +195,14 @@ export function SettingsPage() {
               <InfoValue>{localConfig.terminalId}</InfoValue>
             </InfoItem>
             <InfoItem>
-              <InfoLabel>{t('settings.apiUrl')}</InfoLabel>
+              <InfoLabel>{t('settings.licenseServer')}</InfoLabel>
               <InfoValue style={{ fontSize: '12px' }}>{localConfig.apiUrl}</InfoValue>
             </InfoItem>
           </Card>
         </Section>
       )}
 
-      {/* Sync */}
-      <Section>
-        <SectionTitle><RefreshCw size={15} />{t('settings.sync')}</SectionTitle>
-        <Card>
-          <SettingRow>
-            <SettingInfo>
-              <SettingLabel>{t('sync.status')}</SettingLabel>
-              <SettingDesc>
-                {syncStatus?.lastSyncTime
-                  ? `${t('sync.lastSync')}: ${new Date(syncStatus.lastSyncTime).toLocaleString()}`
-                  : t('sync.neverSynced')}
-                {syncStatus?.lastError && (
-                  <span style={{ color: '#ef4444', display: 'block' }}>{syncStatus.lastError}</span>
-                )}
-              </SettingDesc>
-            </SettingInfo>
-            <SyncBtn onClick={handleSync} disabled={isSyncing}>
-              <RefreshCw size={14} style={{ animation: isSyncing ? 'spin 1s linear infinite' : 'none' }} />
-              {isSyncing ? t('sync.syncing') : t('sync.syncNow')}
-            </SyncBtn>
-          </SettingRow>
-        </Card>
-      </Section>
+      <SubscriptionSection />
 
       {/* About */}
       <Section>

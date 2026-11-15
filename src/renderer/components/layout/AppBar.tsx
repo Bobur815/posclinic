@@ -1,11 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Menu, X, Sun, Moon, LogOut, User, RefreshCw, Stethoscope } from 'lucide-react';
+import { Menu, X, Sun, Moon, LogOut, User, Stethoscope } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuthStore } from '../../store/auth-store';
 import { useTheme } from '../../theme/ThemeProvider';
-import { useToast } from '../../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
 
 export const APP_BAR_HEIGHT = 48;
@@ -77,14 +76,6 @@ const Spacer = styled.div`
   flex: 1;
 `;
 
-const SyncDot = styled.div<{ $syncing: boolean }>`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: ${({ $syncing, theme }) => ($syncing ? theme.colors.warning : theme.colors.success)};
-  flex-shrink: 0;
-`;
-
 const LangBtn = styled.button<{ $active: boolean }>`
   padding: 4px 8px;
   border-radius: 6px;
@@ -139,27 +130,6 @@ export function AppBar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { user, logout } = useAuthStore();
   const { mode, toggleTheme } = useTheme();
-  const toast = useToast();
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const handleSync = useCallback(async () => {
-    if (isSyncing) return;
-    setIsSyncing(true);
-    try {
-      const online = await window.electronAPI.app.isOnline();
-      if (!online) {
-        toast.error(t('errors.noInternet'));
-        return;
-      }
-      await window.electronAPI.sync.trigger();
-      toast.success(t('sync.syncSuccess'));
-    } catch {
-      toast.error(t('sync.syncFailed'));
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isSyncing, toast, t]);
-
   const handleLogout = useCallback(async () => {
     await logout();
     navigate('/login');
@@ -184,14 +154,6 @@ export function AppBar() {
       </BrandWrapper>
 
       <Spacer />
-
-      <SyncDot $syncing={isSyncing} title={isSyncing ? t('sync.syncing') : t('sync.syncSuccess')} />
-
-      <IconBtn onClick={handleSync} title={t('settings.syncNow')} disabled={isSyncing}>
-        <RefreshCw size={16} style={{ animation: isSyncing ? 'spin 1s linear infinite' : undefined }} />
-      </IconBtn>
-
-      <Divider />
 
       <LangBtn $active={i18n.language === 'uz'} onClick={() => changeLanguage('uz')}>UZ</LangBtn>
       <LangBtn $active={i18n.language === 'ru'} onClick={() => changeLanguage('ru')}>RU</LangBtn>

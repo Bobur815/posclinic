@@ -1,10 +1,19 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
+import type { ActivateResult, LicenseStatusDto } from '../shared/license';
+
+interface SetupAdminInput {
+  fullName: string;
+  phone: string;
+  email?: string;
+  password: string;
+  lang: 'uz' | 'ru';
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Authentication
   auth: {
-    login: (email: string, password: string) =>
-      ipcRenderer.invoke('auth:login', email, password),
+    login: (phone: string, password: string) =>
+      ipcRenderer.invoke('auth:login', phone, password),
     logout: () => ipcRenderer.invoke('auth:logout'),
     getProfile: () => ipcRenderer.invoke('auth:getProfile'),
     restoreSession: (token: string) =>
@@ -64,19 +73,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('print:prescription', appointmentId),
   },
 
-  // Sync
-  sync: {
-    getStatus: () => ipcRenderer.invoke('sync:getStatus'),
-    trigger: () => ipcRenderer.invoke('sync:trigger'),
-    onCompleted: (callback: () => void) => {
-      ipcRenderer.on('sync:completed', callback);
-      return () => ipcRenderer.removeListener('sync:completed', callback);
+  // Licence (posgro). The renderer only reads status; main enforces it on every call.
+  license: {
+    status: () => ipcRenderer.invoke('license:status'),
+    checkNow: () => ipcRenderer.invoke('license:checkNow'),
+    activate: (phone: string, code: string) =>
+      ipcRenderer.invoke('license:activate', phone, code),
+    onChanged: (callback: () => void) => {
+      ipcRenderer.on('license:changed', callback);
+      return () => ipcRenderer.removeListener('license:changed', callback);
     },
-    onFailed: (callback: (error: { message: string }) => void) => {
-      const handler = (_event: IpcRendererEvent, error: { message: string }) =>
-        callback(error);
-      ipcRenderer.on('sync:failed', handler);
-      return () => ipcRenderer.removeListener('sync:failed', handler);
+    /** Main refused a call; `key` is an i18n key. */
+    onRefused: (callback: (key: string) => void) => {
+      const handler = (_e: unknown, key: string) => callback(key);
+      ipcRenderer.on('license:refused', handler);
+      return () => ipcRenderer.removeListener('license:refused', handler);
     },
   },
 
@@ -96,26 +107,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Config
   config: {
     getLocalConfig: () => ipcRenderer.invoke('config:getLocalConfig'),
-    updateLocalConfig: (data: {
-      clinicId?: string;
-      apiUrl?: string;
-      clinicName?: string;
-      terminalId?: string;
-    }) => ipcRenderer.invoke('config:updateLocalConfig', data),
   },
 
   // Setup wizard
   setup: {
-    complete: (data: {
-      clinicId: string;
-      terminalId: string;
-      clinicName: string;
-      apiUrl: string;
-      token: string;
-      email: string;
-      password: string;
-      user: { id: string; email: string; firstName: string; lastName: string; role: string };
-    }) => ipcRenderer.invoke('setup:complete', data),
+    createAdmin: (data: SetupAdminInput) => ipcRenderer.invoke('setup:createAdmin', data),
     launchApp: () => ipcRenderer.invoke('setup:launchApp'),
   },
 
@@ -131,10 +127,10 @@ declare global {
   interface Window {
     electronAPI: {
       auth: {
-        login: (email: string, password: string) => Promise<{ success: boolean; user?: { id: string; fullName: string; email: string; role: string; clinicId: string | null }; token?: string; error?: string }>;
+        login: (phone: string, password: string) => Promise<{ success: boolean; user?: { id: string; fullName: string; phone: string; email: string | null; role: string; clinicId: string | null }; token?: string; error?: string }>;
         logout: () => Promise<{ success: boolean }>;
-        getProfile: () => Promise<{ id: string; fullName: string; email: string; role: string; clinicId: string | null } | null>;
-        restoreSession: (token: string) => Promise<{ id: string; fullName: string; email: string; role: string; clinicId: string | null } | null>;
+        getProfile: () => Promise<{ id: string; fullName: string; phone: string; email: string | null; role: string; clinicId: string | null } | null>;
+        restoreSession: (token: string) => Promise<{ id: string; fullName: string; phone: string; email: string | null; role: string; clinicId: string | null } | null>;
         changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
       };
       patients: {
@@ -169,11 +165,12 @@ declare global {
         serviceReceipt: (appointmentId: string) => Promise<{ success: boolean; error?: string }>;
         prescription: (appointmentId: string) => Promise<{ success: boolean; error?: string }>;
       };
-      sync: {
-        getStatus: () => Promise<unknown>;
-        trigger: () => Promise<void>;
-        onCompleted: (callback: () => void) => () => void;
-        onFailed: (callback: (error: { message: string }) => void) => () => void;
+      license: {
+        status: () => Promise<LicenseStatusDto>;
+        checkNow: () => Promise<LicenseStatusDto>;
+        activate: (phone: string, code: string) => Promise<ActivateResult>;
+        onChanged: (callback: () => void) => () => void;
+        onRefused: (callback: (key: string) => void) => () => void;
       };
       app: {
         getVersion: () => Promise<string>;
@@ -185,10 +182,9 @@ declare global {
       };
       config: {
         getLocalConfig: () => Promise<{ clinicId: string; apiUrl: string; clinicName: string; terminalId: string } | null>;
-        updateLocalConfig: (data: { clinicId?: string; apiUrl?: string; clinicName?: string; terminalId?: string }) => Promise<{ requiresRestart?: boolean }>;
       };
       setup: {
-        complete: (data: { clinicId: string; terminalId: string; clinicName: string; apiUrl: string; token: string; email: string; password: string; user: { id: string; email: string; firstName: string; lastName: string; role: string } }) => Promise<{ success: boolean; error?: string }>;
+        createAdmin: (data: SetupAdminInput) => Promise<{ success: boolean; error?: string }>;
         launchApp: () => Promise<void>;
       };
       logger: {

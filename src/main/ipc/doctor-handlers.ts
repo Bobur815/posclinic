@@ -1,13 +1,9 @@
-import { ipcMain } from 'electron';
+import { handle, ipcSafe } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 
-function ipcSafe<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}
-
 export function setupDoctorHandlers(): void {
-  ipcMain.handle('doctors:getAll', async () => {
+  handle('doctors:getAll', async () => {
     try {
       const prisma = getPrismaClient();
       const doctors = await prisma.doctor.findMany({
@@ -20,7 +16,7 @@ export function setupDoctorHandlers(): void {
     }
   });
 
-  ipcMain.handle('doctors:getActive', async () => {
+  handle('doctors:getActive', async () => {
     try {
       const prisma = getPrismaClient();
       const doctors = await prisma.doctor.findMany({
@@ -34,7 +30,7 @@ export function setupDoctorHandlers(): void {
     }
   });
 
-  ipcMain.handle('doctors:create', async (_event, data: Record<string, unknown>) => {
+  handle('doctors:create', async (_event, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const { randomUUID } = await import('crypto');
@@ -54,7 +50,7 @@ export function setupDoctorHandlers(): void {
     }
   });
 
-  ipcMain.handle('doctors:update', async (_event, id: string, data: Record<string, unknown>) => {
+  handle('doctors:update', async (_event, id: string, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
       const doctor = await prisma.doctor.update({
