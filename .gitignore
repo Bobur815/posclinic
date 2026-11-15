@@ -43,3 +43,6 @@ release/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Claude Design exports (self-contained bundles, ~6 MB each; the port lives in src/)
+docs/design/*.html
