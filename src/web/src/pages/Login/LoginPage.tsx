@@ -1,19 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Eye, EyeOff, Stethoscope } from 'lucide-react';
-import { useAuthStore } from '../../store/auth-store';
-import { BRAND_NAME, BRAND_TAGLINE_RU } from '../../branding/constants';
+import { Eye, EyeOff, Moon, Stethoscope, Sun } from 'lucide-react';
+import { useTheme } from '@theme/ThemeProvider';
+import { isSignedIn, useAuthStore } from '../../store/auth-store';
+import { BRAND_NAME } from '../../branding/constants';
+import { setLanguage, type Language } from '../../i18n';
+import { Button, ErrorBanner, Field, Input } from '../../components/ui';
 
-const Page = styled.div`
+const Wrap = styled.div`
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
   background: ${({ theme }) => theme.colors.background};
 `;
 
-const Card = styled.div`
+const Box = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.borderRadius};
@@ -21,28 +26,31 @@ const Card = styled.div`
   width: 100%;
   max-width: 400px;
   box-shadow: ${({ theme }) => theme.shadows.lg};
+
+  @media (max-width: 480px) {
+    padding: ${({ theme }) => theme.spacing.lg};
+  }
 `;
 
-const Header = styled.div`
+const Head = styled.div`
   text-align: center;
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
 `;
 
 const Logo = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: 8px;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
 const Tagline = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.8rem;
-  margin: 0;
+  font-size: 13px;
+  margin: 4px 0 0;
 `;
 
 const Form = styled.form`
@@ -51,46 +59,16 @@ const Form = styled.form`
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
-const Field = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-`;
-
-const Label = styled.label`
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const InputWrapper = styled.div`
+const PasswordWrap = styled.div`
   position: relative;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.9rem;
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary}30;
+  input {
+    padding-right: 42px;
   }
 `;
 
-const PasswordInput = styled(Input)`
-  padding-right: 44px;
-`;
-
-const ToggleBtn = styled.button`
+const Eyeball = styled.button`
   position: absolute;
-  right: ${({ theme }) => theme.spacing.sm};
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -101,110 +79,104 @@ const ToggleBtn = styled.button`
   padding: 4px;
 `;
 
-const SubmitBtn = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.primary};
-  color: #fff;
-  border: none;
-  border-radius: ${({ theme }) => theme.borderRadius};
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: ${({ theme }) => theme.spacing.sm};
-
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
-`;
-
-const ErrorMsg = styled.p`
-  color: ${({ theme }) => theme.colors.error};
-  font-size: 0.85rem;
-  text-align: center;
+const Hint = styled.p`
   margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const RegisterLink = styled.p`
-  text-align: center;
-  font-size: 0.85rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: ${({ theme }) => theme.spacing.md};
-  a {
-    color: ${({ theme }) => theme.colors.primary};
-    text-decoration: none;
-    &:hover { text-decoration: underline; }
-  }
+const Prefs = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: ${({ theme }) => theme.spacing.lg};
 `;
 
 export function LoginPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { login, isLoading, error, isAuthenticated, clearError } = useAuthStore();
+  const { mode, toggleTheme } = useTheme();
+  const signedIn = useAuthStore(isSignedIn);
+  const { login, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('+998 ');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    if (isAuthenticated) navigate('/', { replace: true });
-  }, [isAuthenticated, navigate]);
+  useEffect(() => clearError, [clearError]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  if (signedIn) return <Navigate to="/" replace />;
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
-    const ok = await login(email, password);
-    if (ok) navigate('/');
+    if (await login(phone, password)) navigate('/', { replace: true });
   };
 
   return (
-    <Page>
-      <Card>
-        <Header>
+    <Wrap>
+      <Box>
+        <Head>
           <Logo>
             <Stethoscope size={28} />
             {BRAND_NAME}
           </Logo>
-          <Tagline>{BRAND_TAGLINE_RU}</Tagline>
-        </Header>
+          <Tagline>{t('auth.tagline')}</Tagline>
+        </Head>
 
-        <Form onSubmit={handleSubmit}>
-          <Field>
-            <Label>Email</Label>
+        <Form onSubmit={submit} noValidate>
+          {error && <ErrorBanner role="alert">{t(`errors.${error}`, { defaultValue: t('errors.generic') })}</ErrorBanner>}
+
+          <Field label={t('auth.phone')}>
             <Input
-              type="email"
-              placeholder="email@clinic.uz"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              type="tel"
+              inputMode="tel"
+              autoComplete="username"
+              placeholder="+998 90 123 45 67"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               autoFocus
+              required
             />
           </Field>
 
-          <Field>
-            <Label>Пароль</Label>
-            <InputWrapper>
-              <PasswordInput
+          <Field label={t('auth.password')}>
+            <PasswordWrap>
+              <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Введите пароль"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <ToggleBtn type="button" onClick={() => setShowPassword((v) => !v)}>
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </ToggleBtn>
-            </InputWrapper>
+              <Eyeball
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Eyeball>
+            </PasswordWrap>
           </Field>
 
-          {error && <ErrorMsg>Неверный email или пароль</ErrorMsg>}
+          <Button type="submit" $variant="primary" disabled={isLoading || !password}>
+            {isLoading ? t('common.loading') : t('auth.login')}
+          </Button>
 
-          <SubmitBtn type="submit" disabled={isLoading}>
-            {isLoading ? 'Вход...' : 'Войти'}
-          </SubmitBtn>
+          <Hint>{t('auth.forgotHint')}</Hint>
         </Form>
 
-        <RegisterLink>
-          Нет аккаунта? <Link to="/register">Зарегистрировать клинику</Link>
-        </RegisterLink>
-      </Card>
-    </Page>
+        <Prefs>
+          {(['uz', 'ru'] as Language[]).map((l) => (
+            <Button key={l} type="button" $small $variant={i18n.language === l ? 'primary' : 'secondary'} onClick={() => setLanguage(l)}>
+              {l === 'uz' ? "O'zbekcha" : 'Русский'}
+            </Button>
+          ))}
+          <Button type="button" $small onClick={toggleTheme} aria-label={t('settings.theme')}>
+            {mode === 'dark' ? <Sun /> : <Moon />}
+          </Button>
+        </Prefs>
+      </Box>
+    </Wrap>
   );
 }

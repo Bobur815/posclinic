@@ -1,57 +1,43 @@
 import { useState } from 'react';
-import styled from 'styled-components';
-import { FileText } from 'lucide-react';
-import { format } from 'date-fns';
-
-const Page = styled.div``;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-`;
-
-const Title = styled.h1`
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const MonthInput = styled.input`
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.85rem;
-`;
-
-const Placeholder = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  padding: ${({ theme }) => theme.spacing.xl};
-  text-align: center;
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
+import { useTranslation } from 'react-i18next';
+import { CalendarRange, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { addMonths, parseISO } from 'date-fns';
+import { reportsApi } from '../../api/client';
+import { useAsync } from '../../hooks/useAsync';
+import { localMonth } from '../../lib/format';
+import { Button, DataState, Input, Page, PageHeader } from '../../components/ui';
+import { ReportView } from './ReportView';
 
 export function MonthlyReport() {
-  const [month, setMonth] = useState(() => format(new Date(), 'yyyy-MM'));
+  const { t } = useTranslation();
+  const [month, setMonth] = useState(localMonth());
+  const { data, loading, error, reload } = useAsync(() => reportsApi.monthly(month), [month]);
+  const shift = (n: number) => setMonth(localMonth(addMonths(parseISO(`${month}-01`), n)));
+  const current = localMonth();
 
   return (
     <Page>
-      <Header>
-        <Title><FileText size={22} /> Ежемесячный отчёт</Title>
-        <MonthInput type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-      </Header>
-      <Placeholder>
-        Данные за {month} будут отображены здесь
-      </Placeholder>
+      <PageHeader
+        icon={<CalendarRange />}
+        title={t('reports.monthlyTitle')}
+        actions={
+          <>
+            <Button onClick={() => shift(-1)} aria-label={t('common.prev')}>
+              <ChevronLeft />
+            </Button>
+            <Input type="month" value={month} max={current} onChange={(e) => e.target.value && setMonth(e.target.value)} style={{ width: 'auto' }} />
+            <Button onClick={() => shift(1)} disabled={month >= current} aria-label={t('common.next')}>
+              <ChevronRight />
+            </Button>
+            <Button onClick={reload} aria-label={t('common.refresh')}>
+              <RefreshCw />
+            </Button>
+          </>
+        }
+      />
+      <DataState loading={loading && !data} error={error} onRetry={reload}>
+        {data && <ReportView report={data} />}
+      </DataState>
     </Page>
   );
 }

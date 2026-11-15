@@ -1,105 +1,108 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, User } from 'lucide-react';
-import { patients as patientsApi, type PatientRecord } from '../../api/client';
-
-const Page = styled.div``;
-
-const BackBtn = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.primary};
-  cursor: pointer;
-  font-size: 0.875rem;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  padding: 0;
-`;
-
-const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-`;
-
-const Name = styled.h2`
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0 0 ${({ theme }) => theme.spacing.md};
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const Grid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const Field = styled.div``;
-const FieldLabel = styled.div`
-  font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin-bottom: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-`;
-const FieldValue = styled.div`
-  font-size: 0.9rem;
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 500;
-`;
-
-const Empty = styled.div`
-  text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
+import { patientsApi, type Appointment } from '../../api/client';
+import { useAsync } from '../../hooks/useAsync';
+import { formatDate, formatMoney, formatNumber, showPhone } from '../../lib/format';
+import {
+  ActiveBadge,
+  Button,
+  Card,
+  CardTitle,
+  DataState,
+  Grid,
+  InfoList,
+  Page,
+  PageHeader,
+  StatCard,
+} from '../../components/ui';
+import { VisitsTable } from '../Appointments/VisitsTable';
+import { AppointmentDetailsModal } from '../Appointments/AppointmentDetailsModal';
 
 export function PatientDetails() {
-  const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation();
+  const { id = '' } = useParams();
   const navigate = useNavigate();
-  const [patient, setPatient] = useState<PatientRecord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState<Appointment | null>(null);
+  const { data: p, loading, error, reload } = useAsync(() => patientsApi.get(id), [id]);
 
-  useEffect(() => {
-    if (!id) return;
-    patientsApi.getById(id)
-      .then(setPatient)
-      .catch(() => setPatient(null))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  if (loading) return <Empty>Загрузка...</Empty>;
-  if (!patient) return <Empty>Пациент не найден</Empty>;
+  const visits = useMemo(
+    () => [...(p?.visits ?? [])].sort((a, b) => b.appointmentDate.localeCompare(a.appointmentDate)),
+    [p],
+  );
+  const totals = useMemo(() => {
+    const billed = visits.filter((v) => v.status !== 'CANCELLED');
+    const total = billed.reduce((s, v) => s + v.totalAmount, 0);
+    const paid = billed.reduce((s, v) => s + v.paidAmount, 0);
+    return { total, paid, debt: Math.max(0, total - paid) };
+  }, [visits]);
 
   return (
     <Page>
-      <BackBtn onClick={() => navigate('/patients')}>
-        <ArrowLeft size={16} /> Назад к списку
-      </BackBtn>
+      <PageHeader
+        icon={<User />}
+        title={p?.fullName ?? t('patients.patient')}
+        subtitle={p ? `${p.patientCode} · ${showPhone(p.phone)}` : undefined}
+        actions={
+          <Button onClick={() => navigate('/patients')}>
+            <ArrowLeft />
+            {t('common.back')}
+          </Button>
+        }
+      />
 
-      <Card>
-        <Name><User size={20} /> {patient.fullName}</Name>
-        <Grid>
-          <Field><FieldLabel>Код пациента</FieldLabel><FieldValue>{patient.patientCode}</FieldValue></Field>
-          <Field><FieldLabel>Телефон</FieldLabel><FieldValue>{patient.phone}</FieldValue></Field>
-          <Field><FieldLabel>Пол</FieldLabel><FieldValue>{patient.gender === 'MALE' ? 'Мужской' : patient.gender === 'FEMALE' ? 'Женский' : '—'}</FieldValue></Field>
-          <Field><FieldLabel>Группа крови</FieldLabel><FieldValue>{patient.bloodType ?? '—'}</FieldValue></Field>
-          <Field><FieldLabel>Дата рождения</FieldLabel><FieldValue>{patient.birthDate ? new Date(patient.birthDate).toLocaleDateString('ru-RU') : '—'}</FieldValue></Field>
-          <Field><FieldLabel>Город</FieldLabel><FieldValue>{patient.city ?? '—'}</FieldValue></Field>
-          <Field><FieldLabel>Адрес</FieldLabel><FieldValue>{patient.address ?? '—'}</FieldValue></Field>
-          <Field><FieldLabel>Аллергии</FieldLabel><FieldValue>{patient.allergies ?? '—'}</FieldValue></Field>
-          {patient.notes && <Field style={{ gridColumn: '1 / -1' }}><FieldLabel>Заметки</FieldLabel><FieldValue>{patient.notes}</FieldValue></Field>}
-        </Grid>
-      </Card>
+      <DataState loading={loading && !p} error={error} onRetry={reload}>
+        {p && (
+          <>
+            <Card>
+              <CardTitle>{t('patients.info')}</CardTitle>
+              <InfoList
+                items={[
+                  { label: t('patients.patientCode'), value: p.patientCode },
+                  { label: t('patients.phone'), value: showPhone(p.phone) },
+                  { label: t('patients.birthDate'), value: formatDate(p.birthDate) },
+                  { label: t('patients.gender'), value: p.gender ? t(`patients.genders.${p.gender}`, p.gender) : '—' },
+                  { label: t('patients.bloodType'), value: p.bloodType || '—' },
+                  { label: t('patients.allergies'), value: p.allergies || '—' },
+                  { label: t('patients.city'), value: p.city || '—' },
+                  { label: t('patients.address'), value: p.address || '—' },
+                  { label: t('patients.registered'), value: formatDate(p.createdAt) },
+                  { label: t('common.status'), value: <ActiveBadge active={p.active} /> },
+                  { label: t('common.notes'), value: p.notes || '—' },
+                ]}
+              />
+            </Card>
+
+            <Grid $min={180}>
+              <StatCard label={t('patients.totalVisits')} value={formatNumber(visits.length)} />
+              <StatCard label={t('reports.revenue')} value={formatMoney(totals.total)} tone="success" />
+              <StatCard label={t('reports.paid')} value={formatMoney(totals.paid)} tone="info" />
+              <StatCard label={t('reports.debt')} value={formatMoney(totals.debt)} tone="warning" />
+            </Grid>
+
+            <Card style={{ padding: 0 }}>
+              <div style={{ padding: 16, paddingBottom: 0 }}>
+                <CardTitle>{t('patients.visitHistory')}</CardTitle>
+              </div>
+              <DataState loading={false} error={null} empty={!visits.length} emptyText={t('appointments.noAppointments')}>
+                <div style={{ overflowX: 'auto' }}>
+                  <VisitsTable rows={visits} onOpen={setOpen} showPatient={false} />
+                </div>
+              </DataState>
+            </Card>
+          </>
+        )}
+      </DataState>
+
+      {open && (
+        <AppointmentDetailsModal
+          id={open.id}
+          initial={{ ...open, patient: open.patient ?? (p ? { id: p.id, fullName: p.fullName } : null) }}
+          onClose={() => setOpen(null)}
+          showPatientLink={false}
+        />
+      )}
     </Page>
   );
 }

@@ -1,162 +1,109 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { RefreshCw, Search, Users, ChevronRight } from 'lucide-react';
-import { patients as patientsApi, type PatientRecord } from '../../api/client';
+import { useTranslation } from 'react-i18next';
+import { Users, Search, RefreshCw } from 'lucide-react';
+import { patientsApi } from '../../api/client';
+import { useAsync } from '../../hooks/useAsync';
+import { useDebounced } from '../../hooks/useDebounced';
+import { formatDate, showPhone } from '../../lib/format';
+import {
+  Button,
+  DataState,
+  FilterBar,
+  Field,
+  Input,
+  Page,
+  PageHeader,
+  Pagination,
+  Table,
+  TableWrap,
+  Td,
+  Th,
+  Tr,
+} from '../../components/ui';
 
-const Page = styled.div``;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const Title = styled.h1`
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const SearchWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const SearchInput = styled.input`
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.875rem;
-  width: 220px;
-
-  &::placeholder { color: ${({ theme }) => theme.colors.textSecondary}; }
-`;
-
-const IconBtn = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-
-  &:hover { color: ${({ theme }) => theme.colors.primary}; }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  overflow: hidden;
-`;
-
-const Th = styled.th`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const Tr = styled.tr`
-  cursor: pointer;
-  &:hover td { background: ${({ theme }) => theme.colors.background}; }
-`;
-
-const Td = styled.td`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.text};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const Empty = styled.div`
-  text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
+const PAGE_SIZE = 25;
 
 export function PatientList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [data, setData] = useState<PatientRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const q = useDebounced(search.trim());
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await patientsApi.getAll(query ? { search: query } : undefined);
-      setData(result);
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
-  }, [query]);
+  useEffect(() => setPage(1), [q]);
 
-  useEffect(() => { load(); }, [load]);
+  const { data, loading, error, reload } = useAsync(
+    () => patientsApi.list({ search: q, page, pageSize: PAGE_SIZE }),
+    [q, page],
+  );
 
   return (
     <Page>
-      <Header>
-        <Title><Users size={22} /> Пациенты</Title>
-        <SearchWrapper>
-          <Search size={16} style={{ color: 'gray' }} />
-          <SearchInput
-            placeholder="Поиск по имени, телефону..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <IconBtn onClick={load}><RefreshCw size={16} /></IconBtn>
-        </SearchWrapper>
-      </Header>
+      <PageHeader
+        icon={<Users />}
+        title={t('patients.title')}
+        subtitle={data ? t('common.totalCount', { count: data.total }) : undefined}
+        actions={
+          <Button onClick={reload} aria-label={t('common.refresh')}>
+            <RefreshCw />
+          </Button>
+        }
+      />
 
-      {loading ? (
-        <Empty>Загрузка...</Empty>
-      ) : data.length === 0 ? (
-        <Empty>Пациенты не найдены</Empty>
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Код</Th>
-              <Th>ФИО</Th>
-              <Th>Телефон</Th>
-              <Th>Пол</Th>
-              <Th>Группа крови</Th>
-              <Th></Th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((p) => (
-              <Tr key={p.id} onClick={() => navigate(`/patients/${p.id}`)}>
-                <Td>{p.patientCode}</Td>
-                <Td>{p.fullName}</Td>
-                <Td>{p.phone}</Td>
-                <Td>{p.gender === 'MALE' ? 'М' : p.gender === 'FEMALE' ? 'Ж' : '—'}</Td>
-                <Td>{p.bloodType ?? '—'}</Td>
-                <Td><ChevronRight size={16} /></Td>
-              </Tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
+      <FilterBar>
+        <Field label={t('common.search')}>
+          <div style={{ position: 'relative' }}>
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('patients.searchPlaceholder')}
+              style={{ paddingLeft: 32 }}
+            />
+            <Search size={16} style={{ position: 'absolute', left: 10, top: 11, opacity: 0.5 }} />
+          </div>
+        </Field>
+      </FilterBar>
+
+      <TableWrap>
+        <DataState
+          loading={loading && !data}
+          error={error}
+          onRetry={reload}
+          empty={data?.items.length === 0}
+          emptyText={t('patients.noPatients')}
+        >
+          <Table>
+            <thead>
+              <tr>
+                <Th>{t('patients.patientCode')}</Th>
+                <Th>{t('patients.fullName')}</Th>
+                <Th>{t('patients.phone')}</Th>
+                <Th>{t('patients.birthDate')}</Th>
+                <Th>{t('patients.gender')}</Th>
+                <Th>{t('patients.registered')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.items.map((p) => (
+                <Tr key={p.id} $clickable $dim={!p.active} onClick={() => navigate(`/patients/${p.id}`)}>
+                  <Td $muted $nowrap>
+                    {p.patientCode}
+                  </Td>
+                  <Td>{p.fullName}</Td>
+                  <Td $nowrap>{showPhone(p.phone)}</Td>
+                  <Td $nowrap>{formatDate(p.birthDate)}</Td>
+                  <Td>{p.gender ? t(`patients.genders.${p.gender}`, p.gender) : '—'}</Td>
+                  <Td $muted $nowrap>
+                    {formatDate(p.createdAt)}
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+          {data && <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} />}
+        </DataState>
+      </TableWrap>
     </Page>
   );
 }

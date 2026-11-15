@@ -1,144 +1,204 @@
-import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
-import { Stethoscope, RefreshCw, Plus, Pencil } from 'lucide-react';
-import { doctors as doctorsApi, type DoctorRecord } from '../../api/client';
-
-const Page = styled.div``;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-`;
-
-const Title = styled.h1`
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const Actions = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const Btn = styled.button<{ $variant?: 'primary' | 'ghost' }>`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.md}`};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid ${({ $variant, theme }) => $variant === 'primary' ? 'transparent' : theme.colors.border};
-  background: ${({ $variant, theme }) => $variant === 'primary' ? theme.colors.primary : theme.colors.surface};
-  color: ${({ $variant, theme }) => $variant === 'primary' ? '#fff' : theme.colors.text};
-
-  &:hover { opacity: 0.85; }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  overflow: hidden;
-`;
-
-const Th = styled.th`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const Td = styled.td`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.text};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const ActiveBadge = styled.span<{ $active: boolean }>`
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background: ${({ $active, theme }) => $active ? theme.colors.success + '20' : theme.colors.error + '20'};
-  color: ${({ $active, theme }) => $active ? theme.colors.success : theme.colors.error};
-`;
-
-const Empty = styled.div`
-  text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Stethoscope, Plus, Pencil, RefreshCw, Search } from 'lucide-react';
+import { normalizePhone } from '@shared/phone';
+import { useToast } from '@context/ToastContext';
+import { doctorsApi, type Doctor, type DoctorInput } from '../../api/client';
+import { useAsync } from '../../hooks/useAsync';
+import { useDebounced } from '../../hooks/useDebounced';
+import { invalidateDoctors } from '../../hooks/useDoctors';
+import { errorText } from '../../lib/errors';
+import { showPhone } from '../../lib/format';
+import {
+  ActiveBadge,
+  Button,
+  Checkbox,
+  DataState,
+  ErrorBanner,
+  Field,
+  FilterBar,
+  FormGrid,
+  Input,
+  Modal,
+  Page,
+  PageHeader,
+  Table,
+  TableWrap,
+  Td,
+  Th,
+  Tr,
+} from '../../components/ui';
 
 export function DoctorList() {
-  const [data, setData] = useState<DoctorRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
+  const { data, loading, error, reload } = useAsync(() => doctorsApi.list(), []);
+  const [search, setSearch] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
+  const [editing, setEditing] = useState<Doctor | 'new' | null>(null);
+  const q = useDebounced(search.trim().toLowerCase(), 150);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try { setData(await doctorsApi.getAll()); }
-    catch { /* ignore */ }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  const rows = useMemo(
+    () =>
+      (data ?? [])
+        .filter((d) => showInactive || d.active)
+        .filter(
+          (d) =>
+            !q ||
+            d.fullName.toLowerCase().includes(q) ||
+            (d.specialty ?? '').toLowerCase().includes(q) ||
+            (d.phone ?? '').includes(q),
+        )
+        .sort((a, b) => a.fullName.localeCompare(b.fullName)),
+    [data, q, showInactive],
+  );
 
   return (
     <Page>
-      <Header>
-        <Title><Stethoscope size={22} /> Врачи</Title>
-        <Actions>
-          <Btn onClick={load}><RefreshCw size={14} /></Btn>
-          <Btn $variant="primary"><Plus size={14} /> Добавить врача</Btn>
-        </Actions>
-      </Header>
+      <PageHeader
+        icon={<Stethoscope />}
+        title={t('doctors.title')}
+        subtitle={t('catalog.syncHint')}
+        actions={
+          <>
+            <Button onClick={reload} aria-label={t('common.refresh')}>
+              <RefreshCw />
+            </Button>
+            <Button $variant="primary" onClick={() => setEditing('new')}>
+              <Plus />
+              {t('doctors.newDoctor')}
+            </Button>
+          </>
+        }
+      />
 
-      {loading ? (
-        <Empty>Загрузка...</Empty>
-      ) : data.length === 0 ? (
-        <Empty>Нет врачей</Empty>
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>ФИО</Th>
-              <Th>Специализация</Th>
-              <Th>Телефон</Th>
-              <Th>Лицензия</Th>
-              <Th>Статус</Th>
-              <Th></Th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((d) => (
-              <tr key={d.id}>
-                <Td>{d.fullName}</Td>
-                <Td>{d.specialty ?? '—'}</Td>
-                <Td>{d.phone ?? '—'}</Td>
-                <Td>{d.licenseNo ?? '—'}</Td>
-                <Td><ActiveBadge $active={d.active}>{d.active ? 'Активен' : 'Неактивен'}</ActiveBadge></Td>
-                <Td><Btn><Pencil size={14} /></Btn></Td>
+      <FilterBar>
+        <Field label={t('common.search')}>
+          <div style={{ position: 'relative' }}>
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('doctors.searchPlaceholder')} style={{ paddingLeft: 32 }} />
+            <Search size={16} style={{ position: 'absolute', left: 10, top: 11, opacity: 0.5 }} />
+          </div>
+        </Field>
+        <Checkbox label={t('common.showInactive')} checked={showInactive} onChange={setShowInactive} />
+      </FilterBar>
+
+      <TableWrap>
+        <DataState loading={loading && !data} error={error} onRetry={reload} empty={rows.length === 0} emptyText={t('doctors.noDoctors')}>
+          <Table>
+            <thead>
+              <tr>
+                <Th>{t('doctors.fullName')}</Th>
+                <Th>{t('doctors.specialty')}</Th>
+                <Th>{t('doctors.phone')}</Th>
+                <Th>{t('doctors.licenseNo')}</Th>
+                <Th>{t('common.status')}</Th>
+                <Th />
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {rows.map((d) => (
+                <Tr key={d.id} $dim={!d.active}>
+                  <Td>{d.fullName}</Td>
+                  <Td>{d.specialty || '—'}</Td>
+                  <Td $nowrap>{showPhone(d.phone)}</Td>
+                  <Td $muted>{d.licenseNo || '—'}</Td>
+                  <Td><ActiveBadge active={d.active} /></Td>
+                  <Td $right>
+                    <Button $small $variant="ghost" onClick={() => setEditing(d)} aria-label={t('common.edit')}>
+                      <Pencil />
+                    </Button>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        </DataState>
+      </TableWrap>
+
+      {editing && (
+        <DoctorForm
+          doctor={editing === 'new' ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            invalidateDoctors();
+            void reload();
+          }}
+        />
       )}
     </Page>
+  );
+}
+
+function DoctorForm({ doctor, onClose, onSaved }: { doctor: Doctor | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [fullName, setFullName] = useState(doctor?.fullName ?? '');
+  const [phone, setPhone] = useState(doctor?.phone ?? '');
+  const [specialty, setSpecialty] = useState(doctor?.specialty ?? '');
+  const [licenseNo, setLicenseNo] = useState(doctor?.licenseNo ?? '');
+  const [active, setActive] = useState(doctor?.active ?? true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const phoneNorm = phone.trim() ? normalizePhone(phone) : null;
+  const phoneBad = Boolean(phone.trim()) && !phoneNorm;
+  const valid = fullName.trim() && !phoneBad;
+
+  const save = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!valid) return;
+    setSaving(true);
+    setErr(null);
+    const body: DoctorInput = {
+      fullName: fullName.trim(),
+      phone: phoneNorm,
+      specialty: specialty.trim() || null,
+      licenseNo: licenseNo.trim() || null,
+      active,
+    };
+    try {
+      if (doctor) await doctorsApi.update(doctor.id, body);
+      else await doctorsApi.create(body);
+      toast.success(t('common.saved'));
+      onSaved();
+    } catch (ex) {
+      setErr(errorText(t, ex));
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={doctor ? t('doctors.editDoctor') : t('doctors.newDoctor')}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button $variant="primary" disabled={!valid || saving} onClick={() => save()}>
+            {saving ? t('common.saving') : t('common.save')}
+          </Button>
+        </>
+      }
+    >
+      <form onSubmit={save} style={{ display: 'contents' }}>
+        {err && <ErrorBanner>{err}</ErrorBanner>}
+        <Field label={t('doctors.fullName')}>
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={200} autoFocus required />
+        </Field>
+        <FormGrid>
+          <Field label={t('doctors.specialty')}>
+            <Input value={specialty} onChange={(e) => setSpecialty(e.target.value)} maxLength={200} />
+          </Field>
+          <Field label={t('doctors.phone')} error={phoneBad ? t('errors.invalid_phone') : null}>
+            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" />
+          </Field>
+          <Field label={t('doctors.licenseNo')}>
+            <Input value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} maxLength={100} />
+          </Field>
+        </FormGrid>
+        <Checkbox label={t('common.active')} checked={active} onChange={setActive} />
+        <button type="submit" hidden />
+      </form>
+    </Modal>
   );
 }

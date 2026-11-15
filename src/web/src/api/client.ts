@@ -1,219 +1,126 @@
-import axios from 'axios';
-import type { User, UserRole } from '@shared/types';
+import axios, { AxiosError } from 'axios';
+
+/**
+ * Typed client for the Dashboard section of `.claude/rules/server-api.md`.
+ * Every call is scoped by the clinic in the JWT; the web never sends a clinic id.
+ */
+
+export const AUTH_STORAGE_KEY = 'posclinic-web-auth';
 
 const baseURL = import.meta.env.VITE_API_URL ?? '/api';
 
-export const axiosInstance = axios.create({ baseURL });
+export const http = axios.create({ baseURL });
 
-axiosInstance.interceptors.request.use((config) => {
-  const raw = localStorage.getItem('posclinic-web-auth');
-  if (raw) {
-    try {
-      const token: string | undefined = JSON.parse(raw)?.state?.token;
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-    } catch { /* ignore */ }
+function storedToken(): string | null {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    return raw ? (JSON.parse(raw)?.state?.token ?? null) : null;
+  } catch {
+    return null;
   }
+}
+
+http.interceptors.request.use((config) => {
+  const token = storedToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('posclinic-web-auth');
-      window.location.href = '/web/login';
+/** Set by the auth store so a 401 clears the session without a circular import. */
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: () => void) {
+  onUnauthorized = fn;
+}
+
+/** Error whose `code` is the server's `server.errors.<code>` (or a generic one). */
+export class ApiError extends Error {
+  constructor(
+    public code: string,
+    public status?: number,
+    public details?: string[],
+  ) {
+    super(code);
+  }
+}
+
+http.interceptors.response.use(
+  (r) => r,
+  (error: AxiosError<{ message?: string | string[] }>) => {
+    const status = error.response?.status;
+    const isLogin = error.config?.url?.includes('/auth/login');
+    if (status === 401 && !isLogin) onUnauthorized?.();
+
+    const msg = error.response?.data?.message;
+    if (Array.isArray(msg)) return Promise.reject(new ApiError('validation', status, msg));
+    if (typeof msg === 'string' && msg.startsWith('server.errors.')) {
+      return Promise.reject(new ApiError(msg.slice('server.errors.'.length), status));
     }
-    return Promise.reject(
-      error instanceof Error
-        ? error
-        : new Error(error.response?.data?.message ?? String(error)),
-    );
+    if (!error.response) return Promise.reject(new ApiError('network'));
+    return Promise.reject(new ApiError('generic', status));
   },
 );
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ─── Shapes ──────────────────────────────────────────────────────────────────
 
-export interface CreateClinicData {
-  organizationName: string;
-  organizationNameUz?: string;
-  organizationNameRu?: string;
-  contactPhone?: string;
-  address?: string;
-  city?: string;
-  region?: string;
+export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST';
+export type AppointmentStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'REFUNDED';
+
+export interface Paged<T> {
+  items: T[];
+  total: number;
 }
 
-export const auth = {
-  login: async (email: string, password: string, clinicId?: string) => {
-    const body: Record<string, string> = { email, password };
-    if (clinicId) body.clinicId = clinicId;
-    const { data } = await axiosInstance.post('/auth/login', body);
-    return data as { token: string; user: User };
-  },
+export interface AuthUser {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  role: StaffRole;
+}
 
-  // ── OTP registration flow ──────────────────────────────────────────────────
-  requestOtp: async (email: string) => {
-    const { data } = await axiosInstance.post('/auth/request-otp', { email });
-    return data as { success: boolean; message: string };
-  },
-  verifyOtp: async (email: string, code: string) => {
-    const { data } = await axiosInstance.post('/auth/verify-otp', { email, code });
-    return data as { success: boolean; isNewUser: boolean; registrationToken?: string };
-  },
-  setPassword: async (registrationToken: string, password: string, firstName: string, lastName: string) => {
-    const { data } = await axiosInstance.post('/auth/set-password', { registrationToken, password, firstName, lastName });
-    return data as { setupToken: string };
-  },
-  createClinic: async (setupToken: string, clinicData: CreateClinicData) => {
-    const { data } = await axiosInstance.post('/auth/create-clinic', { setupToken, ...clinicData });
-    return data as { token: string; clinicCode: string; tenant: { id: string; organizationName: string; clinicCode: string }; user: User };
-  },
+export interface ClinicInfo {
+  id: string;
+  name: string;
+  plan: string | null;
+  expiresAt: string | null;
+}
 
-  logout: async () => {
-    try { await axiosInstance.post('/auth/logout'); } catch { /* ignore */ }
-  },
-  getProfile: async (): Promise<User> => {
-    const { data } = await axiosInstance.get('/auth/profile');
-    return data;
-  },
-  changePassword: async (currentPassword: string, newPassword: string) => {
-    const { data } = await axiosInstance.post('/auth/change-password', { currentPassword, newPassword });
-    return data;
-  },
-};
+export interface Terminal {
+  terminalId: string;
+  lastSyncAt: string | null;
+  appVersion: string | null;
+}
 
-// ─── Patients ─────────────────────────────────────────────────────────────────
+export interface ClinicDetails extends ClinicInfo {
+  lastSyncAt: string | null;
+  terminals: Terminal[];
+}
 
-export interface PatientRecord {
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+  clinic: ClinicInfo;
+}
+
+export interface Patient {
   id: string;
   patientCode: string;
   fullName: string;
   phone: string;
-  birthDate?: string | null;
-  gender?: 'MALE' | 'FEMALE' | null;
-  bloodType?: string | null;
-  allergies?: string | null;
-  address?: string | null;
-  city?: string | null;
-  notes?: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  bloodType: string | null;
+  allergies: string | null;
+  address: string | null;
+  city: string | null;
+  notes: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export const patients = {
-  getAll: async (filters?: Record<string, unknown>): Promise<PatientRecord[]> => {
-    const { data } = await axiosInstance.get('/patients', { params: filters });
-    return data;
-  },
-  getById: async (id: string): Promise<PatientRecord> => {
-    const { data } = await axiosInstance.get(`/patients/${id}`);
-    return data;
-  },
-  create: async (payload: Partial<PatientRecord>): Promise<PatientRecord> => {
-    const { data } = await axiosInstance.post('/patients', payload);
-    return data;
-  },
-  update: async (id: string, payload: Partial<PatientRecord>): Promise<PatientRecord> => {
-    const { data } = await axiosInstance.patch(`/patients/${id}`, payload);
-    return data;
-  },
-  deactivate: async (id: string): Promise<PatientRecord> => {
-    const { data } = await axiosInstance.patch(`/patients/${id}`, { active: false });
-    return data;
-  },
-};
-
-// ─── Doctors ──────────────────────────────────────────────────────────────────
-
-export interface DoctorRecord {
-  id: string;
-  fullName: string;
-  phone?: string | null;
-  specialty?: string | null;
-  licenseNo?: string | null;
-  active: boolean;
-  clinicId: string;
-  createdAt: string;
-}
-
-export const doctors = {
-  getAll: async (): Promise<DoctorRecord[]> => {
-    const { data } = await axiosInstance.get('/doctors');
-    return data;
-  },
-  getById: async (id: string): Promise<DoctorRecord> => {
-    const { data } = await axiosInstance.get(`/doctors/${id}`);
-    return data;
-  },
-  create: async (payload: Partial<DoctorRecord>): Promise<DoctorRecord> => {
-    const { data } = await axiosInstance.post('/doctors', payload);
-    return data;
-  },
-  update: async (id: string, payload: Partial<DoctorRecord>): Promise<DoctorRecord> => {
-    const { data } = await axiosInstance.patch(`/doctors/${id}`, payload);
-    return data;
-  },
-};
-
-// ─── Services ─────────────────────────────────────────────────────────────────
-
-export interface ServiceRecord {
-  id: string;
-  code: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  duration: number;
-  active: boolean;
-  clinicId: string;
-  createdAt: string;
-}
-
-export const services = {
-  getAll: async (): Promise<ServiceRecord[]> => {
-    const { data } = await axiosInstance.get('/services');
-    return data;
-  },
-  getById: async (id: string): Promise<ServiceRecord> => {
-    const { data } = await axiosInstance.get(`/services/${id}`);
-    return data;
-  },
-  create: async (payload: Partial<ServiceRecord>): Promise<ServiceRecord> => {
-    const { data } = await axiosInstance.post('/services', payload);
-    return data;
-  },
-  update: async (id: string, payload: Partial<ServiceRecord>): Promise<ServiceRecord> => {
-    const { data } = await axiosInstance.patch(`/services/${id}`, payload);
-    return data;
-  },
-};
-
-// ─── Appointments ─────────────────────────────────────────────────────────────
-
-export interface AppointmentRecord {
-  id: string;
-  appointmentNumber: string;
-  clinicId: string;
-  patientId: string;
-  doctorId: string;
-  appointmentDate: string;
-  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
-  totalAmount: number;
-  paidAmount: number;
-  paymentStatus: 'PENDING' | 'PARTIAL' | 'PAID' | 'REFUNDED';
-  paymentMethod?: string | null;
-  diagnosis?: string | null;
-  prescription?: string | null;
-  notes?: string | null;
-  synced: boolean;
-  createdAt: string;
-  patient?: { id: string; fullName: string; phone: string; patientCode: string };
-  doctor?: { id: string; fullName: string; specialty?: string | null };
-  items?: AppointmentItemRecord[];
-}
-
-export interface AppointmentItemRecord {
+export interface AppointmentItem {
   id: string;
   serviceId: string;
   serviceName: string;
@@ -222,157 +129,204 @@ export interface AppointmentItemRecord {
   total: number;
 }
 
-export const appointments = {
-  getAll: async (filters?: Record<string, unknown>): Promise<AppointmentRecord[]> => {
-    const { data } = await axiosInstance.get('/appointments', { params: filters });
-    return data;
-  },
-  getById: async (id: string): Promise<AppointmentRecord> => {
-    const { data } = await axiosInstance.get(`/appointments/${id}`);
-    return data;
-  },
-  create: async (payload: Partial<AppointmentRecord>): Promise<AppointmentRecord> => {
-    const { data } = await axiosInstance.post('/appointments', payload);
-    return data;
-  },
-  update: async (id: string, payload: Partial<AppointmentRecord>): Promise<AppointmentRecord> => {
-    const { data } = await axiosInstance.patch(`/appointments/${id}`, payload);
-    return data;
-  },
-  getTodaySummary: async () => {
-    const { data } = await axiosInstance.get('/appointments/today/summary');
-    return data as { total: number; completed: number; pending: number; revenue: number };
-  },
-};
-
-// ─── Users ────────────────────────────────────────────────────────────────────
-
-export interface UserRecord {
+export interface Appointment {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string | null;
-  role: UserRole;
-  isActive: boolean;
-  tenantId: string;
-  clinicId?: string | null;
+  appointmentNumber: string;
+  patientId: string;
+  doctorId: string;
+  appointmentDate: string;
+  status: AppointmentStatus;
+  totalAmount: number;
+  paidAmount: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod: string | null;
+  diagnosis: string | null;
+  prescription: string | null;
+  notes: string | null;
+  terminalId: string | null;
   createdAt: string;
+  updatedAt: string;
+  items: AppointmentItem[];
+  /** Not in the row shape of the contract; shown when the server joins them in. */
+  patient?: { id: string; fullName: string; patientCode?: string; phone?: string } | null;
+  doctor?: { id: string; fullName: string } | null;
 }
 
-export const users = {
-  getAll: async (): Promise<UserRecord[]> => {
-    const { data } = await axiosInstance.get('/users');
-    return data;
-  },
-  getById: async (id: string): Promise<UserRecord> => {
-    const { data } = await axiosInstance.get(`/users/${id}`);
-    return data;
-  },
-  create: async (payload: Partial<UserRecord> & { password: string }): Promise<UserRecord> => {
-    const { data } = await axiosInstance.post('/users', payload);
-    return data;
-  },
-  update: async (id: string, payload: Partial<UserRecord>): Promise<UserRecord> => {
-    const { data } = await axiosInstance.patch(`/users/${id}`, payload);
-    return data;
-  },
-  delete: async (id: string) => {
-    const { data } = await axiosInstance.delete(`/users/${id}`);
-    return data;
-  },
-};
+export interface PatientDetails extends Patient {
+  visits: Appointment[];
+}
 
-// ─── Settings ─────────────────────────────────────────────────────────────────
-
-export const settings = {
-  getAll: async (): Promise<Record<string, string>> => {
-    const { data } = await axiosInstance.get('/settings');
-    return data;
-  },
-  set: async (key: string, value: string) => {
-    const { data } = await axiosInstance.put(`/settings/${key}`, { value });
-    return data;
-  },
-};
-
-// ─── Clinics (Super Admin) ────────────────────────────────────────────────────
-
-export interface ClinicRecord {
+export interface Doctor {
   id: string;
-  name: string;
-  type: string;
-  address?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  licenseNo?: string | null;
+  fullName: string;
+  phone: string | null;
+  specialty: string | null;
+  licenseNo: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
-  _count?: { users: number; patients: number; appointments: number };
 }
 
-export const clinics = {
-  getAll: async (): Promise<ClinicRecord[]> => {
-    const { data } = await axiosInstance.get('/clinics');
-    return data;
-  },
-  getById: async (id: string): Promise<ClinicRecord> => {
-    const { data } = await axiosInstance.get(`/clinics/${id}`);
-    return data;
-  },
-  create: async (payload: Partial<ClinicRecord>): Promise<ClinicRecord> => {
-    const { data } = await axiosInstance.post('/clinics', payload);
-    return data;
-  },
-  update: async (id: string, payload: Partial<ClinicRecord>): Promise<ClinicRecord> => {
-    const { data } = await axiosInstance.patch(`/clinics/${id}`, payload);
-    return data;
-  },
-  activate: async (id: string) => axiosInstance.put(`/clinics/${id}/activate`),
-  deactivate: async (id: string) => axiosInstance.put(`/clinics/${id}/deactivate`),
-};
+export interface Service {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  price: number;
+  duration: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-// ─── Audit Logs ───────────────────────────────────────────────────────────────
+export interface StaffUser {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  role: StaffRole;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RankRow {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+export interface DashboardSummary {
+  visits: number;
+  completed: number;
+  cancelled: number;
+  revenue: number;
+  debt: number;
+  newPatients: number;
+  topServices: RankRow[];
+  topDoctors: RankRow[];
+}
+
+export interface ReportBreakdownRow {
+  name: string;
+  count?: number;
+  visits?: number;
+  revenue: number;
+  paid?: number;
+  debt?: number;
+}
+
+export interface ReportDayRow {
+  date: string;
+  visits: number;
+  revenue: number;
+  paid?: number;
+  debt?: number;
+}
+
+export interface Report {
+  totals: { visits: number; revenue: number; paid: number; debt: number };
+  byDoctor: ReportBreakdownRow[];
+  byService: ReportBreakdownRow[];
+  byDay?: ReportDayRow[];
+}
 
 export interface AuditLogEntry {
   id: string;
-  clinicId: string;
-  clinic?: { name: string };
-  userId: string;
-  user?: { fullName: string; phone: string };
   action: string;
   entity: string;
   entityId: string;
-  details?: string | null;
+  details: string | null;
   createdAt: string;
+  userId?: string;
+  user?: { id: string; fullName: string } | null;
+  userName?: string | null;
 }
 
-export interface AuditLogsResponse {
-  items: AuditLogEntry[];
-  total: number;
-  page: number;
-  limit: number;
-  pages: number;
-}
+// ─── Endpoints ───────────────────────────────────────────────────────────────
 
-export const auditLogs = {
-  getAll: async (params?: Record<string, unknown>): Promise<AuditLogsResponse> => {
-    const { data } = await axiosInstance.get('/logs/audit', { params });
-    return data;
-  },
+const get = async <T>(url: string, params?: Record<string, unknown>) =>
+  (await http.get<T>(url, { params: clean(params) })).data;
+const post = async <T>(url: string, body?: unknown) => (await http.post<T>(url, body)).data;
+const put = async <T>(url: string, body?: unknown) => (await http.put<T>(url, body)).data;
+
+/** Catalog lists: the contract does not fix array vs `{ items }`, so accept both. */
+const list = async <T>(url: string) => {
+  const data = await get<T[] | Paged<T>>(url);
+  return Array.isArray(data) ? data : (data?.items ?? []);
 };
 
-// ─── Combined export ──────────────────────────────────────────────────────────
+/** Drop empty query params so the server sees "no filter", not `status=`. */
+function clean(params?: Record<string, unknown>) {
+  if (!params) return undefined;
+  return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+}
 
-export const api = {
-  auth,
-  patients,
-  doctors,
-  services,
-  appointments,
-  users,
-  settings,
-  clinics,
-  auditLogs,
+export const authApi = {
+  login: (phone: string, password: string) => post<LoginResponse>('/auth/login', { phone, password }),
+  profile: () => get<AuthUser>('/auth/profile'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    put<unknown>('/auth/change-password', { currentPassword, newPassword }),
+};
+
+export const clinicApi = {
+  get: () => get<ClinicDetails>('/clinic'),
+};
+
+export const dashboardApi = {
+  summary: (date: string) => get<DashboardSummary>('/dashboard/summary', { date }),
+};
+
+export const patientsApi = {
+  list: (q: { search?: string; page?: number; pageSize?: number }) => get<Paged<Patient>>('/patients', q),
+  get: (id: string) => get<PatientDetails>(`/patients/${encodeURIComponent(id)}`),
+};
+
+export interface AppointmentQuery {
+  from?: string;
+  to?: string;
+  status?: string;
+  doctorId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export const appointmentsApi = {
+  list: (q: AppointmentQuery) => get<Paged<Appointment>>('/appointments', { ...q }),
+  get: (id: string) => get<Appointment>(`/appointments/${encodeURIComponent(id)}`),
+};
+
+export const reportsApi = {
+  daily: (date: string) => get<Report>('/reports/daily', { date }),
+  monthly: (month: string) => get<Report>('/reports/monthly', { month }),
+};
+
+export type ServiceInput = Pick<Service, 'code' | 'name' | 'price' | 'duration' | 'active'> & {
+  description?: string | null;
+};
+export const servicesApi = {
+  list: () => list<Service>('/services'),
+  create: (body: ServiceInput) => post<Service>('/services', body),
+  update: (id: string, body: Partial<ServiceInput>) => put<Service>(`/services/${encodeURIComponent(id)}`, body),
+};
+
+export type DoctorInput = Pick<Doctor, 'fullName' | 'phone' | 'specialty' | 'licenseNo' | 'active'>;
+export const doctorsApi = {
+  list: () => list<Doctor>('/doctors'),
+  create: (body: DoctorInput) => post<Doctor>('/doctors', body),
+  update: (id: string, body: Partial<DoctorInput>) => put<Doctor>(`/doctors/${encodeURIComponent(id)}`, body),
+};
+
+export type UserInput = Pick<StaffUser, 'fullName' | 'phone' | 'email' | 'role' | 'active'> & { password?: string };
+export const usersApi = {
+  list: () => list<StaffUser>('/users'),
+  create: (body: UserInput & { password: string }) => post<StaffUser>('/users', body),
+  update: (id: string, body: Partial<Omit<UserInput, 'password'>>) =>
+    put<StaffUser>(`/users/${encodeURIComponent(id)}`, body),
+  resetPassword: (id: string, newPassword: string) =>
+    post<unknown>(`/users/${encodeURIComponent(id)}/reset-password`, { newPassword }),
+};
+
+export const auditApi = {
+  list: (page: number, pageSize = 50) => get<Paged<AuditLogEntry>>('/audit-logs', { page, pageSize }),
 };

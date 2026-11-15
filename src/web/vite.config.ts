@@ -18,7 +18,6 @@ export default defineConfig({
       '@components/common': path.resolve(__dirname, '../../src/renderer/components/common'),
       '@theme': path.resolve(__dirname, '../../src/renderer/theme'),
       '@context': path.resolve(__dirname, '../../src/renderer/context'),
-      '@i18n': path.resolve(__dirname, '../../src/renderer/i18n'),
     },
   },
   server: {

@@ -1,183 +1,119 @@
-import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
-import { RefreshCw, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-import { appointments as appointmentsApi, type AppointmentRecord } from '../../api/client';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { CalendarDays, RefreshCw } from 'lucide-react';
+import { appointmentsApi, type Appointment, type AppointmentStatus } from '../../api/client';
+import { useAsync } from '../../hooks/useAsync';
+import { useDoctors } from '../../hooks/useDoctors';
+import { dayEndIso, dayStartIso, localDay } from '../../lib/format';
+import {
+  Button,
+  DataState,
+  Field,
+  FilterBar,
+  Input,
+  Page,
+  PageHeader,
+  Pagination,
+  Select,
+  TableWrap,
+} from '../../components/ui';
+import { VisitsTable } from './VisitsTable';
+import { AppointmentDetailsModal } from './AppointmentDetailsModal';
 
-const Page = styled.div``;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const Title = styled.h1`
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const Actions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const DateInput = styled.input`
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.85rem;
-`;
-
-const IconBtn = styled.button`
-  padding: ${({ theme }) => theme.spacing.sm};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-
-  &:hover { color: ${({ theme }) => theme.colors.primary}; }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  overflow: hidden;
-`;
-
-const Th = styled.th`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const Td = styled.td`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.text};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const StatusBadge = styled.span<{ $status: string }>`
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'COMPLETED': return theme.colors.success + '20';
-      case 'SCHEDULED': return theme.colors.info + '20';
-      case 'CANCELLED': return theme.colors.error + '20';
-      default: return theme.colors.warning + '20';
-    }
-  }};
-  color: ${({ $status, theme }) => {
-    switch ($status) {
-      case 'COMPLETED': return theme.colors.success;
-      case 'SCHEDULED': return theme.colors.info;
-      case 'CANCELLED': return theme.colors.error;
-      default: return theme.colors.warning;
-    }
-  }};
-`;
-
-const STATUS_LABELS: Record<string, string> = {
-  SCHEDULED: 'Запланирован',
-  COMPLETED: 'Завершён',
-  CANCELLED: 'Отменён',
-  NO_SHOW: 'Не явился',
-};
-
-const Empty = styled.div`
-  text-align: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
+const PAGE_SIZE = 25;
+const STATUSES: AppointmentStatus[] = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 
 export function AppointmentList() {
-  const [data, setData] = useState<AppointmentRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const { t } = useTranslation();
+  const doctors = useDoctors();
+  const [from, setFrom] = useState(localDay());
+  const [to, setTo] = useState(localDay());
+  const [status, setStatus] = useState('');
+  const [doctorId, setDoctorId] = useState('');
+  const [page, setPage] = useState(1);
+  const [open, setOpen] = useState<Appointment | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await appointmentsApi.getAll({ date });
-      setData(result);
-    } catch {
-      /* ignore */
-    } finally {
-      setLoading(false);
-    }
-  }, [date]);
+  useEffect(() => setPage(1), [from, to, status, doctorId]);
 
-  useEffect(() => { load(); }, [load]);
+  const { data, loading, error, reload } = useAsync(
+    () =>
+      appointmentsApi.list({
+        from: from ? dayStartIso(from) : undefined,
+        to: to ? dayEndIso(to) : undefined,
+        status,
+        doctorId,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
+    [from, to, status, doctorId, page],
+  );
+
+  const reset = () => {
+    setFrom(localDay());
+    setTo(localDay());
+    setStatus('');
+    setDoctorId('');
+  };
 
   return (
     <Page>
-      <Header>
-        <Title><Calendar size={22} /> Приёмы</Title>
-        <Actions>
-          <DateInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <IconBtn onClick={load} title="Обновить"><RefreshCw size={16} /></IconBtn>
-        </Actions>
-      </Header>
+      <PageHeader
+        icon={<CalendarDays />}
+        title={t('appointments.title')}
+        subtitle={data ? t('common.totalCount', { count: data.total }) : undefined}
+        actions={
+          <Button onClick={reload} aria-label={t('common.refresh')}>
+            <RefreshCw />
+          </Button>
+        }
+      />
 
-      {loading ? (
-        <Empty>Загрузка...</Empty>
-      ) : data.length === 0 ? (
-        <Empty>Нет приёмов за выбранный день</Empty>
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>№</Th>
-              <Th>Пациент</Th>
-              <Th>Врач</Th>
-              <Th>Время</Th>
-              <Th>Статус</Th>
-              <Th>Сумма</Th>
-              <Th>Оплата</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((a) => (
-              <tr key={a.id}>
-                <Td>{a.appointmentNumber}</Td>
-                <Td>{a.patient?.fullName ?? '—'}</Td>
-                <Td>{a.doctor?.fullName ?? '—'}</Td>
-                <Td>{format(new Date(a.appointmentDate), 'HH:mm')}</Td>
-                <Td><StatusBadge $status={a.status}>{STATUS_LABELS[a.status] ?? a.status}</StatusBadge></Td>
-                <Td>{a.totalAmount.toLocaleString()} сум</Td>
-                <Td>{a.paidAmount.toLocaleString()} сум</Td>
-              </tr>
+      <FilterBar>
+        <Field label={t('common.from')}>
+          <Input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+        </Field>
+        <Field label={t('common.to')}>
+          <Input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+        </Field>
+        <Field label={t('appointments.status')}>
+          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">{t('common.all')}</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {t(`appointments.statuses.${s}`)}
+              </option>
             ))}
-          </tbody>
-        </Table>
-      )}
+          </Select>
+        </Field>
+        <Field label={t('appointments.doctor')}>
+          <Select value={doctorId} onChange={(e) => setDoctorId(e.target.value)}>
+            <option value="">{t('common.all')}</option>
+            {doctors.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.fullName}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Button $variant="ghost" onClick={reset}>
+          {t('common.reset')}
+        </Button>
+      </FilterBar>
+
+      <TableWrap>
+        <DataState
+          loading={loading && !data}
+          error={error}
+          onRetry={reload}
+          empty={data?.items.length === 0}
+          emptyText={t('appointments.noAppointments')}
+        >
+          {data && <VisitsTable rows={data.items} onOpen={setOpen} />}
+          {data && <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} />}
+        </DataState>
+      </TableWrap>
+
+      {open && <AppointmentDetailsModal id={open.id} initial={open} onClose={() => setOpen(null)} />}
     </Page>
   );
 }

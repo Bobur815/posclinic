@@ -21,8 +21,7 @@
       "@renderer/*": ["../../src/renderer/*"],
       "@components/common/*": ["../../src/renderer/components/common/*"],
       "@theme/*": ["../../src/renderer/theme/*"],
-      "@context/*": ["../../src/renderer/context/*"],
-      "@i18n/*": ["../../src/renderer/i18n/*"]
+      "@context/*": ["../../src/renderer/context/*"]
     }
   },
   "include": [
@@ -30,7 +29,7 @@
     "../../src/renderer/components/common/**/*",
     "../../src/renderer/theme/**/*",
     "../../src/renderer/context/**/*",
-    "../../src/renderer/i18n/**/*",
     "../../src/shared/**/*"
-  ]
+  ],
+  "exclude": ["../../src/**/*.test.ts", "../../src/**/*.test.tsx"]
 }
