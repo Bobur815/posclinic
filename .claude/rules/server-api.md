@@ -96,4 +96,6 @@ As implemented:
   - `GET/POST /api/users`, `PUT /api/users/:id`, `POST /api/users/:id/reset-password { newPassword }`.
     - Phone is unique per clinic; the server stores the bcrypt hash only.
     - An admin cannot deactivate or demote themself.
-- `GET /api/audit-logs?page=` returns `{ items, total }`.
+- `GET /api/audit-logs?page=&pageSize=` returns `{ items, total }`.
+  - Item: `{ id, userId, userName, action, entity, entityId, details, createdAt }`.
+  - `details` is a JSON **object or null**, never a string: `{ fields: string[] }` for an update, `{ role }` for a new user. It holds ids and field names only, never patient data. Clients must format it, not render it raw.

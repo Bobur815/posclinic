@@ -288,6 +288,22 @@
       "service": "Услуга",
       "doctor": "Врач",
       "user": "Сотрудник"
+    },
+    "changed": "Изменено",
+    "role": "Роль",
+    "fields": {
+      "price": "Цена",
+      "name": "Название",
+      "code": "Код",
+      "duration": "Длительность",
+      "description": "Описание",
+      "active": "Активность",
+      "fullName": "Ф.И.О.",
+      "phone": "Телефон",
+      "email": "Email",
+      "role": "Роль",
+      "specialty": "Специальность",
+      "licenseNo": "Номер лицензии"
     }
   },
   "settings": {

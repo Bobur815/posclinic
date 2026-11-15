@@ -288,6 +288,22 @@
       "service": "Xizmat",
       "doctor": "Shifokor",
       "user": "Xodim"
+    },
+    "changed": "O'zgargan",
+    "role": "Rol",
+    "fields": {
+      "price": "Narx",
+      "name": "Nomi",
+      "code": "Kod",
+      "duration": "Davomiyligi",
+      "description": "Tavsif",
+      "active": "Faollik",
+      "fullName": "F.I.Sh.",
+      "phone": "Telefon",
+      "email": "Email",
+      "role": "Rol",
+      "specialty": "Mutaxassislik",
+      "licenseNo": "Litsenziya raqami"
     }
   },
   "settings": {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollText, RefreshCw } from 'lucide-react';
 import { auditApi } from '../../api/client';
 import { useAsync } from '../../hooks/useAsync';
+import { formatAuditDetails } from '../../lib/audit';
 import { formatDateTime } from '../../lib/format';
 import {
   Badge,
@@ -70,7 +71,7 @@ export function AuditLogPage() {
                     </div>
                   </Td>
                   <Td $muted style={{ maxWidth: 420, wordBreak: 'break-word', fontSize: 12 }}>
-                    {l.details ?? '—'}
+                    {formatAuditDetails(l.details, t)}
                   </Td>
                 </Tr>
               ))}

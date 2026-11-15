@@ -236,7 +236,8 @@ export interface AuditLogEntry {
   action: string;
   entity: string;
   entityId: string;
-  details: string | null;
+  /** Ids / field names only, never patient data: `{ fields: string[] }`, `{ role }`, ... */
+  details: Record<string, unknown> | string | null;
   createdAt: string;
   userId?: string;
   user?: { id: string; fullName: string } | null;
