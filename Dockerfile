@@ -39,8 +39,10 @@ RUN chmod +x /docker-entrypoint.sh
 ENV PORT=3012
 EXPOSE 3012
 
+# 127.0.0.1, not localhost: in Alpine `localhost` resolves to [::1] first, and the server listens
+# on IPv4 0.0.0.0, so a localhost probe is refused and the container never turns healthy.
 HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=6 \
-  CMD wget --no-verbose --tries=1 --spider "http://localhost:${PORT}/api/health" || exit 1
+  CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:${PORT}/api/health" || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", "dist/server/main.js"]
