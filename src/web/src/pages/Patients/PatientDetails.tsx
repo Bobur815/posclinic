@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ArrowLeft, User } from 'lucide-react';
-import { patientsApi, type Appointment } from '../../api/client';
+import { patientsApi, type AnalysisResult, type Appointment, type Vitals } from '../../api/client';
 import { useAsync } from '../../hooks/useAsync';
 import { formatDate, formatMoney, formatNumber, showPhone } from '../../lib/format';
 import {
@@ -19,6 +20,28 @@ import {
 } from '../../components/ui';
 import { VisitsTable } from '../Appointments/VisitsTable';
 import { AppointmentDetailsModal } from '../Appointments/AppointmentDetailsModal';
+
+type T = TFunction;
+
+/** "172 cm · 68.5 kg · 36.7 °C · 120/80" (the parts that exist). */
+function vitalsText(v: Vitals | null | undefined, t: T): string {
+  if (!v) return '—';
+  const parts: string[] = [];
+  if (v.heightCm) parts.push(`${v.heightCm} ${t('patients.cm')}`);
+  if (v.weightKg) parts.push(`${v.weightKg} ${t('patients.kg')}`);
+  if (v.temperature) parts.push(`${v.temperature} °C`);
+  if (v.bpSystolic && v.bpDiastolic) parts.push(`${v.bpSystolic}/${v.bpDiastolic}`);
+  return parts.length ? `${parts.join(' · ')} (${formatDate(v.recordedAt)})` : '—';
+}
+
+function resultText(r: AnalysisResult, t: T): string {
+  const parts: string[] = [];
+  if (r.outcome) parts.push(t(`patients.outcome.${r.outcome}`, r.outcome));
+  if (r.value !== null) parts.push(`${r.value}${r.unit ? ` ${r.unit}` : ''}`);
+  if (r.finding) parts.push(r.finding);
+  if (r.comment) parts.push(r.comment);
+  return parts.join(' · ') || (r.enteredAt ? '—' : t('patients.sampleWaiting'));
+}
 
 export function PatientDetails() {
   const { t } = useTranslation();
@@ -65,6 +88,8 @@ export function PatientDetails() {
                   { label: t('patients.gender'), value: p.gender ? t(`patients.genders.${p.gender}`, p.gender) : '—' },
                   { label: t('patients.bloodType'), value: p.bloodType || '—' },
                   { label: t('patients.allergies'), value: p.allergies || '—' },
+                  { label: t('patients.chronicConditions'), value: p.chronicConditions || '—' },
+                  { label: t('patients.latestVitals'), value: vitalsText(p.latestVitals, t) },
                   { label: t('patients.city'), value: p.city || '—' },
                   { label: t('patients.address'), value: p.address || '—' },
                   { label: t('patients.registered'), value: formatDate(p.createdAt) },
@@ -80,6 +105,32 @@ export function PatientDetails() {
               <StatCard label={t('reports.paid')} value={formatMoney(totals.paid)} tone="info" />
               <StatCard label={t('reports.debt')} value={formatMoney(totals.debt)} tone="warning" />
             </Grid>
+
+            {(p.cases?.length ?? 0) > 0 && (
+              <Card>
+                <CardTitle>{t('patients.cases')}</CardTitle>
+                {p.cases!.map((c) => {
+                  const results = (p.results ?? []).filter((r) => r.caseId === c.id);
+                  return (
+                    <div key={c.id} style={{ padding: '8px 0', borderTop: '1px solid var(--border, #e5e7eb)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                        <strong>
+                          {c.caseNumber} · {formatDate(c.openedAt)}
+                        </strong>
+                        <span>{t(`patients.caseStatus.${c.status}`, c.status)}</span>
+                      </div>
+                      {c.diagnosis && <div>{c.diagnosis}</div>}
+                      {results.map((r) => (
+                        <div key={r.id} style={{ fontSize: 13, opacity: 0.85 }}>
+                          {r.serviceName ?? '—'}: {resultText(r, t)}
+                          {r.confirmedAt ? '' : ` (${t('patients.notConfirmed')})`}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </Card>
+            )}
 
             <Card style={{ padding: 0 }}>
               <div style={{ padding: 16, paddingBottom: 0 }}>

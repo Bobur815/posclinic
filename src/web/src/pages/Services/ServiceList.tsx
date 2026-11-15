@@ -20,6 +20,7 @@ import {
   Modal,
   Page,
   PageHeader,
+  Select,
   Table,
   TableWrap,
   Td,
@@ -28,7 +29,17 @@ import {
   Tr,
 } from '../../components/ui';
 
-const EMPTY: ServiceInput = { code: '', name: '', description: '', price: 0, duration: 30, active: true };
+const EMPTY: ServiceInput = {
+  code: '',
+  name: '',
+  description: '',
+  price: 0,
+  duration: 30,
+  kind: 'PROCEDURE',
+  isFollowUp: false,
+  resultType: null,
+  active: true,
+};
 
 export function ServiceList() {
   const { t } = useTranslation();
@@ -131,7 +142,17 @@ function ServiceForm({ service, onClose, onSaved }: { service: Service | null; o
   const toast = useToast();
   const [form, setForm] = useState<ServiceInput>(
     service
-      ? { code: service.code, name: service.name, description: service.description ?? '', price: service.price, duration: service.duration, active: service.active }
+      ? {
+          code: service.code,
+          name: service.name,
+          description: service.description ?? '',
+          price: service.price,
+          duration: service.duration,
+          kind: service.kind ?? 'PROCEDURE',
+          isFollowUp: service.isFollowUp ?? false,
+          resultType: service.resultType ?? null,
+          active: service.active,
+        }
       : EMPTY,
   );
   const [saving, setSaving] = useState(false);
@@ -193,6 +214,41 @@ function ServiceForm({ service, onClose, onSaved }: { service: Service | null; o
             <Input type="number" min={1} step={5} value={form.duration} onChange={(e) => set('duration', Number(e.target.value))} required />
           </Field>
         </FormGrid>
+        <FormGrid>
+          <Field label={t('services.kind')}>
+            <Select
+              value={form.kind ?? 'PROCEDURE'}
+              onChange={(e) => set('kind', e.target.value as ServiceInput['kind'])}
+            >
+              {(['CONSULTATION', 'ANALYSIS', 'PROCEDURE'] as const).map((k) => (
+                <option key={k} value={k}>
+                  {t(`services.kinds.${k}`)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {form.kind === 'ANALYSIS' && (
+            <Field label={t('services.resultType')}>
+              <Select
+                value={form.resultType ?? 'QUALITATIVE'}
+                onChange={(e) => set('resultType', e.target.value as ServiceInput['resultType'])}
+              >
+                {(['QUALITATIVE', 'QUANTITATIVE', 'TEXT'] as const).map((r) => (
+                  <option key={r} value={r}>
+                    {t(`services.resultTypes.${r}`)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+        </FormGrid>
+        {form.kind === 'CONSULTATION' && (
+          <Checkbox
+            label={t('services.followUp')}
+            checked={form.isFollowUp === true}
+            onChange={(v) => set('isFollowUp', v)}
+          />
+        )}
         <Field label={t('services.description')}>
           <Textarea value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} maxLength={1000} />
         </Field>

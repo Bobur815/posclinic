@@ -3,7 +3,8 @@
  * No Electron here: the database and the transport are passed in, so tests run it against a real
  * SQLite file and a fake server.
  *
- * Up: every row of users, doctors, services, patients, appointments changed since the entity's
+ * Up: every row of users, doctors, services, patients, cases, referrals, appointments (with their
+ *     lines and course sessions), vitals and results changed since the entity's
  *     push cursor, oldest first, 200 at a time. The cursor is `<updatedAt ISO>|<id>` of the last
  *     row sent, so rows sharing one timestamp are neither skipped nor sent forever.
  * Down: doctors, services, users the web dashboard changed since the last pull's `serverTime`.
@@ -13,7 +14,18 @@
 
 export const BATCH = 200;
 
-export const PUSH_ORDER = ['users', 'doctors', 'services', 'patients', 'appointments'] as const;
+/** What a row points at goes first (the server's apply order, server-api.md). */
+export const PUSH_ORDER = [
+  'users',
+  'doctors',
+  'services',
+  'patients',
+  'cases',
+  'referrals',
+  'appointments',
+  'vitals',
+  'results',
+] as const;
 export type PushEntity = (typeof PUSH_ORDER)[number];
 export const PULL_ENTITIES = ['users', 'doctors', 'services'] as const;
 type PullEntity = (typeof PULL_ENTITIES)[number];
@@ -32,6 +44,14 @@ export interface SyncDb {
   patient: any;
   // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
   appointment: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  clinicalCase: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  referral: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  patientVitals: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  analysisResult: any;
   // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
   syncState: any;
 }
@@ -125,16 +145,34 @@ export function toWire(entity: PushEntity, row: Record<string, unknown>): Record
       return dates({
         ...rest,
         totalAmount: Number(rest.totalAmount),
+        discountAmount: Number(rest.discountAmount ?? 0),
         paidAmount: Number(rest.paidAmount),
-        items: list.map(({ appointmentId: _a, ...item }) => ({
-          ...item,
-          unitPrice: Number(item.unitPrice),
-          total: Number(item.total),
-        })),
+        items: list.map(({ appointmentId: _a, sessions, ...item }) =>
+          dates({
+            ...item,
+            unitPrice: Number(item.unitPrice),
+            discount: Number(item.discount ?? 0),
+            total: Number(item.total),
+            sessions: ((sessions as Record<string, unknown>[] | undefined) ?? []).map(
+              ({ itemId: _i, createdAt: _c, updatedAt: _u, ...s }) => dates(s),
+            ),
+          }),
+        ),
       });
     }
     case 'services':
       return dates({ ...row, price: Number(row.price) });
+    case 'vitals': {
+      const n = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+      return dates({
+        ...row,
+        heightCm: n(row.heightCm),
+        weightKg: n(row.weightKg),
+        temperature: n(row.temperature),
+      });
+    }
+    case 'results':
+      return dates({ ...row, value: row.value === null || row.value === undefined ? null : Number(row.value) });
     default:
       return dates(row);
   }
@@ -165,6 +203,10 @@ const MODEL: Record<PushEntity, keyof SyncDb> = {
   services: 'service',
   patients: 'patient',
   appointments: 'appointment',
+  cases: 'clinicalCase',
+  referrals: 'referral',
+  vitals: 'patientVitals',
+  results: 'analysisResult',
 };
 
 /** Fields each pulled entity may write on the till (nothing else from the server is trusted). */
@@ -177,6 +219,12 @@ const PULL_FIELDS: Record<PullEntity, string[]> = {
     'description',
     'price',
     'duration',
+    // v2.5: the web edits the type of a service too.
+    'kind',
+    'isFollowUp',
+    'resultType',
+    'resultUnit',
+    'referenceRange',
     'active',
     'createdAt',
     'updatedAt',
@@ -229,7 +277,9 @@ export async function runSync(
         where: afterCursor(cursor),
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
         take: BATCH,
-        ...(entity === 'appointments' ? { include: { items: true } } : {}),
+        ...(entity === 'appointments'
+          ? { include: { items: { include: { sessions: { orderBy: { number: 'asc' } } } } } }
+          : {}),
       });
       if (rows.length === 0) break;
       const answer = await transport.push({ [entity]: rows.map((r) => toWire(entity, r)) });

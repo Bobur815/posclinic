@@ -5,6 +5,8 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  StaffDto,
+  StaffInput,
   LabQueueDto,
   ResultInput,
   ResultsReadyDto,
@@ -134,6 +136,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sessions: {
     tick: (sessionId: string, undo?: boolean) =>
       ipcRenderer.invoke('sessions:tick', sessionId, undo === true),
+  },
+  users: {
+    list: () => ipcRenderer.invoke('users:list'),
+    create: (data: StaffInput) => ipcRenderer.invoke('users:create', data),
+    update: (id: string, data: Partial<StaffInput> & { active?: boolean }) =>
+      ipcRenderer.invoke('users:update', id, data),
+    resetPassword: (id: string, newPassword: string) =>
+      ipcRenderer.invoke('users:resetPassword', id, newPassword),
   },
   clinic: {
     getSettings: () => ipcRenderer.invoke('clinic:getSettings'),
@@ -314,6 +324,12 @@ declare global {
       };
       sessions: {
         tick: (sessionId: string, undo?: boolean) => Promise<unknown>;
+      };
+      users: {
+        list: () => Promise<StaffDto[]>;
+        create: (data: StaffInput) => Promise<StaffDto>;
+        update: (id: string, data: Partial<StaffInput> & { active?: boolean }) => Promise<StaffDto>;
+        resetPassword: (id: string, newPassword: string) => Promise<StaffDto>;
       };
       clinic: {
         getSettings: () => Promise<ClinicSettingsDto>;

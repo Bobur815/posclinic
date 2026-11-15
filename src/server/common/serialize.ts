@@ -26,6 +26,9 @@ interface PatientRow {
   allergies: string | null;
   address: string | null;
   city: string | null;
+  regionCode?: string | null;
+  districtCode?: string | null;
+  chronicConditions?: string | null;
   notes: string | null;
   active: boolean;
   createdAt: Date;
@@ -43,6 +46,9 @@ export const patientOut = (p: PatientRow) => ({
   allergies: p.allergies,
   address: p.address,
   city: p.city,
+  regionCode: p.regionCode ?? null,
+  districtCode: p.districtCode ?? null,
+  chronicConditions: p.chronicConditions ?? null,
   notes: p.notes,
   active: p.active,
   createdAt: isoReq(p.createdAt),
@@ -78,6 +84,11 @@ interface ServiceRow {
   description: string | null;
   price: Decimalish;
   duration: number;
+  kind?: string;
+  isFollowUp?: boolean;
+  resultType?: string | null;
+  resultUnit?: string | null;
+  referenceRange?: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -90,6 +101,11 @@ export const serviceOut = (s: ServiceRow) => ({
   description: s.description,
   price: money(s.price),
   duration: s.duration,
+  kind: s.kind ?? 'PROCEDURE',
+  isFollowUp: s.isFollowUp ?? false,
+  resultType: s.resultType ?? null,
+  resultUnit: s.resultUnit ?? null,
+  referenceRange: s.referenceRange ?? null,
   active: s.active,
   createdAt: isoReq(s.createdAt),
   updatedAt: isoReq(s.updatedAt),
@@ -128,17 +144,25 @@ interface ItemRow {
   serviceName: string;
   quantity: number;
   unitPrice: Decimalish;
+  discount?: Decimalish;
   total: Decimalish;
+  doctorId?: string | null;
+  referralId?: string | null;
+  status?: string;
+  completedAt?: Date | null;
+  sessions?: { id: string; number: number; plannedDate: Date | null; doneAt: Date | null }[];
 }
 
 interface AppointmentRow {
   id: string;
   appointmentNumber: string;
   patientId: string;
-  doctorId: string;
+  doctorId: string | null;
+  caseId?: string | null;
   appointmentDate: Date;
   status: string;
   totalAmount: Decimalish;
+  discountAmount?: Decimalish;
   paidAmount: Decimalish;
   paymentStatus: string;
   paymentMethod: string | null;
@@ -158,9 +182,11 @@ export const appointmentOut = (a: AppointmentRow) => ({
   appointmentNumber: a.appointmentNumber,
   patientId: a.patientId,
   doctorId: a.doctorId,
+  caseId: a.caseId ?? null,
   appointmentDate: isoReq(a.appointmentDate),
   status: a.status,
   totalAmount: money(a.totalAmount),
+  discountAmount: money(a.discountAmount),
   paidAmount: money(a.paidAmount),
   paymentStatus: a.paymentStatus,
   paymentMethod: a.paymentMethod,
@@ -176,7 +202,18 @@ export const appointmentOut = (a: AppointmentRow) => ({
     serviceName: i.serviceName,
     quantity: i.quantity,
     unitPrice: money(i.unitPrice),
+    discount: money(i.discount),
     total: money(i.total),
+    doctorId: i.doctorId ?? null,
+    referralId: i.referralId ?? null,
+    status: i.status ?? 'WAITING',
+    completedAt: iso(i.completedAt),
+    sessions: (i.sessions ?? []).map((x) => ({
+      id: x.id,
+      number: x.number,
+      plannedDate: iso(x.plannedDate),
+      doneAt: iso(x.doneAt),
+    })),
   })),
   ...(a.patient
     ? {
@@ -189,4 +226,81 @@ export const appointmentOut = (a: AppointmentRow) => ({
       }
     : {}),
   ...(a.doctor ? { doctor: { id: a.doctor.id, fullName: a.doctor.fullName } } : {}),
+});
+
+// ── Clinical records (till v2.5): read-only on the web ─────────────────────────────────────
+
+interface CaseRow {
+  id: string;
+  caseNumber: string;
+  patientId: string;
+  doctorId: string | null;
+  status: string;
+  complaint: string | null;
+  diagnosis: string | null;
+  openedAt: Date;
+  closedAt: Date | null;
+  updatedAt: Date;
+}
+export const caseOut = (c: CaseRow) => ({
+  id: c.id,
+  caseNumber: c.caseNumber,
+  patientId: c.patientId,
+  doctorId: c.doctorId,
+  status: c.status,
+  complaint: c.complaint,
+  diagnosis: c.diagnosis,
+  openedAt: isoReq(c.openedAt),
+  closedAt: iso(c.closedAt),
+  updatedAt: isoReq(c.updatedAt),
+});
+
+interface VitalsRow {
+  id: string;
+  caseId: string | null;
+  heightCm: Decimalish | null;
+  weightKg: Decimalish | null;
+  temperature: Decimalish | null;
+  bpSystolic: number | null;
+  bpDiastolic: number | null;
+  pregnant: boolean | null;
+  recordedAt: Date;
+}
+const optMoney = (v: Decimalish | null) => (v === null ? null : money(v));
+export const vitalsOut = (v: VitalsRow) => ({
+  id: v.id,
+  caseId: v.caseId,
+  heightCm: optMoney(v.heightCm),
+  weightKg: optMoney(v.weightKg),
+  temperature: optMoney(v.temperature),
+  bpSystolic: v.bpSystolic,
+  bpDiastolic: v.bpDiastolic,
+  pregnant: v.pregnant,
+  recordedAt: isoReq(v.recordedAt),
+});
+
+interface ResultRow {
+  id: string;
+  caseId: string | null;
+  serviceId: string;
+  outcome: string | null;
+  value: Decimalish | null;
+  unit: string | null;
+  finding: string | null;
+  comment: string | null;
+  enteredAt: Date | null;
+  confirmedAt: Date | null;
+}
+export const resultOut = (r: ResultRow & { serviceName?: string | null }) => ({
+  id: r.id,
+  caseId: r.caseId,
+  serviceId: r.serviceId,
+  serviceName: r.serviceName ?? null,
+  outcome: r.outcome,
+  value: optMoney(r.value),
+  unit: r.unit,
+  finding: r.finding,
+  comment: r.comment,
+  enteredAt: iso(r.enteredAt),
+  confirmedAt: iso(r.confirmedAt),
 });

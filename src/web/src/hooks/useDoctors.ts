@@ -27,7 +27,7 @@ export function invalidateDoctors() {
 
 export function doctorName(
   doctors: Doctor[],
-  a: { doctorId: string; doctor?: { fullName: string } | null },
+  a: { doctorId: string | null; doctor?: { fullName: string } | null },
 ): string {
   return a.doctor?.fullName ?? doctors.find((d) => d.id === a.doctorId)?.fullName ?? '—';
 }

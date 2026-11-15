@@ -287,4 +287,77 @@ describe('runSync against a real till database', () => {
     assert.equal(r.pulled, 0);
     assert.match(warnings[0] ?? '', /services s-clash/);
   });
+
+  it('pushes the clinical records (v2.5): case first, sessions inside their line', async () => {
+    await db.clinicalCase.create({
+      data: { id: 'c1', caseNumber: 'C-1', patientId: 'p1', status: 'ON_TREATMENT' },
+    });
+    await db.referral.create({
+      data: {
+        id: 'r1',
+        caseId: 'c1',
+        patientId: 'p1',
+        serviceId: 's1',
+        quantity: 2,
+        registeredQty: 2,
+        status: 'REGISTERED',
+      },
+    });
+    await db.appointment.create({
+      data: {
+        id: 'a-course',
+        appointmentNumber: 'A-C',
+        patientId: 'p1',
+        caseId: 'c1',
+        appointmentDate: new Date(),
+        totalAmount: 90000,
+        discountAmount: 10000,
+        items: {
+          create: [
+            {
+              id: 'i-course',
+              serviceId: 's1',
+              serviceName: 'Huqna',
+              quantity: 2,
+              unitPrice: 50000,
+              discount: 10000,
+              total: 90000,
+              referralId: 'r1',
+              sessions: {
+                create: [
+                  { id: 'ts1', number: 1 },
+                  { id: 'ts2', number: 2, doneAt: new Date() },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    await db.patientVitals.create({
+      data: { id: 'v1', patientId: 'p1', caseId: 'c1', weightKg: 70.5 },
+    });
+
+    const server = new FakeServer();
+    await runSync(sdb(), server);
+    const order = server.pushes.map((p) => Object.keys(p)[0]);
+    assert.ok(order.indexOf('cases') < order.indexOf('appointments'), order.join(','));
+    assert.ok(order.indexOf('referrals') < order.indexOf('appointments'), order.join(','));
+    const a = server.sent('appointments').find((x) => x.id === 'a-course') as Record<
+      string,
+      unknown
+    >;
+    assert.equal(a.doctorId, null);
+    assert.equal(a.discountAmount, 10000);
+    const [line] = a.items as Record<string, unknown>[];
+    assert.equal(line.discount, 10000);
+    const sessions = line.sessions as Record<string, unknown>[];
+    assert.deepEqual(
+      sessions.map((s) => s.number),
+      [1, 2],
+    );
+    assert.equal(typeof sessions[1].doneAt, 'string');
+    assert.ok(!('itemId' in sessions[0]));
+    assert.equal(server.sent('vitals')[0]?.weightKg, 70.5);
+  });
 });

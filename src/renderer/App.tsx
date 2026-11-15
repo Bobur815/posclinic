@@ -18,6 +18,7 @@ import { AppointmentList } from './pages/Appointments/AppointmentList';
 import { RegisterVisitPage } from './pages/Appointments/RegisterVisitPage';
 import { CasePage } from './pages/Care/CasePage';
 import { LabPage } from './pages/Care/LabPage';
+import { StaffPage } from './pages/Staff/StaffPage';
 import { QueuePage } from './pages/Care/QueuePage';
 import { AppointmentDetails } from './pages/Appointments/AppointmentDetails';
 import { CheckoutPage } from './pages/Appointments/CheckoutPage';
@@ -105,6 +106,14 @@ function App() {
             }
           />
           <Route path="reports/daily" element={<DailyReport />} />
+          <Route
+            path="users"
+            element={
+              <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLINIC_ADMIN']}>
+                <StaffPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="settings"
             element={

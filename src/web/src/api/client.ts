@@ -62,7 +62,7 @@ http.interceptors.response.use(
 
 // ─── Shapes ──────────────────────────────────────────────────────────────────
 
-export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST';
+export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE';
 export type AppointmentStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'REFUNDED';
 
@@ -114,6 +114,10 @@ export interface Patient {
   allergies: string | null;
   address: string | null;
   city: string | null;
+  /** SOATO codes (till v2.5); `city` is the readable "District, Region". */
+  regionCode?: string | null;
+  districtCode?: string | null;
+  chronicConditions?: string | null;
   notes: string | null;
   active: boolean;
   createdAt: string;
@@ -126,17 +130,24 @@ export interface AppointmentItem {
   serviceName: string;
   quantity: number;
   unitPrice: number;
+  discount?: number;
   total: number;
+  /** WAITING | IN_PROGRESS | DONE | CANCELLED (till v2.5). */
+  status?: string;
+  sessions?: { id: string; number: number; plannedDate: string | null; doneAt: string | null }[];
 }
 
 export interface Appointment {
   id: string;
   appointmentNumber: string;
   patientId: string;
-  doctorId: string;
+  /** Null for an analysis / procedure order (till v2.5). */
+  doctorId: string | null;
+  caseId?: string | null;
   appointmentDate: string;
   status: AppointmentStatus;
   totalAmount: number;
+  discountAmount?: number;
   paidAmount: number;
   paymentStatus: PaymentStatus;
   paymentMethod: string | null;
@@ -152,8 +163,51 @@ export interface Appointment {
   doctor?: { id: string; fullName: string } | null;
 }
 
+export interface ClinicalCase {
+  id: string;
+  caseNumber: string;
+  patientId: string;
+  doctorId: string | null;
+  status: string;
+  complaint: string | null;
+  diagnosis: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  updatedAt: string;
+}
+
+export interface Vitals {
+  id: string;
+  caseId: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  temperature: number | null;
+  bpSystolic: number | null;
+  bpDiastolic: number | null;
+  pregnant: boolean | null;
+  recordedAt: string;
+}
+
+export interface AnalysisResult {
+  id: string;
+  caseId: string | null;
+  serviceId: string;
+  serviceName: string | null;
+  outcome: 'POSITIVE' | 'NEGATIVE' | null;
+  value: number | null;
+  unit: string | null;
+  finding: string | null;
+  comment: string | null;
+  enteredAt: string | null;
+  confirmedAt: string | null;
+}
+
 export interface PatientDetails extends Patient {
   visits: Appointment[];
+  /** Till v2.5; absent on an older server. */
+  cases?: ClinicalCase[];
+  latestVitals?: Vitals | null;
+  results?: AnalysisResult[];
 }
 
 export interface Doctor {
@@ -174,10 +228,16 @@ export interface Service {
   description: string | null;
   price: number;
   duration: number;
+  /** CONSULTATION | ANALYSIS | PROCEDURE (till v2.5). */
+  kind?: ServiceKind;
+  isFollowUp?: boolean;
+  resultType?: 'QUALITATIVE' | 'QUANTITATIVE' | 'TEXT' | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+export type ServiceKind = 'CONSULTATION' | 'ANALYSIS' | 'PROCEDURE';
 
 export interface StaffUser {
   id: string;
@@ -304,6 +364,9 @@ export const reportsApi = {
 
 export type ServiceInput = Pick<Service, 'code' | 'name' | 'price' | 'duration' | 'active'> & {
   description?: string | null;
+  kind?: ServiceKind;
+  isFollowUp?: boolean;
+  resultType?: 'QUALITATIVE' | 'QUANTITATIVE' | 'TEXT' | null;
 };
 export const servicesApi = {
   list: () => list<Service>('/services'),

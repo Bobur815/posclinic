@@ -228,8 +228,9 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 - [x] Add height, weight (written as a vitals record when changed), allergies, chronic conditions; the latest vitals and the patient's cases shown in PatientDetails.
 
 ### P6: Server + web (read-only display)
-- [ ] Sync up the new tables and fields. Server `doctorId` becomes nullable plus the new columns/tables in an additive Postgres migration (the user runs deploy). `TILL_ROLES` gains NURSE.
-- [ ] Web: case status and results on the patient page.
+- [x] Sync up the new tables and fields (cases, referrals, vitals, results; sessions inside their line). Server `doctorId` nullable plus new columns/tables: migration `20261115200000_clinical_workflow` (staging applies it on container start). `TILL_ROLES` gains NURSE.
+- [x] Web: cases, results, latest measurements on the patient page; service type in the web catalog; NURSE role on the Users page.
+- [x] Till Staff page (/users): receptionist, nurse and admin logins; staff limit; no self-demotion.
 
 ### Throughout
 - [ ] i18n uz + ru.

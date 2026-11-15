@@ -515,3 +515,28 @@ export interface ResultsReadyDto {
   patient: Pick<PatientDto, 'id' | 'patientCode' | 'fullName' | 'phone' | 'birthDate' | 'gender'>;
   analysisResults: Array<{ id: string; enteredAt: string; service: { name: string } }>;
 }
+
+// ── Staff logins (v2.5) ───────────────────────────────────────────────────────────────────
+
+export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE';
+
+/** `users:list`: never the password hash. `doctor` set = a doctor's login (Doctors page). */
+export interface StaffDto {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  role: StaffRole;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  doctor?: { id: string } | null;
+}
+
+/** `users:create` (RECEPTIONIST | NURSE | CLINIC_ADMIN) and `users:update`. */
+export interface StaffInput {
+  fullName: string;
+  phone: string;
+  role: 'RECEPTIONIST' | 'NURSE' | 'CLINIC_ADMIN';
+  password: string;
+}

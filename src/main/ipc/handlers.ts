@@ -3,6 +3,7 @@ import { setupAuthHandlers } from './auth-handlers';
 import { setupCareHandlers } from './care-handlers';
 import { setupClinicHandlers } from './clinic-handlers';
 import { setupLabHandlers } from './lab-handlers';
+import { setupStaffHandlers } from './staff-handlers';
 import { setupPatientHandlers } from './patient-handlers';
 import { setupDoctorHandlers } from './doctor-handlers';
 import { setupServiceHandlers } from './service-handlers';
@@ -19,5 +20,6 @@ export function setupIpcHandlers(): void {
   setupClinicHandlers();
   setupCareHandlers();
   setupLabHandlers();
+  setupStaffHandlers();
   setupPrintHandlers();
 }

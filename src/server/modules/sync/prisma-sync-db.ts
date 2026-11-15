@@ -23,6 +23,16 @@ export class PrismaSyncDb implements SyncDb {
         return this.tx.patient.findMany({ where, select: ref });
       case 'appointments':
         return this.tx.appointment.findMany({ where, select: ref });
+      case 'cases':
+        return this.tx.clinicalCase.findMany({ where, select: ref });
+      case 'referrals':
+        return this.tx.referral.findMany({ where, select: ref });
+      case 'vitals':
+        return this.tx.patientVitals.findMany({ where, select: ref });
+      case 'results':
+        return this.tx.analysisResult.findMany({ where, select: ref });
+      default:
+        return [];
     }
   }
 
@@ -92,13 +102,52 @@ export class PrismaSyncDb implements SyncDb {
           create: { id, clinicId, ...data, syncedAt },
           update: { ...data, syncedAt },
         });
-        // Items are replaced as a set with their appointment.
+        // Items (and their course sessions, by cascade) are replaced as a set with their
+        // appointment.
         await this.tx.appointmentItem.deleteMany({ where: { appointmentId: id } });
         if (items.length > 0) {
           await this.tx.appointmentItem.createMany({
-            data: items.map((i) => ({ ...i, appointmentId: id })),
+            data: items.map(({ sessions: _s, ...i }) => ({ ...i, appointmentId: id })),
           });
+          const sessions = items.flatMap((i) => i.sessions.map((s) => ({ ...s, itemId: i.id })));
+          if (sessions.length > 0) await this.tx.treatmentSession.createMany({ data: sessions });
         }
+        return;
+      }
+      case 'cases': {
+        const { id, ...data } = row as RowMap['cases'];
+        await this.tx.clinicalCase.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'referrals': {
+        const { id, ...data } = row as RowMap['referrals'];
+        await this.tx.referral.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'vitals': {
+        const { id, ...data } = row as RowMap['vitals'];
+        await this.tx.patientVitals.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'results': {
+        const { id, ...data } = row as RowMap['results'];
+        await this.tx.analysisResult.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
         return;
       }
     }

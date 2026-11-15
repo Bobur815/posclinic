@@ -147,7 +147,8 @@ export function emitEvents(events: AppEvent[]): void {
  * updater, LAN, config, cloud sync status, app info).
  */
 const UNGATED = /^(auth|license|setup|update|lan|config|sync|app):/;
-const WRITES = /^(patients|appointments|doctors|services|users):(create|update|checkout|createLogin)$/;
+const WRITES =
+  /^(patients|appointments|doctors|services|users):(create|update|checkout|createLogin|resetPassword)$/;
 /** Clinical-record writes (v2.5): every channel of these namespaces that is not a read. */
 const CLINICAL = /^(cases|queue|results|sessions):(?!(get|for|list|quote)([A-Z]|$))/;
 

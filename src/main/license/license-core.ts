@@ -188,13 +188,14 @@ export const READONLY_REFUSED: ReadonlySet<string> = new Set([
   // v2.5 clinical workflow: new referrals and new staff logins are new business.
   'cases:addReferral',
   'doctors:createLogin',
+  'users:create',
 ]);
 
 /** Answers from the database the gate needs; injected so this file stays pure. */
 export interface GateFacts {
   activeDoctors(excludeId?: string): Promise<number>;
-  /** Active staff logins (the plan's `staff` limit). */
-  activeUsers(): Promise<number>;
+  /** Active staff logins (the plan's `staff` limit), optionally not counting one user. */
+  activeUsers(excludeId?: string): Promise<number>;
   visitsThisMonth(): Promise<number>;
   /** What a visit costs and what has been paid on it so far; null if there is no such visit. */
   appointmentBalance(id: string): Promise<{ total: number; paid: number } | null>;
@@ -265,9 +266,19 @@ async function needed(
       return (await facts.activeDoctors(String(args[0] ?? ''))) >= 1
         ? 'license.feature.multiDoctor'
         : null;
-    case 'doctors:createLogin': {
+    case 'doctors:createLogin':
+    case 'users:create': {
       const max = state.limits.staff;
       return max !== null && (await facts.activeUsers()) >= max ? 'license.limit.staff' : null;
+    }
+    case 'users:update': {
+      // Only switching a login on can exceed the limit; the user itself is not counted, so
+      // saving an already-active user's name never trips it.
+      if (arg(1).active !== true) return null;
+      const max = state.limits.staff;
+      return max !== null && (await facts.activeUsers(String(args[0] ?? ''))) >= max
+        ? 'license.limit.staff'
+        : null;
     }
     case 'print:prescription':
       return has('printPrescription') ? null : 'license.feature.printPrescription';

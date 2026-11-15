@@ -475,7 +475,11 @@
     "notAnAnalysis": "Bu xizmat tahlil emas",
     "invalidResult": "Natija noto‘g‘ri yoki to‘liq emas",
     "resultConfirmed": "Natija allaqachon tasdiqlangan",
-    "cannotUndo": "Faqat 24 soat ichida belgilangan seansni bekor qilish mumkin"
+    "cannotUndo": "Faqat 24 soat ichida belgilangan seansni bekor qilish mumkin",
+    "useDoctorsPage": "Shifokorga kirish “Shifokorlar” sahifasida beriladi",
+    "invalidRole": "Lavozim noto‘g‘ri",
+    "nameRequired": "Ismni kiriting",
+    "selfDemote": "O‘zingizni o‘chira yoki lavozimingizni pasaytira olmaysiz"
   },
   "license": {
     "title": "Obuna",
@@ -878,5 +882,27 @@
     "finding": "Topilgan (masalan, parazit turi)",
     "comment": "Izoh",
     "saveResult": "Natijani saqlash"
+  },
+  "staff": {
+    "title": "Xodimlar",
+    "list": "Kirish huquqiga ega xodimlar",
+    "add": "Xodim qo‘shish",
+    "none": "Xodim yo‘q",
+    "you": "siz",
+    "fullName": "F.I.Sh.",
+    "role": "Lavozim",
+    "roles": {
+      "CLINIC_ADMIN": "Administrator",
+      "SUPER_ADMIN": "Bosh administrator",
+      "DOCTOR": "Shifokor",
+      "RECEPTIONIST": "Qabulxona",
+      "NURSE": "Hamshira / laborant"
+    },
+    "doctorsPage": "Shifokorlar sahifasida",
+    "doctorHint": "Shifokorga kirish “Shifokorlar” sahifasida beriladi (shifokor profiliga bog‘lanadi).",
+    "resetPassword": "Parolni yangilash",
+    "newPassword": "Yangi parol (kamida 6 belgi)",
+    "deactivate": "O‘chirish",
+    "activate": "Yoqish"
   }
 }

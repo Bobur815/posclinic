@@ -31,7 +31,7 @@ import {
   Tr,
 } from '../../components/ui';
 
-const ROLES: StaffRole[] = ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST'];
+const ROLES: StaffRole[] = ['CLINIC_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE'];
 import { MIN_PASSWORD } from '../../lib/validation';
 
 export function UserList() {

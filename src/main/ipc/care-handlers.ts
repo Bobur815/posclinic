@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { normalizePhone } from '../../shared/phone';
-import { completeOrderIfDone, recomputeCaseStatus } from '../clinic/case-status';
+import { completeOrderIfDone, recomputeCaseStatus, touchOrder } from '../clinic/case-status';
 import { getPrismaClient } from '../database/sqlite-client';
 import { isUniqueConflict } from './appointment-handlers';
 import {
@@ -181,6 +181,7 @@ export function setupCareHandlers(): void {
                 },
         });
         if (next === 'DONE') await completeOrderIfDone(tx, item.appointment.id);
+        await touchOrder(tx, item.appointment.id);
         if (item.appointment.caseId) await recomputeCaseStatus(tx, item.appointment.caseId);
         return u;
       });

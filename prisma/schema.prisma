@@ -37,6 +37,10 @@ model Clinic {
   appointments Appointment[]
   auditLogs    AuditLog[]
   heartbeats   TerminalHeartbeat[]
+  cases        ClinicalCase[]
+  vitals       PatientVitals[]
+  referrals    Referral[]
+  results      AnalysisResult[]
 
   @@map("clinics")
 }
@@ -64,25 +68,33 @@ model User {
 }
 
 model Patient {
-  id          String    @id
-  clinicId    String    @map("clinic_id")
-  clinic      Clinic    @relation(fields: [clinicId], references: [id])
-  patientCode String    @map("patient_code")
-  fullName    String    @map("full_name")
-  phone       String
-  birthDate   DateTime? @map("birth_date")
-  gender      String?
-  bloodType   String?   @map("blood_type")
-  allergies   String?
-  address     String?
-  city        String?
-  notes       String?
-  active      Boolean   @default(true)
-  createdAt   DateTime  @map("created_at")
-  updatedAt   DateTime  @map("updated_at")
-  syncedAt    DateTime  @map("synced_at")
+  id                String    @id
+  clinicId          String    @map("clinic_id")
+  clinic            Clinic    @relation(fields: [clinicId], references: [id])
+  patientCode       String    @map("patient_code")
+  fullName          String    @map("full_name")
+  phone             String
+  birthDate         DateTime? @map("birth_date")
+  gender            String?
+  bloodType         String?   @map("blood_type")
+  allergies         String?
+  address           String?
+  city              String?
+  /// SOATO codes (the till's admin_units); `city` keeps the readable "District, Region".
+  regionCode        String?   @map("region_code")
+  districtCode      String?   @map("district_code")
+  chronicConditions String?   @map("chronic_conditions")
+  notes             String?
+  active            Boolean   @default(true)
+  createdAt         DateTime  @map("created_at")
+  updatedAt         DateTime  @map("updated_at")
+  syncedAt          DateTime  @map("synced_at")
 
-  appointments Appointment[]
+  appointments    Appointment[]
+  cases           ClinicalCase[]
+  vitals          PatientVitals[]
+  referrals       Referral[]
+  analysisResults AnalysisResult[]
 
   // Not unique here: the till owns uniqueness, and an in-flight rename on the till must not
   // fail a whole batch on the server.
@@ -113,19 +125,26 @@ model Doctor {
 }
 
 model Service {
-  id          String   @id
-  clinicId    String   @map("clinic_id")
-  clinic      Clinic   @relation(fields: [clinicId], references: [id])
-  code        String
-  name        String
-  description String?
-  price       Decimal  @db.Decimal(14, 2)
+  id             String   @id
+  clinicId       String   @map("clinic_id")
+  clinic         Clinic   @relation(fields: [clinicId], references: [id])
+  code           String
+  name           String
+  description    String?
+  price          Decimal  @db.Decimal(14, 2)
   /// minutes
-  duration    Int      @default(30)
-  active      Boolean  @default(true)
-  createdAt   DateTime @map("created_at")
-  updatedAt   DateTime @map("updated_at")
-  syncedAt    DateTime @map("synced_at")
+  duration       Int      @default(30)
+  /// CONSULTATION | ANALYSIS | PROCEDURE
+  kind           String   @default("PROCEDURE")
+  isFollowUp     Boolean  @default(false) @map("is_follow_up")
+  /// ANALYSIS: QUALITATIVE | QUANTITATIVE | TEXT
+  resultType     String?  @map("result_type")
+  resultUnit     String?  @map("result_unit")
+  referenceRange String?  @map("reference_range")
+  active         Boolean  @default(true)
+  createdAt      DateTime @map("created_at")
+  updatedAt      DateTime @map("updated_at")
+  syncedAt       DateTime @map("synced_at")
 
   appointmentItems AppointmentItem[]
 
@@ -135,29 +154,32 @@ model Service {
 }
 
 model Appointment {
-  id                String    @id
-  clinicId          String    @map("clinic_id")
-  clinic            Clinic    @relation(fields: [clinicId], references: [id])
-  appointmentNumber String    @map("appointment_number")
-  patientId         String    @map("patient_id")
-  patient           Patient   @relation(fields: [patientId], references: [id])
-  doctorId          String    @map("doctor_id")
-  doctor            Doctor    @relation(fields: [doctorId], references: [id])
-  appointmentDate   DateTime  @map("appointment_date")
+  id                String   @id
+  clinicId          String   @map("clinic_id")
+  clinic            Clinic   @relation(fields: [clinicId], references: [id])
+  appointmentNumber String   @map("appointment_number")
+  patientId         String   @map("patient_id")
+  patient           Patient  @relation(fields: [patientId], references: [id])
+  /// The consultation's doctor; null for an analysis / procedure order (v2.5).
+  doctorId          String?  @map("doctor_id")
+  doctor            Doctor?  @relation(fields: [doctorId], references: [id])
+  caseId            String?  @map("case_id")
+  appointmentDate   DateTime @map("appointment_date")
   /// SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED | NO_SHOW
   status            String
-  totalAmount       Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
-  paidAmount        Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  totalAmount       Decimal  @default(0) @map("total_amount") @db.Decimal(14, 2)
+  discountAmount    Decimal  @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  paidAmount        Decimal  @default(0) @map("paid_amount") @db.Decimal(14, 2)
   /// PENDING | PARTIAL | PAID
-  paymentStatus     String    @map("payment_status")
-  paymentMethod     String?   @map("payment_method")
+  paymentStatus     String   @map("payment_status")
+  paymentMethod     String?  @map("payment_method")
   diagnosis         String?
   prescription      String?
   notes             String?
-  terminalId        String?   @map("terminal_id")
-  createdAt         DateTime  @map("created_at")
-  updatedAt         DateTime  @map("updated_at")
-  syncedAt          DateTime  @map("synced_at")
+  terminalId        String?  @map("terminal_id")
+  createdAt         DateTime @map("created_at")
+  updatedAt         DateTime @map("updated_at")
+  syncedAt          DateTime @map("synced_at")
 
   items AppointmentItem[]
 
@@ -165,6 +187,7 @@ model Appointment {
   @@index([clinicId, appointmentDate])
   @@index([clinicId, patientId])
   @@index([clinicId, doctorId])
+  @@index([clinicId, caseId])
   @@map("appointments")
 }
 
@@ -177,11 +200,139 @@ model AppointmentItem {
   serviceName   String      @map("service_name")
   quantity      Int         @default(1)
   unitPrice     Decimal     @map("unit_price") @db.Decimal(14, 2)
+  discount      Decimal     @default(0) @db.Decimal(14, 2)
   total         Decimal     @db.Decimal(14, 2)
+  doctorId      String?     @map("doctor_id")
+  referralId    String?     @map("referral_id")
+  /// WAITING | IN_PROGRESS | DONE | CANCELLED
+  status        String      @default("WAITING")
+  performedBy   String?     @map("performed_by")
+  startedAt     DateTime?   @map("started_at")
+  completedAt   DateTime?   @map("completed_at")
+
+  sessions TreatmentSession[]
 
   @@index([appointmentId])
   @@index([serviceId])
   @@map("appointment_items")
+}
+
+/// One session of a course line; replaced as a set with its item (like items with an appointment).
+model TreatmentSession {
+  id          String          @id
+  itemId      String          @map("item_id")
+  item        AppointmentItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  number      Int
+  plannedDate DateTime?       @map("planned_date")
+  doneAt      DateTime?       @map("done_at")
+  doneBy      String?         @map("done_by")
+
+  @@index([itemId])
+  @@map("treatment_sessions")
+}
+
+/// One patient journey (till v2.5). References other than patient / clinic are plain ids.
+model ClinicalCase {
+  id         String    @id
+  clinicId   String    @map("clinic_id")
+  clinic     Clinic    @relation(fields: [clinicId], references: [id])
+  caseNumber String    @map("case_number")
+  patientId  String    @map("patient_id")
+  patient    Patient   @relation(fields: [patientId], references: [id])
+  doctorId   String?   @map("doctor_id")
+  /// OPEN | WAITING_DOCTOR | WAITING_ANALYSIS | RESULT_READY | ON_TREATMENT | CLOSED
+  status     String
+  complaint  String?
+  diagnosis  String?
+  openedAt   DateTime  @map("opened_at")
+  closedAt   DateTime? @map("closed_at")
+  createdAt  DateTime  @map("created_at")
+  updatedAt  DateTime  @map("updated_at")
+  syncedAt   DateTime  @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, patientId])
+  @@index([clinicId, status])
+  @@map("clinical_cases")
+}
+
+model PatientVitals {
+  id          String   @id
+  clinicId    String   @map("clinic_id")
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+  patientId   String   @map("patient_id")
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  caseId      String?  @map("case_id")
+  heightCm    Decimal? @map("height_cm") @db.Decimal(6, 1)
+  weightKg    Decimal? @map("weight_kg") @db.Decimal(6, 1)
+  temperature Decimal? @db.Decimal(4, 1)
+  bpSystolic  Int?     @map("bp_systolic")
+  bpDiastolic Int?     @map("bp_diastolic")
+  pregnant    Boolean?
+  complaints  String?
+  recordedBy  String?  @map("recorded_by")
+  recordedAt  DateTime @map("recorded_at")
+  updatedAt   DateTime @map("updated_at")
+  syncedAt    DateTime @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, patientId])
+  @@map("patient_vitals")
+}
+
+model Referral {
+  id            String   @id
+  clinicId      String   @map("clinic_id")
+  clinic        Clinic   @relation(fields: [clinicId], references: [id])
+  caseId        String   @map("case_id")
+  patientId     String   @map("patient_id")
+  patient       Patient  @relation(fields: [patientId], references: [id])
+  doctorId      String?  @map("doctor_id")
+  serviceId     String   @map("service_id")
+  quantity      Int
+  perDay        Int?     @map("per_day")
+  days          Int?
+  instructions  String?
+  registeredQty Int      @default(0) @map("registered_qty")
+  /// PENDING | PARTIAL | REGISTERED | CANCELLED
+  status        String
+  createdAt     DateTime @map("created_at")
+  updatedAt     DateTime @map("updated_at")
+  syncedAt      DateTime @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, caseId])
+  @@map("referrals")
+}
+
+model AnalysisResult {
+  id            String    @id
+  clinicId      String    @map("clinic_id")
+  clinic        Clinic    @relation(fields: [clinicId], references: [id])
+  itemId        String    @map("item_id")
+  caseId        String?   @map("case_id")
+  patientId     String    @map("patient_id")
+  patient       Patient   @relation(fields: [patientId], references: [id])
+  serviceId     String    @map("service_id")
+  /// QUALITATIVE: POSITIVE | NEGATIVE
+  outcome       String?
+  value         Decimal?  @db.Decimal(18, 4)
+  unit          String?
+  finding       String?
+  comment       String?
+  sampleTakenAt DateTime? @map("sample_taken_at")
+  enteredBy     String?   @map("entered_by")
+  enteredAt     DateTime? @map("entered_at")
+  confirmedBy   String?   @map("confirmed_by")
+  confirmedAt   DateTime? @map("confirmed_at")
+  createdAt     DateTime  @map("created_at")
+  updatedAt     DateTime  @map("updated_at")
+  syncedAt      DateTime  @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, patientId])
+  @@index([clinicId, caseId])
+  @@map("analysis_results")
 }
 
 /// Web mutations by clinic admins (ids only, never patient fields).

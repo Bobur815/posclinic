@@ -23,6 +23,10 @@ class FakeDb implements SyncDb {
     services: new Map(),
     patients: new Map(),
     appointments: new Map(),
+    cases: new Map(),
+    referrals: new Map(),
+    vitals: new Map(),
+    results: new Map(),
   };
   writes = 0;
 
@@ -169,6 +173,10 @@ describe('applyPush', () => {
       services: 1,
       patients: 1,
       appointments: 1,
+      cases: 0,
+      referrals: 0,
+      vitals: 0,
+      results: 0,
     });
     assert.equal(r.written, 5);
     assert.equal((db.rows.users.get('u1')?.row as RowMap['users']).phone, '+998901112233');
@@ -242,6 +250,202 @@ describe('applyPush', () => {
     // Another clinic may use the same code.
     const other = await applyPush(db, 'c2', { services: [service({ id: 's3' })] }, NOW);
     assert.deepEqual(other.rejected, []);
+  });
+});
+
+describe('applyPush: clinical workflow rows (till v2.5)', () => {
+  let db: FakeDb;
+  beforeEach(() => {
+    db = new FakeDb();
+  });
+  const base = {
+    users: [user()],
+    doctors: [doctor()],
+    services: [
+      service(),
+      service({ id: 's2', code: 'PAR-OP', kind: 'ANALYSIS', resultType: 'QUALITATIVE' }),
+    ],
+    patients: [
+      patient({ regionCode: '1726', districtCode: '1726292', chronicConditions: 'Gastrit' }),
+    ],
+  };
+  const theCase = (over: Record<string, unknown> = {}) => ({
+    id: 'c-1',
+    caseNumber: 'C20261115-001',
+    patientId: 'p1',
+    doctorId: 'd1',
+    status: 'RESULT_READY',
+    complaint: null,
+    diagnosis: 'Lyambliya',
+    openedAt: T0,
+    closedAt: null,
+    createdAt: T0,
+    updatedAt: T1,
+    ...over,
+  });
+
+  it('accepts an order without a doctor, its case, sessions, referral, vitals and result', async () => {
+    const r = await applyPush(
+      db,
+      'c1',
+      {
+        ...base,
+        cases: [theCase()],
+        referrals: [
+          {
+            id: 'r-1',
+            caseId: 'c-1',
+            patientId: 'p1',
+            doctorId: 'd1',
+            serviceId: 's2',
+            quantity: 1,
+            perDay: null,
+            days: null,
+            instructions: 'Ertalab',
+            registeredQty: 1,
+            status: 'REGISTERED',
+            createdAt: T0,
+            updatedAt: T1,
+          },
+        ],
+        appointments: [
+          appointment({
+            id: 'a2',
+            doctorId: null,
+            caseId: 'c-1',
+            discountAmount: 0,
+            items: [
+              {
+                id: 'i2',
+                serviceId: 's2',
+                serviceName: 'Najas',
+                quantity: 2,
+                unitPrice: 80000,
+                discount: 16000,
+                total: 144000,
+                doctorId: null,
+                referralId: 'r-1',
+                status: 'DONE',
+                completedAt: T1,
+                sessions: [
+                  { id: 'ts1', number: 1, plannedDate: T0, doneAt: T1, doneBy: 'u1' },
+                  { id: 'ts2', number: 2, plannedDate: T0, doneAt: null, doneBy: null },
+                ],
+              },
+            ],
+          }),
+        ],
+        vitals: [
+          {
+            id: 'v-1',
+            patientId: 'p1',
+            caseId: 'c-1',
+            heightCm: 172,
+            weightKg: 68.5,
+            temperature: null,
+            bpSystolic: null,
+            bpDiastolic: null,
+            pregnant: null,
+            complaints: null,
+            recordedBy: 'u1',
+            recordedAt: T1,
+            updatedAt: T1,
+          },
+        ],
+        results: [
+          {
+            id: 'res-1',
+            itemId: 'i2',
+            caseId: 'c-1',
+            patientId: 'p1',
+            serviceId: 's2',
+            outcome: 'POSITIVE',
+            value: null,
+            unit: null,
+            finding: 'Giardia',
+            comment: null,
+            sampleTakenAt: T0,
+            enteredBy: 'u1',
+            enteredAt: T1,
+            confirmedBy: null,
+            confirmedAt: null,
+            createdAt: T0,
+            updatedAt: T1,
+          },
+        ],
+      },
+      NOW,
+    );
+    assert.deepEqual(r.rejected, []);
+    assert.deepEqual(
+      [
+        r.accepted.cases,
+        r.accepted.referrals,
+        r.accepted.appointments,
+        r.accepted.vitals,
+        r.accepted.results,
+      ],
+      [1, 1, 1, 1, 1],
+    );
+    const a = db.rows.appointments.get('a2')?.row as {
+      doctorId: unknown;
+      items: { sessions: unknown[]; status: string }[];
+    };
+    assert.equal(a.doctorId, null);
+    assert.equal(a.items[0].status, 'DONE');
+    assert.equal(a.items[0].sessions.length, 2);
+    const p = db.rows.patients.get('p1')?.row as {
+      districtCode: string;
+      chronicConditions: string;
+    };
+    assert.deepEqual([p.districtCode, p.chronicConditions], ['1726292', 'Gastrit']);
+    const s2 = db.rows.services.get('s2')?.row as { kind: string; resultType: string };
+    assert.deepEqual([s2.kind, s2.resultType], ['ANALYSIS', 'QUALITATIVE']);
+  });
+
+  it('still accepts a v2.4 till’s rows (no new fields) with their defaults', async () => {
+    const r = await applyPush(db, 'c1', { ...base, appointments: [appointment()] }, NOW);
+    assert.deepEqual(r.rejected, []);
+    const a = db.rows.appointments.get('a1')?.row as {
+      discountAmount: number;
+      items: { status: string; discount: number }[];
+    };
+    assert.deepEqual([a.discountAmount, a.items[0].status, a.items[0].discount], [0, 'WAITING', 0]);
+    assert.equal((db.rows.services.get('s1')?.row as { kind: string }).kind, 'PROCEDURE');
+  });
+
+  it('rejects clinical rows pointing at a case or patient the clinic does not have', async () => {
+    const r = await applyPush(
+      db,
+      'c1',
+      {
+        ...base,
+        cases: [
+          theCase({ id: 'c-x', patientId: 'nobody' }),
+          theCase({ id: 'c-bad', status: 'LOST' }),
+        ],
+        appointments: [appointment({ id: 'a3', caseId: 'c-x' })],
+      },
+      NOW,
+    );
+    assert.deepEqual(
+      r.rejected.map((x) => [x.entity, x.id, x.reason]),
+      [
+        ['cases', 'c-bad', 'invalid'],
+        ['cases', 'c-x', 'missing_patient'],
+        ['appointments', 'a3', 'missing_case'],
+      ],
+    );
+  });
+
+  it('accepts a NURSE login', async () => {
+    const r = await applyPush(
+      db,
+      'c1',
+      { users: [user({ id: 'n1', phone: '90 999 88 77', role: 'NURSE' })] },
+      NOW,
+    );
+    assert.deepEqual(r.rejected, []);
   });
 });
 

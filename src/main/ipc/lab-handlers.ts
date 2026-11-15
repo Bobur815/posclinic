@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { completeOrderIfDone, recomputeCaseStatus } from '../clinic/case-status';
+import { completeOrderIfDone, recomputeCaseStatus, touchOrder } from '../clinic/case-status';
 import { getPrismaClient } from '../database/sqlite-client';
 import { ADMIN_ROLES, type HandlerContext, handle, ipcSafe, RefusedError } from './ipc-safe';
 
@@ -163,6 +163,7 @@ export function setupLabHandlers(): void {
         where: { id: item.id },
         data: { status: 'IN_PROGRESS', startedAt: item.startedAt ?? now, performedBy: a.id },
       });
+      await touchOrder(tx, item.appointment.id);
       if (item.appointment.caseId) await recomputeCaseStatus(tx, item.appointment.caseId);
       return r;
     });
@@ -238,6 +239,7 @@ export function setupLabHandlers(): void {
         },
       });
       await completeOrderIfDone(tx, item.appointment.id);
+      await touchOrder(tx, item.appointment.id);
       if (item.appointment.caseId) await recomputeCaseStatus(tx, item.appointment.caseId);
       return r;
     });
@@ -340,6 +342,7 @@ export function setupLabHandlers(): void {
           data: { status: 'SCHEDULED' },
         });
       }
+      await touchOrder(tx, s.item.appointment.id);
       if (s.item.appointment.caseId) await recomputeCaseStatus(tx, s.item.appointment.caseId);
       return u;
     });

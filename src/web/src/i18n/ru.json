@@ -93,7 +93,8 @@
     "CLINIC_ADMIN": "Администратор",
     "SUPER_ADMIN": "Главный администратор",
     "DOCTOR": "Врач",
-    "RECEPTIONIST": "Регистратор"
+    "RECEPTIONIST": "Регистратор",
+    "NURSE": "Медсестра / лаборант"
   },
   "dashboard": {
     "title": "Главная",
@@ -129,7 +130,26 @@
     "searchPlaceholder": "Имя, телефон или код...",
     "noPatients": "Пациенты не найдены",
     "totalVisits": "Всего приёмов",
-    "visitHistory": "История приёмов"
+    "visitHistory": "История приёмов",
+    "chronicConditions": "Хронические заболевания",
+    "latestVitals": "Последние измерения",
+    "cases": "Обращения",
+    "notConfirmed": "не подтверждён",
+    "sampleWaiting": "ожидается образец",
+    "cm": "см",
+    "kg": "кг",
+    "outcome": {
+      "POSITIVE": "Положительный",
+      "NEGATIVE": "Отрицательный"
+    },
+    "caseStatus": {
+      "OPEN": "Открыто",
+      "WAITING_DOCTOR": "Ждёт врача",
+      "WAITING_ANALYSIS": "Ждёт анализа",
+      "RESULT_READY": "Результат готов",
+      "ON_TREATMENT": "На лечении",
+      "CLOSED": "Закрыто"
+    }
   },
   "appointments": {
     "title": "Приёмы",
@@ -200,7 +220,20 @@
     "duration": "Длительность",
     "durationMin": "Длительность (мин)",
     "searchPlaceholder": "Название или код...",
-    "noServices": "Услуги не найдены"
+    "noServices": "Услуги не найдены",
+    "kind": "Тип",
+    "kinds": {
+      "CONSULTATION": "Консультация",
+      "ANALYSIS": "Анализ",
+      "PROCEDURE": "Процедура"
+    },
+    "resultType": "Тип результата",
+    "resultTypes": {
+      "QUALITATIVE": "Положительный / отрицательный",
+      "QUANTITATIVE": "Число (титр)",
+      "TEXT": "Текст"
+    },
+    "followUp": "Повторная консультация (бесплатно 14 дней)"
   },
   "doctors": {
     "title": "Врачи",

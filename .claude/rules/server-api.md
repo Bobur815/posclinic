@@ -22,7 +22,7 @@ posgro. Patient data must never be logged (ids only).
 - Ids are UUIDs created on the till (or on the server for web-created catalog rows). Upserts by id.
 - Phone `+998XXXXXXXXX` (`src/shared/phone.ts` `normalizePhone`); email optional.
 - Money: JSON numbers (UZS). Dates: ISO strings.
-- Till roles: `CLINIC_ADMIN | SUPER_ADMIN | DOCTOR | RECEPTIONIST`. Web login: `CLINIC_ADMIN`, `SUPER_ADMIN` only.
+- Till roles: `CLINIC_ADMIN | SUPER_ADMIN | DOCTOR | RECEPTIONIST | NURSE` (NURSE since v2.5). Web login: `CLINIC_ADMIN`, `SUPER_ADMIN` only.
 - Soft delete only (`active: false`).
 - Errors: Nest HttpException, `message` = i18n key `server.errors.<code>` (or class-validator array).
 
@@ -38,6 +38,30 @@ Appointment { id, appointmentNumber, patientId, doctorId, appointmentDate, statu
               terminalId|null, createdAt, updatedAt,
               items: [{ id, serviceId, serviceName, quantity, unitPrice, total }] }
 ```
+
+### v2.5 additions (clinical workflow; every new field optional, so a v2.4 till still syncs)
+```ts
+Patient     + { regionCode|null, districtCode|null, chronicConditions|null }
+Service     + { kind: CONSULTATION|ANALYSIS|PROCEDURE (default PROCEDURE), isFollowUp, resultType|null, resultUnit|null, referenceRange|null }
+Appointment + { doctorId|null (analysis / procedure orders), caseId|null, discountAmount }
+  items[]   + { discount, doctorId|null, referralId|null, status: WAITING|IN_PROGRESS|DONE|CANCELLED, performedBy|null,
+                startedAt|null, completedAt|null, sessions: [{ id, number, plannedDate|null, doneAt|null, doneBy|null }] }
+Case        { id, caseNumber, patientId, doctorId|null, status, complaint|null, diagnosis|null, openedAt, closedAt|null, createdAt, updatedAt }
+Referral    { id, caseId, patientId, doctorId|null, serviceId, quantity, perDay|null, days|null, instructions|null,
+              registeredQty, status: PENDING|PARTIAL|REGISTERED|CANCELLED, createdAt, updatedAt }
+Vitals      { id, patientId, caseId|null, heightCm|null, weightKg|null, temperature|null, bpSystolic|null, bpDiastolic|null,
+              pregnant|null, complaints|null, recordedBy|null, recordedAt, updatedAt }
+Result      { id, itemId, caseId|null, patientId, serviceId, outcome: POSITIVE|NEGATIVE|null, value|null, unit|null, finding|null,
+              comment|null, sampleTakenAt|null, enteredBy|null, enteredAt|null, confirmedBy|null, confirmedAt|null, createdAt, updatedAt }
+```
+- Push body arrays `cases, referrals, vitals, results`; apply order users, doctors, services, patients, **cases, referrals**,
+  appointments, **vitals, results**. Sessions are replaced as a set with their item (as items with their appointment).
+  A line or session change on the till touches its appointment's `updatedAt` so the order is re-sent.
+- New reject reason `missing_case`. A null `doctorId` is not checked; a non-null one must be the clinic's.
+- Pull services carry the type fields; the web catalog edits them with the till's consistency rules.
+- `GET /api/patients/:id` adds `cases: Case[]`, `latestVitals: Vitals|null`, `results: (Result & { serviceName })[]` (read-only).
+- Migration `20261115200000_clinical_workflow`: additive, plus `appointments.doctor_id` made nullable and a data
+  backfill of the new item `status` from the visit status.
 
 ## Sync (main till → server). Auth: licence
 Headers: `Authorization: License <posgro licence token>`, `X-Terminal-Id: <terminalId>`,

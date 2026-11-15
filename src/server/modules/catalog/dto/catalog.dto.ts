@@ -27,6 +27,28 @@ export class CreateServiceDto {
   description?: string | null;
   @ApiProperty({ description: 'UZS' }) @IsNumber() @Min(0) @Max(1e12) price!: number;
   @ApiPropertyOptional({ default: 30 }) @IsOptional() @IsInt() @Min(0) @Max(1440) duration?: number;
+  @ApiPropertyOptional({ enum: ['CONSULTATION', 'ANALYSIS', 'PROCEDURE'] })
+  @IsOptional()
+  @IsIn(['CONSULTATION', 'ANALYSIS', 'PROCEDURE'])
+  kind?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isFollowUp?: boolean;
+  @ApiPropertyOptional({ enum: ['QUALITATIVE', 'QUANTITATIVE', 'TEXT'], nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsIn(['QUALITATIVE', 'QUANTITATIVE', 'TEXT'])
+  resultType?: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(100)
+  resultUnit?: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(100)
+  referenceRange?: string | null;
   @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() active?: boolean;
 }
 
@@ -41,6 +63,28 @@ export class UpdateServiceDto {
   description?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Max(1e12) price?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Max(1440) duration?: number;
+  @ApiPropertyOptional({ enum: ['CONSULTATION', 'ANALYSIS', 'PROCEDURE'] })
+  @IsOptional()
+  @IsIn(['CONSULTATION', 'ANALYSIS', 'PROCEDURE'])
+  kind?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isFollowUp?: boolean;
+  @ApiPropertyOptional({ enum: ['QUALITATIVE', 'QUANTITATIVE', 'TEXT'], nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsIn(['QUALITATIVE', 'QUANTITATIVE', 'TEXT'])
+  resultType?: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(100)
+  resultUnit?: string | null;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(100)
+  referenceRange?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() active?: boolean;
 }
 

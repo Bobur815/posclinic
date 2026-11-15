@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import type { Prisma } from '@prisma/client';
 import { paging } from '../../common/dates';
 import { errorKey } from '../../common/errors';
-import { appointmentOut, patientOut } from '../../common/serialize';
+import { appointmentOut, patientOut, caseOut, vitalsOut, resultOut } from '../../common/serialize';
 import { PrismaService } from '../../prisma/prisma.service';
 import { type AuthUser, CurrentUser } from '../auth/auth-user';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -57,11 +57,35 @@ export class PatientsController {
         appointments: {
           orderBy: { appointmentDate: 'desc' },
           take: 200,
-          include: { items: true, doctor: { select: { id: true, fullName: true } } },
+          include: {
+            items: { include: { sessions: { orderBy: { number: 'asc' } } } },
+            doctor: { select: { id: true, fullName: true } },
+          },
         },
+        cases: { orderBy: { openedAt: 'desc' }, take: 50 },
+        vitals: { orderBy: { recordedAt: 'desc' }, take: 1 },
+        analysisResults: { orderBy: { createdAt: 'desc' }, take: 200 },
       },
     });
     if (!patient) throw new NotFoundException(errorKey('not_found'));
-    return { ...patientOut(patient), visits: patient.appointments.map(appointmentOut) };
+    // Result rows carry a service id; the name comes from this clinic's catalog.
+    const serviceIds = [...new Set(patient.analysisResults.map((r) => r.serviceId))];
+    const names = new Map(
+      (
+        await this.prisma.service.findMany({
+          where: { id: { in: serviceIds }, clinicId: user.clinicId },
+          select: { id: true, name: true },
+        })
+      ).map((s) => [s.id, s.name]),
+    );
+    return {
+      ...patientOut(patient),
+      visits: patient.appointments.map(appointmentOut),
+      cases: patient.cases.map(caseOut),
+      latestVitals: patient.vitals[0] ? vitalsOut(patient.vitals[0]) : null,
+      results: patient.analysisResults.map((r) =>
+        resultOut({ ...r, serviceName: names.get(r.serviceId) ?? null }),
+      ),
+    };
   }
 }

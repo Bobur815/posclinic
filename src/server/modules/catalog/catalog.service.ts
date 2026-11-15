@@ -61,6 +61,33 @@ export class CatalogService {
     if (other && other.id !== id) throw new ConflictException(errorKey('code_taken'));
   }
 
+  /**
+   * The type fields made consistent, as on the till: only a consultation is a follow-up; only an
+   * analysis has a result type (QUALITATIVE unless chosen), unit and reference range.
+   */
+  private serviceType(
+    dto: Partial<CreateServiceDto>,
+    current?: {
+      kind: string;
+      isFollowUp: boolean;
+      resultType: string | null;
+      resultUnit: string | null;
+      referenceRange: string | null;
+    },
+  ) {
+    const kind = dto.kind ?? current?.kind ?? 'PROCEDURE';
+    const analysis = kind === 'ANALYSIS';
+    const pick = <K extends 'resultType' | 'resultUnit' | 'referenceRange'>(k: K) =>
+      dto[k] !== undefined ? (nullable(dto[k] as string | null) ?? null) : (current?.[k] ?? null);
+    return {
+      kind,
+      isFollowUp: kind === 'CONSULTATION' && (dto.isFollowUp ?? current?.isFollowUp ?? false),
+      resultType: analysis ? (pick('resultType') ?? 'QUALITATIVE') : null,
+      resultUnit: analysis ? pick('resultUnit') : null,
+      referenceRange: analysis ? pick('referenceRange') : null,
+    };
+  }
+
   createService(actor: AuthUser, dto: CreateServiceDto) {
     const now = new Date();
     return this.prisma.$transaction(async (tx) => {
@@ -75,6 +102,7 @@ export class CatalogService {
           description: nullable(dto.description) ?? null,
           price: dto.price,
           duration: dto.duration ?? 30,
+          ...this.serviceType(dto),
           active: dto.active ?? true,
           createdAt: now,
           updatedAt: now,
@@ -99,6 +127,13 @@ export class CatalogService {
         description: nullable(dto.description),
         price: dto.price,
         duration: dto.duration,
+        ...(dto.kind !== undefined ||
+        dto.isFollowUp !== undefined ||
+        dto.resultType !== undefined ||
+        dto.resultUnit !== undefined ||
+        dto.referenceRange !== undefined
+          ? this.serviceType(dto, existing!)
+          : {}),
         active: dto.active,
       };
       const row = await tx.service.update({

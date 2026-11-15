@@ -58,6 +58,14 @@ export async function recomputeCaseStatus(db: Db, caseId: string): Promise<CaseS
   return status;
 }
 
+/**
+ * Lines and course sessions sync inside their order, and sync picks rows by the order's
+ * `updatedAt`: any change to them must touch the order, or the server never hears of it.
+ */
+export async function touchOrder(db: Db, appointmentId: string): Promise<void> {
+  await db.appointment.update({ where: { id: appointmentId }, data: { updatedAt: new Date() } });
+}
+
 /** An order is completed once none of its lines is waiting or in progress. */
 export async function completeOrderIfDone(db: Db, appointmentId: string): Promise<void> {
   const left = await db.appointmentItem.count({

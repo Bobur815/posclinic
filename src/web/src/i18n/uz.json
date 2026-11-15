@@ -93,7 +93,8 @@
     "CLINIC_ADMIN": "Administrator",
     "SUPER_ADMIN": "Bosh administrator",
     "DOCTOR": "Shifokor",
-    "RECEPTIONIST": "Registrator"
+    "RECEPTIONIST": "Registrator",
+    "NURSE": "Hamshira / laborant"
   },
   "dashboard": {
     "title": "Bosh sahifa",
@@ -129,7 +130,26 @@
     "searchPlaceholder": "Ism, telefon yoki kod bo'yicha...",
     "noPatients": "Bemorlar topilmadi",
     "totalVisits": "Jami qabullar",
-    "visitHistory": "Qabullar tarixi"
+    "visitHistory": "Qabullar tarixi",
+    "chronicConditions": "Surunkali kasalliklar",
+    "latestVitals": "Oxirgi o‘lchovlar",
+    "cases": "Murojaatlar",
+    "notConfirmed": "tasdiqlanmagan",
+    "sampleWaiting": "namuna kutilmoqda",
+    "cm": "sm",
+    "kg": "kg",
+    "outcome": {
+      "POSITIVE": "Musbat",
+      "NEGATIVE": "Manfiy"
+    },
+    "caseStatus": {
+      "OPEN": "Ochiq",
+      "WAITING_DOCTOR": "Shifokorni kutmoqda",
+      "WAITING_ANALYSIS": "Tahlilni kutmoqda",
+      "RESULT_READY": "Natija tayyor",
+      "ON_TREATMENT": "Davolanmoqda",
+      "CLOSED": "Yopilgan"
+    }
   },
   "appointments": {
     "title": "Qabullar",
@@ -200,7 +220,20 @@
     "duration": "Davomiyligi",
     "durationMin": "Davomiyligi (daqiqa)",
     "searchPlaceholder": "Nomi yoki kod bo'yicha...",
-    "noServices": "Xizmatlar topilmadi"
+    "noServices": "Xizmatlar topilmadi",
+    "kind": "Turi",
+    "kinds": {
+      "CONSULTATION": "Konsultatsiya",
+      "ANALYSIS": "Tahlil",
+      "PROCEDURE": "Muolaja"
+    },
+    "resultType": "Natija turi",
+    "resultTypes": {
+      "QUALITATIVE": "Musbat / manfiy",
+      "QUANTITATIVE": "Son (titr)",
+      "TEXT": "Matn"
+    },
+    "followUp": "Takroriy konsultatsiya (14 kun ichida bepul)"
   },
   "doctors": {
     "title": "Shifokorlar",
