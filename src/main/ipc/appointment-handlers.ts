@@ -1,4 +1,4 @@
-import { handle, ipcSafe } from './ipc-safe';
+import { handle, ipcSafe, RefusedError } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
@@ -242,32 +242,41 @@ export function setupAppointmentHandlers(): void {
       id: string,
       data: {
         paymentMethod: string;
-        paidAmount: number;
+        /** Money taken now; more than what is owed is change, not credit. */
+        amount: number;
       },
     ) => {
       try {
+        const amount = Number(data?.amount);
+        if (!Number.isFinite(amount) || amount <= 0) throw new RefusedError('errors.invalidAmount');
         const prisma = getPrismaClient();
-        const appointment = await prisma.appointment.findUnique({
-          where: { id },
-          select: { totalAmount: true },
-        });
 
-        if (!appointment) throw new Error('Appointment not found');
+        // Read and write in one transaction: two desks paying the same visit cannot both
+        // add onto the same old balance.
+        const updated = await prisma.$transaction(async (tx) => {
+          const appointment = await tx.appointment.findUnique({
+            where: { id },
+            select: { totalAmount: true, paidAmount: true },
+          });
+          if (!appointment) throw new RefusedError('errors.notFound');
 
-        const totalAmount = Number(appointment.totalAmount);
-        const paidAmount = Number(data.paidAmount);
-        const paymentStatus =
-          paidAmount >= totalAmount ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'PENDING';
+          const totalAmount = Number(appointment.totalAmount);
+          const alreadyPaid = Number(appointment.paidAmount);
+          if (alreadyPaid >= totalAmount) throw new RefusedError('errors.alreadyPaid');
 
-        const updated = await prisma.appointment.update({
-          where: { id },
-          data: {
-            status: paymentStatus === 'PAID' ? 'COMPLETED' : undefined,
-            paymentStatus,
-            paymentMethod: data.paymentMethod,
-            paidAmount,
-          },
-          include: { patient: true, doctor: true, items: true },
+          const paidAmount = Math.min(totalAmount, alreadyPaid + amount);
+          const paymentStatus = paidAmount >= totalAmount ? 'PAID' : 'PARTIAL';
+
+          return tx.appointment.update({
+            where: { id },
+            data: {
+              status: paymentStatus === 'PAID' ? 'COMPLETED' : undefined,
+              paymentStatus,
+              paymentMethod: data.paymentMethod,
+              paidAmount,
+            },
+            include: { patient: true, doctor: true, items: true },
+          });
         });
 
         return ipcSafe(updated);

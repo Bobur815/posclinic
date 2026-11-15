@@ -262,11 +262,17 @@ describe('a satellite at work', () => {
     await until(() => b.events.some((e) => e.type === 'data:changed'));
     assert.ok(mainWindowEvents.some((e) => e.entity === 'appointments'));
 
-    const paid = await a.call('appointments:checkout', id, {
-      paymentMethod: 'CASH',
-      paidAmount: 50_000,
-    });
-    assert.equal((paid as { data: { paymentStatus: string } }).data.paymentStatus, 'PAID');
+    // Payments add up: 30k now, then 30k cash for the remaining 20k (10k is change, not credit).
+    type Paid = { ok: boolean; data: { paymentStatus: string; paidAmount: number } };
+    const first = (await a.call('appointments:checkout', id, { paymentMethod: 'CASH', amount: 30_000 })) as Paid;
+    assert.equal(first.data.paymentStatus, 'PARTIAL');
+    assert.equal(Number(first.data.paidAmount), 30_000);
+    const paid = (await a.call('appointments:checkout', id, { paymentMethod: 'CASH', amount: 30_000 })) as Paid;
+    assert.equal(paid.data.paymentStatus, 'PAID');
+    assert.equal(Number(paid.data.paidAmount), 50_000, 'capped at the bill');
+    const again = await a.call('appointments:checkout', id, { paymentMethod: 'CASH', amount: 1_000 });
+    assert.equal((again as { ok: boolean }).ok, false);
+    assert.match(JSON.stringify(again), /alreadyPaid/);
     // The visit the satellite prints comes back over RPC.
     const fetched = await a.call('appointments:getById', id);
     assert.equal((fetched as { data: { id: string } }).data.id, id);

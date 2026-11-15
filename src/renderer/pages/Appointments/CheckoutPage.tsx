@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { ArrowLeft, CheckCircle, Printer } from 'lucide-react';
+import { ipcErrorKey } from '../../store/lan-store';
 import { useToast } from '../../context/ToastContext';
 
 interface AppointmentData {
@@ -270,8 +271,10 @@ export function CheckoutPage() {
         amount: enteredAmount,
       });
       setIsDone(true);
-    } catch {
-      toast.error(t('common.error'));
+    } catch (error) {
+      // Licence refusals are already toasted by LicenseBanner; show every other reason here.
+      const key = ipcErrorKey(error, 'common.error');
+      if (!key.startsWith('license.')) toast.error(t(key));
     } finally {
       setIsProcessing(false);
     }

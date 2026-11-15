@@ -414,7 +414,10 @@
     "serverError": "Server xatosi",
     "unknownError": "Noma'lum xato",
     "notAuthenticated": "Avval tizimga kiring",
-    "forbidden": "Bu amal faqat klinika administratoriga ruxsat etilgan"
+    "forbidden": "Bu amal faqat klinika administratoriga ruxsat etilgan",
+    "notFound": "Topilmadi",
+    "invalidAmount": "To'lov summasini kiriting",
+    "alreadyPaid": "Bu qabul allaqachon to'liq to'langan"
   },
   "license": {
     "title": "Obuna",

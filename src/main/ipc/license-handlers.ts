@@ -29,12 +29,12 @@ export function setupLicenseHandlers(): void {
       start.setHours(0, 0, 0, 0);
       return getPrismaClient().appointment.count({ where: { createdAt: { gte: start } } });
     },
-    appointmentTotal: async (id) => {
+    appointmentBalance: async (id) => {
       const a = await getPrismaClient().appointment.findUnique({
         where: { id },
-        select: { totalAmount: true },
+        select: { totalAmount: true, paidAmount: true },
       });
-      return a ? Number(a.totalAmount) : null;
+      return a ? { total: Number(a.totalAmount), paid: Number(a.paidAmount) } : null;
     },
   });
 

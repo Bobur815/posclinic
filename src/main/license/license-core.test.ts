@@ -44,7 +44,7 @@ function payload(over: Partial<LicensePayload> = {}): LicensePayload {
 const facts = (over: Partial<GateFacts> = {}): GateFacts => ({
   activeDoctors: async () => 0,
   visitsThisMonth: async () => 0,
-  appointmentTotal: async () => 100_000,
+  appointmentBalance: async () => ({ total: 100_000, paid: 0 }),
   ...over,
 });
 
@@ -148,7 +148,7 @@ describe('refusal', () => {
     );
     assert.equal(await refusal('patients:getAll', [], ro, facts()), null);
     assert.equal(
-      await refusal('appointments:checkout', ['a1', { paidAmount: 100_000 }], ro, facts()),
+      await refusal('appointments:checkout', ['a1', { amount: 100_000 }], ro, facts()),
       null,
     );
   });
@@ -195,12 +195,27 @@ describe('refusal', () => {
   it('needs debt for a partial payment, not for a full one', async () => {
     const s = state(start);
     assert.equal(
-      await refusal('appointments:checkout', ['a1', { paidAmount: 50_000 }], s, facts()),
+      await refusal('appointments:checkout', ['a1', { amount: 50_000 }], s, facts()),
       'license.feature.debt',
     );
     assert.equal(
-      await refusal('appointments:checkout', ['a1', { paidAmount: 100_000 }], s, facts()),
+      await refusal('appointments:checkout', ['a1', { amount: 100_000 }], s, facts()),
       null,
+    );
+    // Cash with change is not debt.
+    assert.equal(
+      await refusal('appointments:checkout', ['a1', { amount: 120_000 }], s, facts()),
+      null,
+    );
+    // A second payment that completes an earlier partial one is not debt either.
+    const halfPaid = facts({ appointmentBalance: async () => ({ total: 100_000, paid: 60_000 }) });
+    assert.equal(
+      await refusal('appointments:checkout', ['a1', { amount: 40_000 }], s, halfPaid),
+      null,
+    );
+    assert.equal(
+      await refusal('appointments:checkout', ['a1', { amount: 30_000 }], s, halfPaid),
+      'license.feature.debt',
     );
   });
 
@@ -225,9 +240,9 @@ describe('review hardening', () => {
 
   it('refuses a non-numeric or negative checkout amount on every plan', async () => {
     for (const s of [state(start), state(payload())]) {
-      for (const paidAmount of ['abc', Number.NaN, -1, undefined]) {
+      for (const amount of ['abc', Number.NaN, -1, 0, undefined]) {
         assert.equal(
-          await refusal('appointments:checkout', ['a1', { paidAmount }], s, facts()),
+          await refusal('appointments:checkout', ['a1', { amount }], s, facts()),
           'license.refused.invalid',
         );
       }

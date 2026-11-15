@@ -231,7 +231,7 @@ export class LicenseService {
     const facts: GateFacts = this.facts ?? {
       activeDoctors: async () => 0,
       visitsThisMonth: async () => 0,
-      appointmentTotal: async () => null,
+      appointmentBalance: async () => null,
     };
     return refusal(channel, args, this.tillState(), facts);
   }

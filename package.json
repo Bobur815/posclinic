@@ -1,6 +1,6 @@
 {
   "name": "posclinic",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Parasitology clinic POS - offline-first, licensed by posgro",
   "main": "dist-electron/main/index.js",
   "scripts": {

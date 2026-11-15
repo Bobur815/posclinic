@@ -191,7 +191,8 @@ export const READONLY_REFUSED: ReadonlySet<string> = new Set([
 export interface GateFacts {
   activeDoctors(excludeId?: string): Promise<number>;
   visitsThisMonth(): Promise<number>;
-  appointmentTotal(id: string): Promise<number | null>;
+  /** What a visit costs and what has been paid on it so far; null if there is no such visit. */
+  appointmentBalance(id: string): Promise<{ total: number; paid: number } | null>;
 }
 
 /** i18n keys (`license.refused.*`), resolved in the renderer. */
@@ -222,14 +223,18 @@ async function needed(
     }
     case 'appointments:checkout': {
       // Money only moves through checkout (appointments:update cannot set it), so this is the
-      // one place a partial payment can happen. A non-number is never "paid in full".
-      const paid = arg(1).paidAmount;
-      if (typeof paid !== 'number' || !Number.isFinite(paid) || paid < 0) {
+      // one place a partial payment can happen. `amount` is the money taken NOW (it may exceed
+      // what is owed: cash with change); a non-number or nothing is never a payment.
+      const amount = arg(1).amount;
+      if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
         return 'license.refused.invalid';
       }
       if (has('debt')) return null;
-      const total = await facts.appointmentTotal(String(args[0] ?? ''));
-      return total !== null && paid < total ? 'license.feature.debt' : null;
+      const balance = await facts.appointmentBalance(String(args[0] ?? ''));
+      // Leaving any of the bill unpaid is selling on debt.
+      return balance !== null && balance.paid + amount < balance.total
+        ? 'license.feature.debt'
+        : null;
     }
     case 'appointments:getAll': {
       // The work list (no dates, `today`, one `date`) is free; a date range is a report, free
