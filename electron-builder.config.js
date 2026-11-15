@@ -55,13 +55,10 @@ module.exports = {
     installerIcon: 'build/icons/posclinic-icon.ico',
     uninstallerIcon: 'build/icons/posclinic-icon.ico',
     installerHeaderIcon: 'build/icons/posclinic-icon.ico',
-    runAfterFinish: false
-  },
-
-  mac: {
-    target: ['dmg'],
-    icon: 'build/icons/posclinic-icon.icns',
-    category: 'public.app-category.medical'
+    runAfterFinish: false,
+    // The clinic's data (%APPDATA%\POSCLINIC: patient database, licence, logs) survives an
+    // uninstall and every upgrade; installing a newer version over an older one is the update path.
+    deleteAppDataOnUninstall: false
   },
 
   linux: {
@@ -70,9 +67,12 @@ module.exports = {
     category: 'Office'
   },
 
+  // The build writes latest.yml + .blockmap for this feed and app-update.yml into the app;
+  // `npm run deploy:pos` uploads them (scripts/upload-release.mjs). Keep in sync with
+  // UPDATE_FEED_URL in src/main/updater/updater.ts. Served by the posgro panel's /releases/ alias.
   publish: {
     provider: 'generic',
-    url: 'https://posclinic.bobur-dev.uz/releases/',
+    url: 'https://panel.posgro.uz/releases/posclinic/',
     channel: 'latest'
   }
 };

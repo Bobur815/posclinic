@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ActivateResult, LicenseStatusDto } from '../shared/license';
+import type { UpdateStatusDto } from '../shared/update';
 
 interface SetupAdminInput {
   fullName: string;
@@ -104,6 +105,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     confirmClose: () => ipcRenderer.send('app:confirm-close'),
   },
 
+  // Software update (feed: panel.posgro.uz/releases/posclinic). Download/install: admins only.
+  update: {
+    status: () => ipcRenderer.invoke('update:status'),
+    check: () => ipcRenderer.invoke('update:check'),
+    download: () => ipcRenderer.invoke('update:download'),
+    install: () => ipcRenderer.invoke('update:install'),
+    onChanged: (callback: () => void) => {
+      ipcRenderer.on('update:changed', callback);
+      return () => ipcRenderer.removeListener('update:changed', callback);
+    },
+  },
+
   // Config
   config: {
     getLocalConfig: () => ipcRenderer.invoke('config:getLocalConfig'),
@@ -179,6 +192,13 @@ declare global {
         quit: () => Promise<void>;
         onCloseRequested: (callback: () => void) => () => void;
         confirmClose: () => void;
+      };
+      update: {
+        status: () => Promise<UpdateStatusDto>;
+        check: () => Promise<UpdateStatusDto>;
+        download: () => Promise<UpdateStatusDto>;
+        install: () => Promise<void>;
+        onChanged: (callback: () => void) => () => void;
       };
       config: {
         getLocalConfig: () => Promise<{ clinicId: string; apiUrl: string; clinicName: string; terminalId: string } | null>;

@@ -100,7 +100,9 @@ Renderer (React) → hooks → ipc-client.ts → preload.ts (contextBridge) → 
 - `asar: false` in `electron-builder.config.js` — Chromium ES modules can't load from `.asar`
 - SQLite Prisma client at `src/generated/prisma-sqlite/` is committed and included in the bundle
 - Native Prisma query engine binaries are bundled via `extraResources`
-- Release channel: `https://posclinic.bobur-dev.uz/releases/`
+- Release channel: `https://panel.posgro.uz/releases/posclinic/` (posgro VPS `/home/bobur/releases/posclinic`). Windows NSIS installer.
+- Release: `npm run release -- patch|minor|major` (bump + tag + build), then `npm run deploy:pos` (check → `dist:win` → `scripts/upload-release.mjs`; `--dry-run` to check only). The user runs deploys. A published version can't be re-uploaded: bump instead.
+- Updates: `src/main/updater/updater.ts` + `ipc/update-handlers.ts`. One quiet check 30 s after start; download/install are buttons in Settings → Update, clinic admins only.
 
 ---
 

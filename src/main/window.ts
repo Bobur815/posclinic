@@ -102,7 +102,14 @@ export function createWindow(): BrowserWindow {
     console.error(`[Window] did-fail-load: code=${code} desc=${desc} url=${url}`);
   });
 
+  // The window's X asks the renderer first ("exit?"). A deliberate app.quit() (the update
+  // installer, app:quit) is let through, or quitAndInstall would never get to install.
+  let appQuitting = false;
+  app.once('before-quit', () => {
+    appQuitting = true;
+  });
   mainWindow.on('close', (e) => {
+    if (appQuitting) return;
     e.preventDefault();
     mainWindow.webContents.send('app:close-requested');
   });

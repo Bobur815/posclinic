@@ -3,6 +3,7 @@ import { updateConfig } from './config/app-config';
 import { getPrismaClient, initializeDatabase, readClinicBootstrap } from './database/sqlite-client';
 import { setupIpcHandlers } from './ipc/handlers';
 import { setupLicenseHandlers } from './ipc/license-handlers';
+import { setupUpdateHandlers } from './ipc/update-handlers';
 import { getLicenseService } from './license/license-service';
 import { log } from './logger';
 import { createSetupWindow, createWindow } from './window';
@@ -95,6 +96,7 @@ async function bootstrap() {
 
     setupIpcHandlers();
     setupLicenseHandlers();
+    setupUpdateHandlers();
     registerCoreHandlers();
 
     process.on('unhandledRejection', (reason, promise) => {

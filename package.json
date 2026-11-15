@@ -9,7 +9,7 @@
     "build:pos": "cross-env APP_MODE=pos electron-vite build && electron-builder --config electron-builder.config.js",
     "build:server": "nest build",
     "prisma:generate": "prisma generate",
-    "prisma:generate:sqlite": "prisma generate --schema=prisma/schema.sqlite.prisma",
+    "prisma:generate:sqlite": "cross-env SQLITE_DATABASE_URL=file:./dev.db prisma generate --schema=prisma/schema.sqlite.prisma",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:push:sqlite": "prisma db push --schema=prisma/schema.sqlite.prisma",
@@ -19,7 +19,11 @@
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "test": "tsx --test \"src/**/*.test.ts\"",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "npm run typecheck && npm test",
+    "dist:win": "npm run prisma:generate:sqlite && cross-env APP_MODE=pos electron-vite build && electron-builder --config electron-builder.config.js --win --publish never",
+    "deploy:pos": "npm run check && npm run dist:win && node scripts/upload-release.mjs",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

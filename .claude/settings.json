@@ -39,7 +39,12 @@
       "Bash(git merge*)",
       "Bash(git rebase*)",
       "Bash(git stash*)",
-      "Edit(/electron-builder.config.js)"
+      "Edit(/electron-builder.config.js)",
+      "Bash(npm run deploy:pos*)",
+      "Bash(npm run release*)",
+      "Bash(npm run dist:win*)",
+      "Bash(node scripts/upload-release*)",
+      "Bash(node scripts/release*)"
     ],
     "deny": [
       "Edit(/src/generated/**)",

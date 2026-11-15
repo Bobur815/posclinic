@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { SubscriptionSection } from './SubscriptionSection';
+import { UpdateSection } from './UpdateSection';
 import { Sun, Moon, Globe, Monitor, Info } from 'lucide-react';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -203,6 +204,8 @@ export function SettingsPage() {
       )}
 
       <SubscriptionSection />
+
+      <UpdateSection />
 
       {/* About */}
       <Section>

@@ -1,0 +1,54 @@
+/**
+ * Cuts a release: version bump + tag + installer. Publishing it to the tills' update feed is a
+ * separate step: `node scripts/upload-release.mjs` uploads what this built, or
+ * `npm run deploy:pos` builds and uploads the current version in one go.
+ *
+ *   node scripts/release.mjs patch|minor|major
+ *
+ * Version rule (CLAUDE.md "Versioning"):
+ *   patch  bug fix
+ *   minor  new feature, or any additive database change
+ *   major  breaking change or a change a clinic must be told about before installing
+ *
+ * Steps: refuse a dirty tree -> `npm run check` -> bump version (commit + tag vX.Y.Z) -> build the
+ * Windows installer -> write SHA-256 next to it in release/. Pushing is left to you.
+ */
+import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const bump = process.argv[2];
+if (!['patch', 'minor', 'major'].includes(bump)) {
+  console.error('Usage: node scripts/release.mjs patch|minor|major');
+  process.exit(1);
+}
+
+const run = (cmd) => execSync(cmd, { stdio: 'inherit' });
+const out = (cmd) => execSync(cmd, { encoding: 'utf8' }).trim();
+
+if (out('git status --porcelain')) {
+  console.error('Working tree is not clean; commit or stash first.');
+  process.exit(1);
+}
+
+run('npm run check');
+run(`npm version ${bump} -m "release: v%s"`);
+const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+
+run('npm run dist:win');
+
+const name = `POSCLINIC-Setup-${version}.exe`;
+const releaseDir = path.join('release', `v${version}`);
+fs.mkdirSync(releaseDir, { recursive: true });
+fs.copyFileSync(path.join('dist', name), path.join(releaseDir, name));
+const sha = createHash('sha256')
+  .update(fs.readFileSync(path.join(releaseDir, name)))
+  .digest('hex');
+fs.writeFileSync(path.join(releaseDir, `${name}.sha256`), `${sha}  ${name}\n`);
+
+console.log(
+  `\n${releaseDir}/${name}\nsha256 ${sha}\n` +
+    `Publish to the tills: node scripts/upload-release.mjs (--dry-run first to check)\n` +
+    `Push when ready: git push && git push --tags`,
+);

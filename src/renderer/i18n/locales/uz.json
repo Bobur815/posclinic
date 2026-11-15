@@ -481,5 +481,24 @@
       "terminal_missing": "Terminal identifikatori topilmadi",
       "other_clinic": "Bu kod boshqa klinikaga tegishli. Terminal faqat o'z klinikasiga qayta ulanadi"
     }
+  },
+  "update": {
+    "title": "Yangilanish",
+    "current": "Joriy versiya",
+    "unsupported": "Yangilanish faqat o'rnatilgan dasturda ishlaydi",
+    "upToDate": "Eng so'nggi versiya o'rnatilgan",
+    "available": "Yangi versiya mavjud: v{{version}}",
+    "ready": "Yuklab olindi. O'rnatish dasturni qayta ishga tushiradi",
+    "check": "Yangilanishni tekshirish",
+    "checking": "Tekshirilmoqda...",
+    "download": "v{{version}} ni yuklab olish",
+    "downloading": "Yuklanmoqda... {{percent}}%",
+    "install": "O'rnatish va qayta ishga tushirish",
+    "errors": {
+      "corrupt": "Yuklangan fayl buzilgan. Qayta yuklab ko'ring",
+      "not_found": "Yangilanish serverda topilmadi",
+      "offline": "Internetga ulanib bo'lmadi. Ulanishni tekshirib qayta urinib ko'ring",
+      "unknown": "Yangilanishni olib bo'lmadi. Qayta urinib ko'ring"
+    }
   }
 }
