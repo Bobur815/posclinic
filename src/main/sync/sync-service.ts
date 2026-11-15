@@ -68,7 +68,9 @@ function httpTransport(token: string, terminalId: string): SyncTransport {
   return {
     push: (body) => call<PushAnswer>('/sync/push', { method: 'POST', body: JSON.stringify(body) }),
     pull: (since) =>
-      call<PullAnswer>(`/sync/pull?since=${encodeURIComponent(since ?? '')}`, { method: 'GET' }),
+      call<PullAnswer>(since ? `/sync/pull?since=${encodeURIComponent(since)}` : '/sync/pull', {
+        method: 'GET',
+      }),
   };
 }
 

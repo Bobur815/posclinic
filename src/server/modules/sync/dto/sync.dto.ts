@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsArray, IsISO8601, IsOptional } from 'class-validator';
 
 /**
@@ -37,6 +38,9 @@ export class SyncPushDto {
 
 export class SyncPullQueryDto {
   @ApiPropertyOptional({ description: 'serverTime from the previous pull; empty = everything' })
+  // A first pull sends `since=` (contract: "<ISO|empty>"); @IsOptional alone lets only
+  // undefined/null through, so an empty value is mapped to undefined first.
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsISO8601()
   since?: string;
