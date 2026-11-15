@@ -3,7 +3,11 @@ import { resolve } from 'path'
 import { loadEnv } from 'vite'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode || 'pos', process.cwd(), '')
+  // Always the till's env files (.env, .env.pos, .env.pos.local), whatever Vite's own mode is.
+  // `electron-vite dev` runs in mode "development", so loadEnv(mode) never read .env.pos and the
+  // POSCLINIC_API_URL / POSCLINIC_SERVER_URL overrides were silently ignored.
+  void mode
+  const env = loadEnv(process.env.APP_MODE || 'pos', process.cwd(), '')
 
   // Baked into the bundle and extractable: never add secrets here. POSCLINIC_API_URL is honoured
   // only by unpackaged (dev) builds (licenseApiUrl / serverApiUrl). POSCLINIC_SERVER_URL is the
