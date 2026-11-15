@@ -127,13 +127,11 @@ export interface AppointmentCreateInput {
   /** ISO date-time. */
   appointmentDate: string;
   notes?: string;
-  items: Array<{
-    serviceId: string;
-    serviceName: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-  }>;
+  /**
+   * Which services and how many. Names, prices and totals are set by the main till from its own
+   * catalog (appointment-handlers.ts), never by the caller.
+   */
+  items: Array<{ serviceId: string; quantity: number }>;
 }
 
 /** `appointments:getAll`. A date range is a report (licence: `reports` beyond one day). */

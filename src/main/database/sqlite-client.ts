@@ -1,7 +1,27 @@
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
+import { normalizePatientPhones } from './data-upgrades';
 import { createSchemaIfNeeded } from './schema';
+
+/**
+ * Schema first (must succeed), then data upgrades. A failed data upgrade is logged and never
+ * stops the clinic from opening: the old rows still work, they are just not normalised yet.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: generated Prisma client
+async function upgradeDatabase(db: any): Promise<void> {
+  await createSchemaIfNeeded(db);
+  try {
+    const phones = await normalizePatientPhones(db);
+    if (phones.updated || phones.skipped.length) {
+      console.log(
+        `[db] patient phones normalised: ${phones.updated}, skipped (duplicate): ${phones.skipped.length}`,
+      );
+    }
+  } catch (error) {
+    console.error('[db] patient phone normalisation failed (left as is):', error);
+  }
+}
 
 import type { PrismaClient as GeneratedClient } from '../../generated/prisma-sqlite';
 
@@ -83,7 +103,7 @@ export async function initializeDatabase(): Promise<void> {
 
   try {
     await prisma!.$connect();
-    await createSchemaIfNeeded(prisma!);
+    await upgradeDatabase(prisma!);
   } catch (error) {
     console.error('Failed to connect to database:', error);
     throw error;
@@ -108,5 +128,5 @@ export async function reinitializeDatabaseForClinic(clinicId: string): Promise<v
     log: ['error'],
   });
   await prisma!.$connect();
-  await createSchemaIfNeeded(prisma!);
+  await upgradeDatabase(prisma!);
 }

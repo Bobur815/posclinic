@@ -198,9 +198,12 @@ describe('appointments (NewAppointmentPage, CheckoutPage, Dashboard, PatientDeta
 
   it('creates with numeric money and the includes the pages read', async () => {
     visit = await create();
-    assert.equal(visit.totalAmount, 100000);
+    // The till prices from its catalog (the page's 50 000 is only a preview).
+    const price = (await call<ServiceDto[]>('services:search', 'KONS'))[0].price;
+    assert.equal(visit.items[0].unitPrice, price);
+    assert.equal(visit.totalAmount, price * 2);
+    assert.equal(typeof visit.totalAmount, 'number');
     assert.equal(visit.paidAmount, 0);
-    assert.equal(visit.items[0].unitPrice, 50000);
     assert.equal(visit.patient.fullName, 'Aliyev Vali');
     assert.equal(visit.doctor.fullName, 'Dr Karimov');
   });
@@ -224,10 +227,59 @@ describe('appointments (NewAppointmentPage, CheckoutPage, Dashboard, PatientDeta
     assert.equal(typeof s.recentAppointments[0].totalAmount, 'number');
   });
 
+  it('prices the visit from the catalog, ignoring prices the caller sends', async () => {
+    const catalog = (await call<ServiceDto[]>('services:search', 'KONS'))[0];
+    const forged = await call<AppointmentDto>('appointments:create', {
+      patientId,
+      doctorId,
+      appointmentDate: new Date().toISOString(),
+      items: [{ serviceId, serviceName: 'Cheap', quantity: 3, unitPrice: 1, total: 3 }],
+    });
+    assert.equal(forged.items[0].unitPrice, catalog.price);
+    assert.equal(forged.items[0].serviceName, catalog.name);
+    assert.equal(forged.totalAmount, catalog.price * 3);
+    // Not part of the visits the next tests count.
+    await call('appointments:update', forged.id, { status: 'CANCELLED' });
+  });
+
+  it('refuses unknown/inactive services, an empty visit and impossible quantities', async () => {
+    const base = { patientId, doctorId, appointmentDate: new Date().toISOString() };
+    await refusedWith(
+      call('appointments:create', { ...base, items: [{ serviceId: 'nope', quantity: 1 }] }),
+      'errors.serviceUnavailable',
+    );
+    await refusedWith(call('appointments:create', { ...base, items: [] }), 'errors.noServices');
+    for (const quantity of [0, -1, 1.5, 1000]) {
+      await refusedWith(
+        call('appointments:create', { ...base, items: [{ serviceId, quantity }] }),
+        'errors.invalidQuantity',
+      );
+    }
+    await refusedWith(
+      call('appointments:create', { ...base, appointmentDate: 'garbage', items: [{ serviceId, quantity: 1 }] }),
+      'errors.invalidDate',
+    );
+    const off = await call<ServiceDto>('services:create', { code: 'OFF', name: 'Old', price: 9, duration: 10, active: false });
+    await refusedWith(
+      call('appointments:create', { ...base, items: [{ serviceId: off.id, quantity: 1 }] }),
+      'errors.serviceUnavailable',
+    );
+  });
+
+  it('a cancelled visit refuses payment', async () => {
+    const v = await create();
+    await call('appointments:update', v.id, { status: 'CANCELLED' });
+    await refusedWith(
+      call('appointments:checkout', v.id, { paymentMethod: 'CASH', amount: 1000 }),
+      'errors.visitCancelled',
+    );
+  });
+
   it('patient history carries the doctor of each visit', async () => {
     const p = await call<PatientWithVisitsDto>('patients:getById', patientId);
-    assert.equal(p.appointments.length, 2);
-    assert.equal(p.appointments[0].doctor.fullName, 'Dr Karimov');
+    const visits = await t.db.appointment.count({ where: { patientId } });
+    assert.equal(p.appointments.length, visits);
+    assert.ok(p.appointments.every((a) => a.doctor.fullName === 'Dr Karimov'));
   });
 });
 

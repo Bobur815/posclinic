@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Plus, Edit2, X, Save, Search } from 'lucide-react';
@@ -272,7 +273,8 @@ export function DoctorList() {
     }
   }, []);
 
-  useEffect(() => { loadDoctors(); }, [loadDoctors]);
+  const dataVersion = useDataVersion(['doctors']);
+  useEffect(() => { loadDoctors(); }, [loadDoctors, dataVersion]);
 
   const filtered = searchQuery
     ? doctors.filter(

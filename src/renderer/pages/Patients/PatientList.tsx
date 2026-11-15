@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -145,9 +146,10 @@ export function PatientList() {
     }
   }, []);
 
+  const dataVersion = useDataVersion(['patients']);
   useEffect(() => {
     loadPatients();
-  }, [loadPatients]);
+  }, [loadPatients, dataVersion]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);

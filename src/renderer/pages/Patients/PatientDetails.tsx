@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -140,6 +141,7 @@ export function PatientDetails() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const dataVersion = useDataVersion(['patients', 'appointments']);
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -149,7 +151,7 @@ export function PatientDetails() {
       setPatient(data as PatientData);
       setIsLoading(false);
     });
-  }, [id]);
+  }, [id, dataVersion]);
 
   if (isLoading) return <Page>{t('common.loading')}</Page>;
   if (!patient) return <Page>{t('patients.errors.not_found')}</Page>;

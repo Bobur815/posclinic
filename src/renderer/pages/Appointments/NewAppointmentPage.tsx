@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -301,11 +302,12 @@ export function NewAppointmentPage() {
   const [serviceResults, setServiceResults] = useState<Service[]>([]);
   const [items, setItems] = useState<AppointmentItemLocal[]>([]);
 
+  const doctorsVersion = useDataVersion(['doctors']);
   useEffect(() => {
     window.electronAPI.doctors.getActive().then((data) => {
       setDoctors(data as Doctor[]);
     });
-  }, []);
+  }, [doctorsVersion]);
 
   const handlePatientSearch = useCallback(async (q: string) => {
     setPatientSearch(q);
@@ -368,13 +370,8 @@ export function NewAppointmentPage() {
         // The local time typed, as an instant (`new Date('…T09:00')` reads it as local).
         appointmentDate: new Date(appointmentDate).toISOString(),
         notes,
-        items: items.map((i) => ({
-          serviceId: i.serviceId,
-          serviceName: i.serviceName,
-          quantity: i.quantity,
-          unitPrice: i.price,
-          total: i.total,
-        })),
+        // Prices shown here are a preview; the main till prices the visit from its catalog.
+        items: items.map((i) => ({ serviceId: i.serviceId, quantity: i.quantity })),
       });
       const appt = result as { id: string };
       toast.success(t('common.success'));

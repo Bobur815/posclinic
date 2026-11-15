@@ -59,43 +59,70 @@ export function setupAppointmentHandlers(): void {
     try {
       const prisma = getPrismaClient();
 
-      const items =
-        (data.items as Array<{
-          serviceId: string;
-          serviceName: string;
-          quantity: number;
-          unitPrice: number;
-          total: number;
-        }>) || [];
-
-      const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
+      // The caller names services and quantities only. Names and prices come from THIS till's
+      // catalog: a page (or a satellite over the LAN) never sets what a visit costs.
+      const requested = Array.isArray(data.items)
+        ? (data.items as Array<{ serviceId?: unknown; quantity?: unknown }>)
+        : [];
+      if (requested.length === 0 || requested.length > 50) {
+        throw new RefusedError('errors.noServices');
+      }
+      const lines = requested.map((item) => ({
+        serviceId: String(item.serviceId ?? ''),
+        quantity: Number(item.quantity ?? 1),
+      }));
+      if (
+        lines.some(
+          (l) =>
+            !l.serviceId || !Number.isInteger(l.quantity) || l.quantity < 1 || l.quantity > 999,
+        )
+      ) {
+        throw new RefusedError('errors.invalidQuantity');
+      }
+      const appointmentDate = new Date(String(data.appointmentDate ?? ''));
+      if (Number.isNaN(appointmentDate.getTime())) throw new RefusedError('errors.invalidDate');
 
       const appointment = await withUniqueRetry(['appointment_number', 'appointmentNumber'], () =>
-        prisma.$transaction(async (tx: Tx) =>
-          tx.appointment.create({
+        prisma.$transaction(async (tx: Tx) => {
+          const services = await tx.service.findMany({
+            where: { id: { in: [...new Set(lines.map((l) => l.serviceId))] }, active: true },
+            select: { id: true, name: true, price: true },
+          });
+          const byId = new Map(
+            services.map((s: { id: string; name: string; price: unknown }) => [s.id, s]),
+          );
+          const items = lines.map((l) => {
+            const service = byId.get(l.serviceId) as
+              | { id: string; name: string; price: unknown }
+              | undefined;
+            if (!service) throw new RefusedError('errors.serviceUnavailable');
+            const unitPrice = Number(service.price);
+            return {
+              id: randomUUID(),
+              serviceId: service.id,
+              serviceName: service.name,
+              quantity: l.quantity,
+              unitPrice,
+              total: Math.round(unitPrice * l.quantity * 100) / 100,
+            };
+          });
+          const totalAmount = Math.round(items.reduce((sum, i) => sum + i.total, 0) * 100) / 100;
+
+          return tx.appointment.create({
             data: {
               id: randomUUID(),
               appointmentNumber: await nextAppointmentNumber(tx),
               patientId: data.patientId as string,
               doctorId: data.doctorId as string,
-              appointmentDate: new Date(data.appointmentDate as string),
+              appointmentDate,
               notes: (data.notes as string) || null,
               totalAmount,
               terminalId: ctx.terminalId || getAppConfig().terminalId,
-              items: {
-                create: items.map((item) => ({
-                  id: randomUUID(),
-                  serviceId: item.serviceId,
-                  serviceName: item.serviceName,
-                  quantity: item.quantity,
-                  unitPrice: item.unitPrice,
-                  total: item.total,
-                })),
-              },
+              items: { create: items },
             },
             include: { items: true, patient: true, doctor: true },
-          }),
-        ),
+          });
+        }),
       );
 
       return ipcSafe(appointment);
@@ -258,9 +285,10 @@ export function setupAppointmentHandlers(): void {
         const updated = await prisma.$transaction(async (tx) => {
           const appointment = await tx.appointment.findUnique({
             where: { id },
-            select: { totalAmount: true, paidAmount: true },
+            select: { totalAmount: true, paidAmount: true, status: true },
           });
           if (!appointment) throw new RefusedError('errors.notFound');
+          if (appointment.status === 'CANCELLED') throw new RefusedError('errors.visitCancelled');
 
           const totalAmount = Number(appointment.totalAmount);
           const alreadyPaid = Number(appointment.paidAmount);

@@ -420,7 +420,12 @@
     "alreadyPaid": "Bu qabul allaqachon to'liq to'langan",
     "invalidPhone": "Telefon raqamini +998 XX XXX XX XX ko'rinishida kiriting",
     "phoneTaken": "Bu telefon raqamli bemor allaqachon bor",
-    "codeTaken": "Bu kodli xizmat allaqachon bor"
+    "codeTaken": "Bu kodli xizmat allaqachon bor",
+    "noServices": "Kamida bitta xizmatni tanlang",
+    "invalidQuantity": "Xizmat soni noto'g'ri",
+    "invalidDate": "Sana noto'g'ri",
+    "serviceUnavailable": "Tanlangan xizmat topilmadi yoki faol emas. Ro'yxatni yangilang",
+    "visitCancelled": "Bekor qilingan qabul uchun to'lov qabul qilinmaydi"
   },
   "license": {
     "title": "Obuna",

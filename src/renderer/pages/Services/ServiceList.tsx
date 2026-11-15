@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Plus, Search, Edit2, X, Save } from 'lucide-react';
@@ -281,7 +282,8 @@ export function ServiceList() {
     }
   }, []);
 
-  useEffect(() => { loadServices(); }, [loadServices]);
+  const dataVersion = useDataVersion(['services']);
+  useEffect(() => { loadServices(); }, [loadServices, dataVersion]);
 
   // Filtered here, not with services:search: that one lists active services only (the visit
   // picker), and an admin must find an inactive service to switch it back on.

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { format } from 'date-fns';
@@ -160,6 +161,7 @@ export function DailyReport() {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  const dataVersion = useDataVersion(['appointments', 'patients', 'doctors']);
   useEffect(() => {
     const load = async () => {
       setIsLoading(true);
@@ -183,7 +185,7 @@ export function DailyReport() {
       }
     };
     load();
-  }, [selectedDate]);
+  }, [selectedDate, dataVersion]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

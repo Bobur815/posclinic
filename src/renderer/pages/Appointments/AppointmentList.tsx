@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -183,9 +184,10 @@ export function AppointmentList() {
     }
   }, []);
 
+  const dataVersion = useDataVersion(['appointments', 'patients', 'doctors']);
   useEffect(() => {
     loadAppointments(filter);
-  }, [filter, loadAppointments]);
+  }, [filter, loadAppointments, dataVersion]);
 
   const filteredAppointments = searchQuery
     ? appointments.filter(

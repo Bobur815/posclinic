@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import type { SyncStatusDto } from '../../shared/sync';
 import { getPrismaClient } from '../database/sqlite-client';
+import { emitEvents } from '../ipc/ipc-safe';
 import { getLicenseService } from '../license/license-service';
 import { log } from '../logger';
 import {
@@ -131,6 +132,15 @@ class CloudSync {
       });
       if (r.pushed || r.pulled || r.rejected) {
         log.info(`[sync] pushed=${r.pushed} pulled=${r.pulled} rejected=${r.rejected}`);
+      }
+      // Catalog edits from the web bypass the handlers: tell open pages here and on satellites.
+      if (r.pulled > 0) {
+        emitEvents(
+          (['services', 'doctors', 'users'] as const).map((entity) => ({
+            type: 'data:changed' as const,
+            entity,
+          })),
+        );
       }
       this.set({ state: 'idle', lastSyncAt: new Date().toISOString(), lastError: null });
     } catch (e) {

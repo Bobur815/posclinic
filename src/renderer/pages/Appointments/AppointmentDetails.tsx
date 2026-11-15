@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -172,6 +173,7 @@ export function AppointmentDetails() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const dataVersion = useDataVersion(['appointments', 'patients', 'doctors']);
   const toast = useToast();
   const [appointment, setAppointment] = useState<AppointmentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -183,7 +185,7 @@ export function AppointmentDetails() {
       setAppointment(data as AppointmentData);
       setIsLoading(false);
     });
-  }, [id]);
+  }, [id, dataVersion]);
 
   const handleCancel = async () => {
     if (!id) return;

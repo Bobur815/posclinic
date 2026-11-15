@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -180,9 +181,10 @@ export function DashboardPage() {
   const [summary, setSummary] = useState<TodaySummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const dataVersion = useDataVersion(['appointments', 'patients']);
   useEffect(() => {
     loadSummary();
-  }, []);
+  }, [dataVersion]);
 
   const loadSummary = async () => {
     try {

@@ -123,6 +123,14 @@ export function configureHandlers(next: Partial<Hooks>): void {
 }
 
 /**
+ * Announce changes that did not come through a handler (cloud sync pulling the web dashboard's
+ * catalog edits) to every window of this till and every satellite, like a handler's write does.
+ */
+export function emitEvents(events: AppEvent[]): void {
+  hooks.emit(events);
+}
+
+/**
  * Channels the licence never gates: signing in, and the till's own machinery (licence, setup,
  * updater, LAN, config, cloud sync status, app info).
  */
