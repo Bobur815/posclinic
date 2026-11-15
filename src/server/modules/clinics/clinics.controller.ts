@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { Roles } from '../auth/roles/roles.decorator';
 import { RolesGuard } from '../auth/roles/roles.guard';
 import { ClinicsService } from './clinics.service';
-import type { UpdateClinicDto } from './dto/update-clinic.dto';
+import { UpdateClinicDto } from './dto/update-clinic.dto';
 
 @ApiTags('clinics')
 @ApiBearerAuth('JWT')

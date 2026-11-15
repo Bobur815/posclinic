@@ -9,9 +9,9 @@ import type {
 } from '../../common/interfaces';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { AppointmentsService } from './appointments.service';
-import type { CheckoutDto } from './dto/checkout.dto';
-import type { CreateAppointmentDto } from './dto/create-appointment.dto';
-import type { UpdateAppointmentDto } from './dto/update-appointment.dto';
+import { CheckoutDto } from './dto/checkout.dto';
+import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
 interface ClinicRequest {
   user: { tenantId: string; clinicId: string };

@@ -2,8 +2,8 @@ import { Body, Controller, Get, Param, Post, Put, Query, Request, UseGuards } fr
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { ServiceListResponse, ServiceMutationResponse } from '../../common/interfaces';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
-import type { CreateServiceDto } from './dto/create-service.dto';
-import type { UpdateServiceDto } from './dto/update-service.dto';
+import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
 import { ServicesService } from './services.service';
 
 interface ClinicRequest {

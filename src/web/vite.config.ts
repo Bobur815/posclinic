@@ -5,6 +5,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Dev-server API target: the local posclinic server by default; PROXY_TARGET=https://... for a remote one.
+const apiTarget = process.env.PROXY_TARGET ?? 'http://localhost:4000';
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -23,11 +26,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://posclinic.bobur-dev.uz',
+        target: apiTarget,
         changeOrigin: true,
       },
       '/releases': {
-        target: 'https://posclinic.bobur-dev.uz',
+        target: apiTarget,
         changeOrigin: true,
       },
     },

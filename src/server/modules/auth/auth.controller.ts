@@ -26,13 +26,13 @@ import type {
   VerifyOtpResponse,
 } from '../../common/interfaces';
 import { AuthService } from './auth.service';
-import type { ChangePasswordDto } from './dto/change-password.dto';
-import type { ForgotPasswordDto } from './dto/forgot-password.dto';
-import type { LoginDto } from './dto/login.dto';
-import type { ElectronSetupDto } from './dto/register.dto';
-import type { RequestOtpDto } from './dto/request-otp.dto';
-import type { CreateClinicDto, SetPasswordDto } from './dto/set-password.dto';
-import type { ResetPasswordDto, VerifyOtpDto } from './dto/verify-otp.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { LoginDto } from './dto/login.dto';
+import { ElectronSetupDto } from './dto/register.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { CreateClinicDto, SetPasswordDto } from './dto/set-password.dto';
+import { ResetPasswordDto, VerifyOtpDto } from './dto/verify-otp.dto';
 import type { GoogleUser } from './jwt/google.strategy';
 import { JwtAuthGuard } from './jwt/jwt-auth.guard';
 

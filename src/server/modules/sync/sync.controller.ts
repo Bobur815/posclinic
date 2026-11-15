@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Query, Request, UseGuards } from '@nestjs/
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { SyncPullResponse, SyncPushResponse } from '../../common/interfaces';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
-import type { SyncPushDto } from './dto/sync-push.dto';
+import { SyncPushDto } from './dto/sync-push.dto';
 import { SyncService } from './sync.service';
 
 interface ClinicRequest {

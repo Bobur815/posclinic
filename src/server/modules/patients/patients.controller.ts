@@ -6,8 +6,8 @@ import type {
   PatientMutationResponse,
 } from '../../common/interfaces';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
-import type { CreatePatientDto } from './dto/create-patient.dto';
-import type { UpdatePatientDto } from './dto/update-patient.dto';
+import { CreatePatientDto } from './dto/create-patient.dto';
+import { UpdatePatientDto } from './dto/update-patient.dto';
 import { PatientsService } from './patients.service';
 
 interface ClinicRequest {

@@ -3,8 +3,8 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import type { DoctorDetailResponse, DoctorListResponse } from '../../common/interfaces';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { DoctorsService } from './doctors.service';
-import type { CreateDoctorDto } from './dto/create-doctor.dto';
-import type { UpdateDoctorDto } from './dto/update-doctor.dto';
+import { CreateDoctorDto } from './dto/create-doctor.dto';
+import { UpdateDoctorDto } from './dto/update-doctor.dto';
 
 interface ClinicRequest {
   user: { tenantId: string; clinicId: string };
