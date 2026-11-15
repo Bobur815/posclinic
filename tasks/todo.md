@@ -1,99 +1,109 @@
-# Plan — posclinic → posgro-licensed parasitology clinic POS (SavdoChef pattern)
+# Plan — Clinic web dashboard + satellite tills (v2.1)
 
-Decisions (confirmed 2026-11-15):
-- **Architecture:** posgro is the licensing + super-admin backend (like SavdoChef). posclinic till = offline-only, licensed by signed Ed25519 token. posclinic's own server/web/sync are frozen.
-- **VIP:** perpetual, no price, all features, unlimited limits; assigned only by super admin.
-- **POS login:** phone + password. Phone required, email optional. No verification of any kind.
-- **Password recovery:** none for now (super admin resets in posgro). Telegram OAuth later.
-- **Parasitology:** `PARASITOLOGY` clinic type (default) + seeded ru/uz services. No lab module yet.
+Previous plan (posgro licensing, v2.0.0) is done and committed in `2856f9d`; its review is in git history.
 
-Assumption: no posclinic tills are live yet (repo has 3 commits) → SQLite changes may be non-additive this once. Tell me if that's wrong.
+## Decisions (owner, 2026-11-15)
+1. **Data home:** revive the posclinic server (`src/server`, Postgres). The **main till** syncs up to it; the owner uses `src/web`. posgro stays licensing-only.
+2. **Scope:** patients/visits/reports read-only on the web; **services, prices, doctors, staff** editable on the web and synced down.
+3. **Web users:** clinic admins only (`CLINIC_ADMIN`/`SUPER_ADMIN` till roles), same phone + password as on the till.
+4. **Tills:** one main till (database, licence, sync) plus **satellite tills on the LAN** that do everything the main can, by remote calls to the main (SavdoChef design).
+5. **Hosting:** new container stack on the posgro VPS, own domain + staging copy.
+6. **Plans:** dashboard and satellites on **all plans**; satellites limited only by the licence `terminals` (devices = terminals − 1; VIP unlimited).
+7. **Satellite:** full till (register, visit, checkout, print). Licence, LAN, updater and setup stay per machine.
 
----
+## Architecture
+```
+ satellite till ──LAN RPC──▶ MAIN TILL (SQLite = source of truth) ──HTTPS sync──▶ posclinic server (Postgres) ◀── web dashboard (admins)
+                                   │                                     ▲
+                                   └──── licence check-in ──▶ posgro ────┘ (server verifies the posgro licence with the public key)
+```
+- **Till → server credential = the posgro licence token** (same idea as posgro `licenses/renew`). The server holds only the POSCLINIC **public** key, verifies the signature, and takes `storeId` as the clinic id. No passwords or secrets on the till; a blocked licence stops sync. No posgro change needed.
+- **Sync rules:** up (main → server): patients, appointments + items, users (bcrypt hash), doctors, services. Down (server → main): doctors, services, users edited on the web. Catalog conflicts: last-write-wins by `updatedAt`, ids are UUIDs everywhere, deletes are soft (`active=false`). Visits and patients are only created on tills, so there are no conflicts there.
+- **Satellite RPC:** the `handle(channel, fn)` helper in `src/main/ipc/ipc-safe.ts` becomes the single branch point. On a satellite it forwards `{channel, args}` to the main over LAN; on the main it runs the same handler with a per-caller context. Licence, roles and validation all run on the main.
 
-## Phase 0 — Hygiene & Claude config (posclinic)
-- [ ] Scrub `.env.example`: remove SMTP creds/email, Google OAuth vars. **User: revoke the Gmail app password (it's in git history).**
-- [ ] Add `tasks/lessons.md` (CLAUDE.md requires it).
-- [ ] Port `.claude/` (Windows-native, Git Bash), merging the best of posgro + SavdoChef:
-  - `settings.json`: allow/ask/deny (deny reading `.env*`, editing `src/generated/**`, `rm -rf`, force push, `reset --hard`, `migrate reset`, `db push` on Postgres)
-  - hooks: `guard-bash.ts`, `format.ts` (Prettier), `session-start.ts` (branch + lessons), `stop-version-check.ts` (Electron change ⇒ bump). **Skip `branch-guard`** for now (posclinic works on `main`; enable once a `dev` branch exists).
-  - rules: `electron.md`, `prisma.md`, `licensing.md` (new: the posgro contract), path-scoped
-  - commands: `/plan`, `/check`; agents: `migration-reviewer`, `electron-security-reviewer`; skills: `ipc-feature`, `prisma-migration`
-- [ ] Update CLAUDE.md: Windows dev env, new architecture (posgro licensing), remove sync/server sections or mark frozen.
+## Phase 0 — housekeeping
+- [ ] Commit pending work on `feature/posgro-licensing`: the updater, release scripts, icons, the `import type` controller fix, the `src/web` proxy.
+- [ ] New branch `feature/clinic-dashboard`. Update CLAUDE.md: `src/server` + `src/web` are **active again** (no longer frozen).
 
-## Phase 1 — posgro: POSCLINIC product (repo `C:\Users\user\posgro`, feature branch off `dev`, never `main`)
-Mirror `src/server/modules/savdochef/` as `src/server/modules/posclinic/`, behind `POSCLINIC_ENABLED=true`.
-- [ ] Prisma (additive): `ProductKind` += `POSCLINIC`. Reuse `Store.activationCodeHash/ExpiresAt`, `StoreTerminal`, `TrialClaim`. Migration via `--create-only`, read SQL, migration-reviewer agent.
-- [ ] `posclinic-plans.ts`: `TRIAL, START, PRO, ENTERPRISE, VIP` (keeps posclinic's existing tier names; FREE dropped → use TRIAL). VIP = all features, `terminals/staff/monthlyVisits = null` (unlimited), no price, never expires.
-- [ ] `posclinic-config.ts` (SiteConfig `posclinic_config`, editable by super admin):
-  - features: `reports`, `advancedReports`, `multiDoctor`, `printPrescription`, `patientHistory`, `debt` + upcoming `labResults`, `telegramBot`
-  - limits per plan: `terminals`, `staff` (was maxNurses), `monthlyVisits` (was maxMonthlyVisits)
-- [ ] `posclinic-license.ts`: payload `{v:1, product:'POSCLINIC', storeId, storeName, plan, expiresAt, warnFrom, blockAt, issuedAt, checkinBy, seats, features[], limits{}}`, separate key `POSCLINIC_LICENSE_SIGNING_KEY`.
-- [ ] Controller `/posclinic`: `GET plans`, `POST activate {phone, activationCode, terminal}`, `POST licenses/renew`. **No self-signup / no Telegram phone verification** (per "no verification at all") — clinics are created only by super admin.
-- [ ] Admin `/posclinic/admin`: `GET/PUT config`, `POST stores/:id/activation-code`, `GET/DELETE stores/:id/terminals`.
-- [ ] Web: `PosclinicPage.tsx` (list/create clinics, plan incl. VIP, expiry) + `PosclinicStorePage.tsx` (activation code shown once, terminals, reset admin) — copy SavdoChef pages; nav entry. ru/uz strings.
-- [ ] Tests: `posclinic.service.test.ts` (activate one-shot code, VIP never blocks, seat limit, stale license rejected).
-- [ ] Stores list `?product=POSCLINIC` filter works; POSGRO/SAVDOCHEF untouched (no N-1 impact on posgro tills).
+## Phase 1 — posclinic server (`src/server`, `prisma/schema.prisma`)
+- [ ] **Schema** (new migration; see open question A on existing data):
+  - `Tenant`/`Clinic` keyed by the posgro `storeId` (`Clinic.id = storeId`); drop `clinicCode`, self-registration, `contactEmail` unique.
+  - `User`: `phone` required, unique per clinic, `+998XXXXXXXXX`; `email` optional; drop `emailVerified`, `googleId`, OTP table. `role` mirrors the till roles.
+  - Plan/tier no longer stored as an enum: `licensePlan String?` and `licenseExpiresAt` copied from the last verified licence, for display only.
+  - Sync bookkeeping: `TerminalHeartbeat` reused (main + satellites count, last sync).
+- [ ] **Remove** OTP, email (`mail.service.ts`, nodemailer), Google OAuth, `/auth/register|request-otp|verify-otp|set-password|create-clinic|forgot-password|reset-password`, `electron/setup`, platform-admin clinic list (posgro owns clinics).
+- [ ] **Licence auth:** `LicenseGuard` reads `Authorization: License <token>`, verifies Ed25519 with `POSCLINIC_LICENSE_PUBLIC_KEY` (shared contract), rejects other products, stale `checkinBy`, or a blocked state → `request.clinicId = storeId`. Clinic row auto-created on first sync.
+- [ ] **Sync API** (idempotent, batched ≤ 200, one `$transaction` per batch):
+  - `POST /sync/push` `{patients, appointments, users, doctors, services}` → upsert by id. Appointments upsert their items. Users carry the hash, never plaintext.
+  - `GET /sync/pull?since=` → doctors, services, users changed since the cursor (including inactive), plus `serverTime`.
+  - Fixes the old bug: patients were never pushed, so appointment foreign keys failed.
+- [ ] **Dashboard auth:** `POST /auth/login {phone, password}`; only active admins of a clinic whose last licence is not blocked (like posgro's `dashboardLoginBlockReason`). JWT `{sub, clinicId, role}`.
+- [ ] **Catalog CRUD** for admins: services, doctors, users (create/edit/deactivate, reset password). Writes bump `updatedAt` so the main pulls them. Audit log row on every mutation.
+- [ ] **Read APIs:** patients (search, detail + visits), appointments (filters), reports (daily, monthly, by doctor and service, debt).
+- [ ] Every query scoped by `clinicId` from the JWT or the licence, never from the body. Logs carry ids only, never patient fields.
+- [ ] Tests (node:test via tsx, like the till; service level with a fake Prisma, plus one run against the local Postgres): LicenseGuard, push idempotency, LWW pull, clinic scoping, login refusals.
 
-## Phase 2 — posclinic till: licensing (port from restaurant-app `src/main/license/*`)
-- [ ] `src/shared/license.ts`: features, plans, `knownPlan`, `TillMode`.
-- [ ] `src/main/license/`: `license-core.ts` (verify, `tillState`, `refusal`), `license-public-key.ts`, `license-service.ts` (check-in 20 s after start, then every 6 h), `trusted-clock.ts`.
-- [ ] SQLite: `LicenseState` single row (terminalId, storeId, storeName, token, lastCheckinAt, lastError, firstRunAt, clockMark). `LocalConfig.clinicId` ← storeId.
-- [ ] IPC gate: every handler passes through `refusal(channel)` (readonly when blocked; feature + limit checks e.g. staff count, monthly visits). Renderer `licensed(feature)` only hides UI.
-- [ ] Setup wizard → step 1 "link clinic" (phone + activation code `XXXX-XXXX`), step 2 create first admin (name, phone, password). Remove clinicCode+email flow.
-- [ ] Settings → Subscription section (plan, expiry, features, "check now").
-- [ ] Disable `SyncService` start + remove `VPS_API_URL` sync usage; replace with `POSCLINIC_API_URL` (default `https://api.posgro.uz/api`, dev override only when unpackaged).
+## Phase 2 — main till sync (`src/main/sync/`, SQLite)
+- [ ] SQLite, **additive in-place upgrade** (tills are in the field from 2.0.0):
+  - new table `sync_state(entity TEXT PRIMARY KEY, push_cursor TEXT, pull_cursor TEXT)`;
+  - index on `updated_at` for the synced tables.
+  - Remove the unused `sync_queue` table only if it is empty (otherwise leave it).
+- [ ] `sync-service.ts` (main only): push rows with `updated_at > push_cursor` in batches, then pull since `pull_cursor` and apply LWW. Runs every 60 s and after writes (debounced). Offline = silent retry with backoff.
+- [ ] Every handler that writes sets `updated_at` (check patients/doctors/services/users/appointments handlers).
+- [ ] Settings → "Cloud sync" status row (last sync, pending count, error).
+- [ ] Contract update: `.claude/rules/licensing.md` gets "the licence is also the sync credential for the posclinic server".
 
-## Phase 3 — posclinic till: phone instead of email
-- [ ] SQLite `User`: `phone String @unique` (required), `email String?` (optional, not unique).
-- [ ] Shared `normalizePhone()` (+998XXXXXXXXX, accepts `90 123 45 67`, `998…`, `+998…`) + zod validator, used everywhere.
-- [ ] `auth-handlers.ts`: `auth:login(phone, password)`; session token payload uses phone.
-- [ ] LoginPage, UserSettingsPage, user create/edit forms: phone field required, email optional; saved-credentials key migrates.
-- [ ] i18n: `auth.phone`, errors (ru + uz).
-- [ ] Remove "forgot password" UI; show "contact administrator" hint.
+## Phase 3 — web dashboard (`src/web`)
+- [ ] Login by phone + password; remove Register, Google and forgot-password pages. Recovery is done by an admin (Telegram later).
+- [ ] Pages: Dashboard (today, month, top services and doctors), Patients (list, search, detail with visit history, read-only), Appointments (filters, read-only), Reports daily/monthly (+ by doctor, by service, debt), **Services (CRUD, prices)**, **Doctors (CRUD)**, **Staff (CRUD, phone login, role, reset password)**, Devices (main + satellites, last seen, last sync), Subscription (plan/expiry from the licence, read-only).
+- [ ] Remove `admin/clinics` and audit pages for platform admins (posgro is the super admin). Keep a per-clinic audit log page.
+- [ ] i18n ru + uz for every string (shares the renderer locale files via the `@i18n` alias).
+- [ ] Builds into `dist/web`, served by Nest at `/web` (as now).
 
-## Phase 4 — Parasitology
-- [ ] `ClinicType` += `PARASITOLOGY` (shared types + SQLite setting default).
-- [ ] First-run seed of services (ru/uz names, codes, default price 0, duration): consultation, stool O&P (ova & parasites), scotch-tape test (enterobiasis), ELISA Giardia, ELISA Toxocara, ELISA Echinococcus, ELISA Opisthorchis, ELISA Ascaris, blood smear (malaria), repeat consultation. User reviews the list before seeding.
-- [ ] Branding text: "Parazitologiya klinikasi" defaults.
+## Phase 4 — satellites (port of SavdoChef `src/main/lan/`)
+- [ ] **Handler context refactor first:** handlers get `ctx = { actor, terminalId }` instead of reading the module-global `currentUser` (auth-handlers). Add role checks the review flagged (receptionist cannot edit services, doctors or staff).
+- [ ] Port `config.ts`, `devices.ts`, `pairing.ts`, `serve-policy.ts`, `server.ts`, `main-link.ts`, `lan-service.ts` + `lan.test.ts`, `satellite.e2e.test.ts`. Adapt:
+  - app id `posclinic`, default port 5180;
+  - header `Authorization: Posclinic <deviceId>.<secret>`;
+  - `NOT_OVER_LAN` = `license:*`, `setup:*`, `update:*`, `lan:*`, `config:*`.
+- [ ] SQLite (additive): `lan_devices(id, name, secret_hash, ip, last_seen_at, active, created_at)`; `lan_role` and `lan_link` (secret encrypted with `safeStorage`) in a `settings` table (new).
+- [ ] RPC: `handle()` → on a satellite, forward; on the main, run with the caller's session actor. Login on a satellite gives a per-device session token on the main.
+- [ ] **Printing on a satellite stays local:** `print:*` runs on the satellite's own printer, fetching the visit over RPC.
+- [ ] Concurrency: `appointmentNumber` is generated inside a transaction with retry on the unique conflict (two desks at once).
+- [ ] Device limit = licence `terminals − 1` (null = unlimited). Satellites never contact posgro or the posclinic server; the main's licence gates every forwarded call.
+- [ ] Events: main → satellites SSE so lists refresh (`appointments/patients/catalog changed`).
+- [ ] Renderer (React):
+  - setup wizard step 0 "Main till / Extra till";
+  - join form (main address + 6-digit code);
+  - Settings → Satellites (enable, port, addresses, code with countdown, devices + revoke, firewall command);
+  - "Waiting for main till" overlay driven by link state.
+- [ ] i18n ru + uz.
 
-## Phase 5 — Freeze posclinic server/web
-- [ ] Leave `src/server`, `src/web`, `prisma/schema.prisma` in place but untouched; note "frozen — superseded by posgro" in CLAUDE.md/README. Delete in a follow-up after posgro module is verified on staging. (The email→phone + VIP changes go into posgro, not this Postgres schema.)
+## Phase 5 — deploy (posgro VPS)
+- [ ] `Dockerfile` + `docker-compose.yml` / `docker-compose.staging.yml` in posclinic: `posclinic-server` + its **own** `posclinic-postgres` (separate from posgro's database: medical data, own backups), not published publicly; `RUN_MIGRATIONS`.
+- [ ] GitHub Actions `deploy-staging.yml` (dev) / `deploy.yml` (main) modelled on posgro's (ENV_FILE secret, ssh to `posgro-vps`).
+- [ ] **User:** DNS for e.g. `clinic.posgro.uz` + `dev.clinic.posgro.uz`, nginx server blocks + TLS (certbot), GitHub secrets.
+- [ ] Till: `POSCLINIC_SERVER_URL` compiled default (prod), dev override only when unpackaged (same rule as `POSCLINIC_API_URL`).
 
 ## Versioning
-- posclinic `package.json` 1.0.0 → **2.0.0** (major: licensing model + login identifier change).
-- posgro: server/web only → no Electron bump.
+- Till: **2.1.0** (minor: new features, additive SQLite). Server/web: no Electron bump.
 
 ## Verification
-- posclinic: `npx tsc --noEmit`, `npm test` (license-core tests ported), `electron-vite build`; run `dev:pos` against posgro staging (`dev.web.posgro.uz`): create clinic in admin → activation code → link till → login by phone → VIP shows all features → set plan expired → till goes readonly.
-- posgro: `npm run lint`, `npm test`, `build:server`, `npm --prefix src/web run build`, `/api-compat` shows no POSGRO/SAVDOCHEF break. Push only to a feature branch → you merge to `dev` (staging) and later `main`.
+- Server: tests + `build:server`; Swagger smoke test; push the same batch twice → no duplicates; a licence for another product → 401.
+- Till: `npm run check`, the ported `lan.test.ts` + `satellite.e2e.test.ts` (real LAN server on 127.0.0.1), sync service tests with a fake server.
+- End to end on staging:
+  1. A main till links the Demo clinic and creates a patient and a visit. They appear on the web within 60 s.
+  2. Edit a service price on the web. The main shows it after the next pull.
+  3. Pair a satellite. A visit created there lands in the main DB and on the web, and prints on the satellite's printer.
+  4. Revoke the satellite → refused. Exceed `terminals` → pairing refused.
+  5. Expire the licence in posgro → sync refused and dashboard login refused.
 
-## Risks / open
-1. **Multi-terminal clinics:** offline-only tills don't share patients. Phase 1 = one till per clinic (seat limit enforced). LAN satellites (SavdoChef `src/main/lan/`) is a follow-up if needed.
-2. Existing patient/appointment data on posclinic server (if any) is not migrated.
-3. Signing keypair: I generate an Ed25519 pair; private key goes only into posgro `.env` (you set it on VPS), public key compiled into the till.
+## Risks
+- **Medical data leaves the clinic again** → TLS only, licence auth, clinicId scoping, no patient fields in logs, own database with backups; VPS location vs the Uzbekistan personal-data localisation rule (owner to confirm).
+- **LAN has no TLS** (SavdoChef design) → private-address-only plus pairing code plus 256-bit device secret. Option: pin a self-signed certificate at pairing (later).
+- The main's IP changes break satellites → advise a DHCP reservation; "change main address" action (posgro `repointMain`) as a follow-up.
+- Big change set → ship in phase order; each phase is usable on its own (1+2+3 = dashboard; 4 = satellites).
 
-## Review (2026-11-15)
-
-Status: Phases 0–5 implemented. posclinic is uncommitted; posgro is committed on `feature/posclinic-licensing` (`e54b9ab`) and not pushed.
-
-**Verified**
-- posclinic: `npm test` 21/21; `tsc` clean outside the frozen `src/web` (7 errors there, all pre-existing: its own deps aren't installed); `electron-vite build` OK.
-- posgro (agent): lint 0 errors, tsc clean, 2051 tests pass, `build:server` and web build OK.
-- Cross-repo: posgro's real `buildPosclinicLicense`/`signPosclinicLicense` → till `readLicense`/`tillState` gives VIP=unlimited, PRO=active with limits, other till=no-seat, expired START=blocked.
-- Security/migration review: no high findings. Fixed: the debt bypass via `appointments:update` (payment fields removed), NaN checkout amounts, one-ended report ranges, recovery when the licence file is lost (same clinic only), guarded `setup:launchApp`, storeId charset, DevTools off when packaged, corrected the trusted-clock comment.
-- Found and fixed a pre-existing bug: the Daily report sent `{date}`, which the handler ignored, so it showed every appointment.
-
-**Deviations from plan**
-- Licence state lives in `userData/license-state.json`, not a SQLite table. The clinic DB file is chosen by storeId, so state has to exist before the DB does.
-- Features are `reports, multiDoctor, printPrescription, debt` (+ upcoming `labResults, telegramBot`). I dropped the vague `advancedReports/patientHistory`.
-- `limits.staff` is carried in the licence but not enforced: the till has no staff-management screen yet.
-- posgro admin pages are English-only (posgro's super-admin has no i18n).
-
-**Open / next**
-1. User: set `POSCLINIC_ENABLED=true` and `POSCLINIC_LICENSE_SIGNING_KEY` on staging, push the branch, merge to `dev`, then test end to end on staging.
-2. Staff management screen (enforce `limits.staff`, role checks in handlers).
-3. A lost licence file means a new terminalId, so the old seat must be freed in the admin.
-4. Existing (pre-change) error logs in handlers may include patient fields from Prisma errors; scrub them.
-5. Delete the frozen `src/server`, `src/web` and `prisma/schema.prisma` after staging is verified.
-6. Telegram login for password recovery.
+## Open (answer before Phase 1)
+- **A.** Does `posclinic.bobur-dev.uz` (old server) hold any real clinic data? If none → reset to one fresh baseline migration. If yes → additive migrations + data mapping.
+- **B.** Domain names: `clinic.posgro.uz` / `dev.clinic.posgro.uz`? Something else?
