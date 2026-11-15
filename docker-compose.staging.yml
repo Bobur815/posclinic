@@ -1,0 +1,59 @@
+# posclinic STAGING — dev.clinic.posgro.uz on the posgro Contabo VPS (Germany).
+# Run by scripts/deploy/staging.sh in ~/posclinic-staging. Production will live on an
+# Uzbekistan VPS (patient data residency) with its own compose file.
+#
+# Its own Postgres container and volume: clinic medical data never shares a database with posgro.
+# Both ports bind to 127.0.0.1 only (Docker bypasses UFW); nginx is the only public entry.
+
+name: posclinic-staging
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:?DB_USER is not set}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set}
+      POSTGRES_DB: posclinic_staging
+    volumes:
+      - posclinic_staging_pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5442:5432"
+    restart: unless-stopped
+    networks: [posclinic-staging]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER:?DB_USER is not set}:${DB_PASSWORD:?DB_PASSWORD is not set}@postgres:5432/posclinic_staging"
+      NODE_ENV: "production"
+      PORT: "3012"
+      RUN_MIGRATIONS: "true"
+      # Same-origin: the dashboard is served by this container at /web via nginx.
+      CORS: "https://dev.clinic.posgro.uz"
+    ports:
+      - "127.0.0.1:3012:3012"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [posclinic-staging]
+    logging: *logging
+
+volumes:
+  posclinic_staging_pgdata:
+
+networks:
+  posclinic-staging:

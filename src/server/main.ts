@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { CorsConfig } from './common/utils/config';
 
@@ -82,6 +85,21 @@ async function bootstrap() {
     },
     customSiteTitle: 'POSCLINIC API Docs',
   });
+
+  // ── Web dashboard (src/web, built with base '/web/') ──────────────────────
+  // Same origin as /api, so the dashboard needs no CORS. Unknown /web/* paths return index.html
+  // so client-side routes survive a reload. Skipped when the build is absent (local dev uses Vite).
+  const webDir = path.resolve(process.env.WEB_DIST ?? 'dist/web');
+  if (existsSync(path.join(webDir, 'index.html'))) {
+    app.useStaticAssets(webDir, { prefix: '/web/', index: false, maxAge: '1h' });
+    const indexHtml = path.join(webDir, 'index.html');
+    app.use('/web', (req: Request, res: Response, next: NextFunction) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(indexHtml);
+    });
+    logger.log(`Dashboard     → /web (${webDir})`);
+  }
 
   // ── Graceful shutdown ──────────────────────────────────────────────────────
   app.enableShutdownHooks();
