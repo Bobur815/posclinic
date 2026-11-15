@@ -1,5 +1,5 @@
 import { resolveAddress } from './address-handlers';
-import { handle, ipcSafe, RefusedError, requireReception } from './ipc-safe';
+import { handle, ipcSafe, RefusedError, requireReception, errorSummary } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 import { randomUUID } from 'crypto';
@@ -60,7 +60,7 @@ export function setupPatientHandlers(): void {
 
       return ipcSafe(patients);
     } catch (error) {
-      log.error('[patients:getAll]', error);
+      log.error('[patients:getAll]', errorSummary(error));
       throw error;
     }
   });
@@ -120,7 +120,7 @@ export function setupPatientHandlers(): void {
       });
       return ipcSafe(patients);
     } catch (error) {
-      log.error('[patients:search]', error);
+      log.error('[patients:search]', errorSummary(error));
       throw error;
     }
   });
@@ -140,7 +140,7 @@ export function setupPatientHandlers(): void {
       });
       return ipcSafe(patient);
     } catch (error) {
-      log.error('[patients:getById]', error);
+      log.error('[patients:getById]', errorSummary(error));
       throw error;
     }
   });
@@ -177,7 +177,7 @@ export function setupPatientHandlers(): void {
 
       return ipcSafe(patient);
     } catch (error) {
-      log.error('[patients:create]', error);
+      log.error('[patients:create]', errorSummary(error));
       throw error;
     }
   });
@@ -198,6 +198,7 @@ export function setupPatientHandlers(): void {
         });
         return ipcSafe(patient);
       }
+      requireReception(ctx);
       const fullName = typeof data.fullName === 'string' ? data.fullName.trim() : undefined;
       const addr = await resolveAddress(prisma, data.regionCode, data.districtCode);
       const patient = await prisma.patient
@@ -221,7 +222,7 @@ export function setupPatientHandlers(): void {
         .catch(phoneTaken);
       return ipcSafe(patient);
     } catch (error) {
-      log.error('[patients:update]', error);
+      log.error('[patients:update]', errorSummary(error));
       throw error;
     }
   });

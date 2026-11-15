@@ -464,7 +464,13 @@
     "invalidVitals": "O‘lchov qiymati noto‘g‘ri",
     "referralKind": "Faqat tahlil yoki muolajaga yo‘llanma beriladi",
     "loginExists": "Bu shifokorning kirishi bor",
-    "passwordTooShort": "Parol kamida 6 belgi bo‘lishi kerak"
+    "passwordTooShort": "Parol kamida 6 belgi bo‘lishi kerak",
+    "approvalFailed": "Administrator telefoni yoki paroli noto‘g‘ri",
+    "tooManyAttempts": "Juda ko‘p urinish. 10 daqiqadan keyin qayta urinib ko‘ring",
+    "notYourPatient": "Bu bemor sizning qabulingizda emas",
+    "doctorInactive": "Shifokor faol emas",
+    "passwordTooLong": "Parol 72 belgidan oshmasligi kerak",
+    "cannotCancelPaid": "To‘langan yoki boshlangan buyurtmani bekor qilib bo‘lmaydi"
   },
   "license": {
     "title": "Obuna",
@@ -760,7 +766,8 @@
     "toPayment": "To‘lovga o‘tish",
     "adminApproval": "Administrator ruxsati",
     "adminApprovalHint": "Katta chegirma uchun administrator telefon va parolini kiritadi.",
-    "approve": "Ruxsat berish"
+    "approve": "Ruxsat berish",
+    "approvalChecked": "Saqlashda administrator paroli tekshiriladi"
   },
   "cases": {
     "status": {

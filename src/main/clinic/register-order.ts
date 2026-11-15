@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { PrismaClient } from '../../generated/prisma-sqlite';
 import type { ServiceKind } from '../../shared/clinic';
-import { ADMIN_ROLES, type HandlerContext, RefusedError } from '../ipc/ipc-safe';
+import { ADMIN_ROLES, checkOpenCase, type HandlerContext, RefusedError } from '../ipc/ipc-safe';
 import { normalizePhone } from '../../shared/phone';
 import { nextAppointmentNumber } from '../ipc/appointment-handlers';
 import { recomputeCaseStatus } from './case-status';
@@ -55,19 +55,51 @@ export async function nextCaseNumber(tx: Pick<Tx, 'clinicalCase'>, now = new Dat
   return `${prefix}-${String(max + 1).padStart(3, '0')}`;
 }
 
-async function adminApproved(
+/**
+ * Wrong admin approvals per signed-in user: after APPROVAL_FAILURES the user waits
+ * APPROVAL_LOCK_MS (an admin password must not be guessable through the discount dialog).
+ */
+const APPROVAL_FAILURES = 5;
+const APPROVAL_LOCK_MS = 10 * 60 * 1000;
+const approvalFails = new Map<string, { count: number; until: number }>();
+
+/** Tests only. */
+export function resetApprovalThrottle(): void {
+  approvalFails.clear();
+}
+
+/** Verifies an admin's phone + password for a big discount; throws on failure (throttled). */
+async function verifyAdminApproval(
   db: PrismaClient,
   ctx: HandlerContext,
   approval: RegisterInput['approval'],
-): Promise<boolean> {
-  if (ADMIN_ROLES.has(ctx.actor?.role ?? '')) return true;
-  if (!approval || typeof approval.password !== 'string') return false;
-  const phone = normalizePhone(String(approval.phone ?? ''));
-  if (!phone) return false;
-  const admin = await db.user.findUnique({ where: { phone } });
-  if (!admin || !admin.active || !ADMIN_ROLES.has(admin.role)) return false;
-  return bcrypt.compare(approval.password, admin.password);
+): Promise<void> {
+  const key = ctx.actor?.id ?? 'anonymous';
+  const now = Date.now();
+  const f = approvalFails.get(key);
+  if (f && f.until > now) throw new RefusedError('errors.tooManyAttempts');
+  let ok = false;
+  if (approval && typeof approval.password === 'string' && approval.password.length <= 128) {
+    const phone = normalizePhone(typeof approval.phone === 'string' ? approval.phone : null);
+    const admin = phone ? await db.user.findUnique({ where: { phone } }) : null;
+    ok =
+      !!admin &&
+      admin.active &&
+      ADMIN_ROLES.has(admin.role) &&
+      (await bcrypt.compare(approval.password, admin.password));
+  }
+  if (ok) {
+    approvalFails.delete(key);
+    return;
+  }
+  const count = (f && f.until <= now && f.count >= APPROVAL_FAILURES ? 0 : (f?.count ?? 0)) + 1;
+  approvalFails.set(key, { count, until: count >= APPROVAL_FAILURES ? now + APPROVAL_LOCK_MS : 0 });
+  throw new RefusedError('errors.approvalFailed');
 }
+
+/** Registration is for now (a little clock skew allowed) or a future booking, never the past. */
+const PAST_SLACK_MS = 10 * 60 * 1000;
+const FUTURE_MAX_MS = 60 * DAY;
 
 function lineInputs(input: RegisterInput): LineInput[] {
   const raw = Array.isArray(input.items) ? (input.items as Record<string, unknown>[]) : [];
@@ -92,17 +124,32 @@ export async function registerOrder(
 ) {
   const lines = lineInputs(input);
   if (lines.length === 0 || lines.length > 50) throw new RefusedError('errors.noServices');
+  const now = new Date();
   const appointmentDate =
-    input.appointmentDate === undefined ? new Date() : new Date(String(input.appointmentDate));
-  if (Number.isNaN(appointmentDate.getTime())) throw new RefusedError('errors.invalidDate');
+    input.appointmentDate === undefined ? now : new Date(String(input.appointmentDate));
+  if (
+    Number.isNaN(appointmentDate.getTime()) ||
+    appointmentDate.getTime() < now.getTime() - PAST_SLACK_MS ||
+    appointmentDate.getTime() > now.getTime() + FUTURE_MAX_MS
+  ) {
+    throw new RefusedError('errors.invalidDate');
+  }
   const patientId = typeof input.patientId === 'string' ? input.patientId : '';
   const caseId = typeof input.caseId === 'string' && input.caseId ? input.caseId : null;
 
-  // bcrypt is slow: checked before the transaction, not inside it.
-  const approved = lines.some((l) => (l.discountPercent ?? 0) > 0)
-    ? await adminApproved(db, ctx, input.approval)
-    : false;
   const settings = await getClinicSettings(db);
+  const isAdmin = ADMIN_ROLES.has(ctx.actor?.role ?? '');
+  // An approval is needed only above the receptionist's limit. A quote never checks the password
+  // (it would tell the caller whether a guess was right); it prices as if approved and says so.
+  // bcrypt is slow: verified before the transaction, not inside it.
+  const needsAdminApproval =
+    !isAdmin && lines.some((l) => (l.discountPercent ?? 0) > settings.maxDiscountPercent);
+  // No approval sent: pricing refuses with errors.discountNeedsAdmin (the screen offers the
+  // dialog). One sent: it is checked (throttled) before anything is written.
+  if (needsAdminApproval && !options.dryRun && input.approval) {
+    await verifyAdminApproval(db, ctx, input.approval);
+  }
+  const approved = isAdmin || (needsAdminApproval && !!input.approval);
 
   return db.$transaction(async (tx: Tx) => {
     const patient = await tx.patient.findUnique({ where: { id: patientId } });
@@ -127,7 +174,8 @@ export async function registerOrder(
 
     let followUpIsFree = false;
     if (existingCase && settings.followUpFreeDays > 0) {
-      const since = new Date(appointmentDate.getTime() - settings.followUpFreeDays * DAY);
+      // Measured from the till's own clock, never from a date the caller sends.
+      const since = new Date(now.getTime() - settings.followUpFreeDays * DAY);
       followUpIsFree =
         (await tx.appointmentItem.count({
           where: {
@@ -137,7 +185,7 @@ export async function registerOrder(
             appointment: {
               caseId: existingCase.id,
               paymentStatus: 'PAID',
-              appointmentDate: { gte: since, lte: appointmentDate },
+              appointmentDate: { gte: since, lte: now },
             },
           },
         })) > 0;
@@ -191,7 +239,8 @@ export async function registerOrder(
         discountAmount: Math.round(priced.reduce((s, p) => s + p.discount, 0) * 100) / 100,
         followUpIsFree,
         maxDiscountPercent: settings.maxDiscountPercent,
-        adminApproved: approved || ADMIN_ROLES.has(ctx.actor?.role ?? ''),
+        /** Saving will ask for (and check) the admin's phone + password. */
+        needsAdminApproval,
       };
     }
 
@@ -213,6 +262,8 @@ export async function registerOrder(
     const consultDoctor =
       priced.find((p) => p.kind === 'CONSULTATION')?.doctorId ?? legacyDoctor;
     if (!theCase) {
+      // A new case is a new visit for the plan's monthly limit: asked here, where it happens.
+      await checkOpenCase();
       theCase = await tx.clinicalCase.create({
         data: {
           id: randomUUID(),

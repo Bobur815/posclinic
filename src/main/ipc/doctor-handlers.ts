@@ -1,4 +1,4 @@
-import { handle, ipcSafe, requireAdmin } from './ipc-safe';
+import { handle, ipcSafe, requireAdmin, errorSummary } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 
@@ -12,7 +12,7 @@ export function setupDoctorHandlers(): void {
       });
       return ipcSafe(doctors);
     } catch (error) {
-      log.error('[doctors:getAll]', error);
+      log.error('[doctors:getAll]', errorSummary(error));
       throw error;
     }
   });
@@ -26,7 +26,7 @@ export function setupDoctorHandlers(): void {
       });
       return ipcSafe(doctors);
     } catch (error) {
-      log.error('[doctors:getActive]', error);
+      log.error('[doctors:getActive]', errorSummary(error));
       throw error;
     }
   });
@@ -47,7 +47,7 @@ export function setupDoctorHandlers(): void {
       });
       return ipcSafe(doctor);
     } catch (error) {
-      log.error('[doctors:create]', error);
+      log.error('[doctors:create]', errorSummary(error));
       throw error;
     }
   });
@@ -68,7 +68,7 @@ export function setupDoctorHandlers(): void {
       });
       return ipcSafe(doctor);
     } catch (error) {
-      log.error('[doctors:update]', error);
+      log.error('[doctors:update]', errorSummary(error));
       throw error;
     }
   });

@@ -11,7 +11,7 @@ import {
 } from '../database/sqlite-client';
 import { getLicenseService, licenseApiUrl } from '../license/license-service';
 import { log } from '../logger';
-import { handle } from './ipc-safe';
+import { errorSummary, handle } from './ipc-safe';
 
 /** The renderer is told to re-read `license:status` whenever this fires (`license:changed`). */
 export function setupLicenseHandlers(): void {
@@ -126,7 +126,7 @@ export function setupLicenseHandlers(): void {
       log.info('[setup] first admin created, parasitology services seeded');
       return { success: true };
     } catch (error) {
-      log.error('[setup:createAdmin]', error);
+      log.error('[setup:createAdmin]', errorSummary(error));
       return { success: false, error: 'setup.errors.failed' };
     }
   });

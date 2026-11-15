@@ -1,4 +1,4 @@
-import { handle, ipcSafe, RefusedError, requireAdmin } from './ipc-safe';
+import { handle, ipcSafe, RefusedError, requireAdmin, errorSummary } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 import { isUniqueConflict } from './appointment-handlers';
@@ -68,7 +68,7 @@ export function setupServiceHandlers(): void {
       });
       return ipcSafe(services);
     } catch (error) {
-      log.error('[services:getAll]', error);
+      log.error('[services:getAll]', errorSummary(error));
       throw error;
     }
   });
@@ -82,7 +82,7 @@ export function setupServiceHandlers(): void {
       });
       return ipcSafe(services);
     } catch (error) {
-      log.error('[services:getActive]', error);
+      log.error('[services:getActive]', errorSummary(error));
       throw error;
     }
   });
@@ -99,7 +99,7 @@ export function setupServiceHandlers(): void {
       });
       return ipcSafe(services);
     } catch (error) {
-      log.error('[services:search]', error);
+      log.error('[services:search]', errorSummary(error));
       throw error;
     }
   });
@@ -123,7 +123,7 @@ export function setupServiceHandlers(): void {
       }).catch(codeTaken);
       return ipcSafe(service);
     } catch (error) {
-      log.error('[services:create]', error);
+      log.error('[services:create]', errorSummary(error));
       throw error;
     }
   });
@@ -148,7 +148,7 @@ export function setupServiceHandlers(): void {
       }).catch(codeTaken);
       return ipcSafe(service);
     } catch (error) {
-      log.error('[services:update]', error);
+      log.error('[services:update]', errorSummary(error));
       throw error;
     }
   });

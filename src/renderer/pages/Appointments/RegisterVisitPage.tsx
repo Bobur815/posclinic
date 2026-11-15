@@ -224,6 +224,8 @@ export function RegisterVisitPage() {
       );
     } catch (e) {
       const key = ipcErrorKey(e, 'common.error');
+      // A wrong admin password: forget it, so the dialog can be filled in again.
+      if (key === 'errors.approvalFailed' || key === 'errors.tooManyAttempts') setApproval(null);
       if (!key.startsWith('license.')) toast.error(t(key));
     } finally {
       setSaving(false);
@@ -620,6 +622,7 @@ export function RegisterVisitPage() {
                     {t('register.discount')}: −{money(quote.discountAmount)}
                   </Muted>
                 )}
+                {quote.needsAdminApproval && <Muted>{t('register.approvalChecked')}</Muted>}
                 <strong>
                   {t('common.total')}: {money(quote.totalAmount)}
                 </strong>

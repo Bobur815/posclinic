@@ -109,6 +109,11 @@ interface Hooks {
   onWrite(channel: string): void;
   /** Tell every window of the main till, and every satellite, what changed. */
   emit(events: AppEvent[]): void;
+  /**
+   * The licence's answer to "may this registration open a new case?" (the monthly visit limit),
+   * asked by the handler at the moment a case is really created (register-order.ts).
+   */
+  openCase(): Promise<string | null>;
 }
 
 // Refuses until the app wires the licence in (index.ts), so nothing slips through at start-up.
@@ -116,7 +121,14 @@ let hooks: Hooks = {
   gate: async () => 'license.refused.setup',
   onWrite: () => undefined,
   emit: () => undefined,
+  openCase: async () => null,
 };
+
+/** Throws the licence refusal if a new case may not be opened now. */
+export async function checkOpenCase(): Promise<void> {
+  const refused = await hooks.openCase();
+  if (refused) throw new LicenseRefusedError(refused);
+}
 
 export function configureHandlers(next: Partial<Hooks>): void {
   hooks = { ...hooks, ...next };
@@ -137,7 +149,7 @@ export function emitEvents(events: AppEvent[]): void {
 const UNGATED = /^(auth|license|setup|update|lan|config|sync|app):/;
 const WRITES = /^(patients|appointments|doctors|services|users):(create|update|checkout|createLogin)$/;
 /** Clinical-record writes (v2.5): every channel of these namespaces that is not a read. */
-const CLINICAL = /^(cases|queue|results|sessions):(?!(get|for|list|quote)[A-Z]?)/;
+const CLINICAL = /^(cases|queue|results|sessions):(?!(get|for|list|quote)([A-Z]|$))/;
 
 /** Which entities a write channel changed (pages reload on these); empty for a read. */
 export function writtenEntities(channel: string): DataChangedEvent['entity'][] {
@@ -147,6 +159,7 @@ export function writtenEntities(channel: string): DataChangedEvent['entity'][] {
     // A registration opens / moves a case; payment releases lines to the queues.
     return entity === 'appointments' ? ['appointments', 'cases'] : [entity];
   }
+  if (channel === 'clinic:setSettings') return ['settings'];
   return CLINICAL.test(channel) ? ['cases', 'appointments'] : [];
 }
 
@@ -179,11 +192,26 @@ export function isAdmin(ctx: HandlerContext): boolean {
   return ADMIN_ROLES.has(ctx.actor?.role ?? '');
 }
 
-/** Reception-only channels (register, pay, new patients): doctors and nurses never take money. */
+/**
+ * Reception-only channels (register, pay, new patients, identity edits). An allowlist: a
+ * receptionist or an admin; doctors, nurses and any future role never take money.
+ */
 export function requireReception(ctx: HandlerContext): void {
   if (!ctx.actor) throw new RefusedError('errors.notAuthenticated');
   const role = ctx.actor.role;
-  if (role === 'DOCTOR' || role === 'NURSE') throw new RefusedError('errors.receptionOnly');
+  if (role !== 'RECEPTIONIST' && !ADMIN_ROLES.has(role)) {
+    throw new RefusedError('errors.receptionOnly');
+  }
+}
+
+/**
+ * What a handler may log about an error: its kind, never its message. A Prisma validation
+ * message prints the whole call, patient names and phones included (medical data).
+ */
+export function errorSummary(error: unknown): string {
+  if (error instanceof RefusedError || error instanceof LicenseRefusedError) return error.message;
+  const e = error as { name?: string; code?: string };
+  return [e?.name ?? 'Error', e?.code].filter(Boolean).join(' ');
 }
 
 /** Clinic admins only (catalog, doctors, staff, LAN settings). */

@@ -157,16 +157,17 @@ describe('refusal', () => {
   it('enforces the monthly visit limit', async () => {
     const s = state(start);
     assert.equal(
-      await refusal('appointments:create', [{}], s, facts({ visitsThisMonth: async () => 300 })),
+      await refusal('cases:open', [], s, facts({ visitsThisMonth: async () => 300 })),
       'license.limit.monthlyVisits',
     );
     assert.equal(
-      await refusal('appointments:create', [{}], s, facts({ visitsThisMonth: async () => 299 })),
+      await refusal('cases:open', [], s, facts({ visitsThisMonth: async () => 299 })),
       null,
     );
-    // An order inside an open case is not a new visit.
+    // The registration itself is not limited (an order inside an open case is no new visit);
+    // the handler asks 'cases:open' when it really opens one.
     assert.equal(
-      await refusal('appointments:create', [{ caseId: 'c1' }], s, facts({ visitsThisMonth: async () => 300 })),
+      await refusal('appointments:create', [{ caseId: true }], s, facts({ visitsThisMonth: async () => 300 })),
       null,
     );
   });

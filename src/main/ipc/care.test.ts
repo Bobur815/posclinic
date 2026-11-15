@@ -245,6 +245,18 @@ describe('the case page', () => {
     );
   });
 
+  it('a doctor decides only on their own patients’ cases', async () => {
+    const caseId = visit.caseId as string;
+    await refusedWith(as(drB)('cases:update', caseId, { diagnosis: 'x' }), 'errors.notYourPatient');
+    await refusedWith(as(drB)('cases:update', caseId, { close: true }), 'errors.notYourPatient');
+    await refusedWith(
+      as(drB)('cases:addReferral', caseId, { serviceId: 's-op' }),
+      'errors.notYourPatient',
+    );
+    const [ref] = (await as(drA)<CaseDetailDto>('cases:get', caseId)).referrals;
+    await refusedWith(as(drB)('cases:cancelReferral', ref.id), 'errors.notYourPatient');
+  });
+
   it('a doctor edits medical fields only; name and phone stay', async () => {
     const u = await as(drA)<PatientDto>('patients:update', patient.id, {
       fullName: 'Changed',

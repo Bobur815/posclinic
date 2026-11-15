@@ -220,9 +220,9 @@ async function needed(
   const arg = (i: number) => (args[i] ?? {}) as Record<string, unknown>;
 
   switch (channel) {
-    case 'appointments:create': {
-      // Only a registration that opens a new case is a new visit; one inside an open case is not.
-      if (arg(0).caseId) return null;
+    case 'cases:open': {
+      // Asked by registerOrder right before it creates a case (a new visit); orders inside an
+      // open case never get here, and no caller-sent field can skip it.
       const max = state.limits.monthlyVisits;
       if (max !== null && (await facts.visitsThisMonth()) >= max) {
         return 'license.limit.monthlyVisits';

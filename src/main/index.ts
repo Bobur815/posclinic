@@ -180,6 +180,7 @@ async function bootstrap() {
     registerCoreHandlers();
     configureHandlers({
       gate: (channel, args) => getLicenseService().refusal(channel, args),
+      openCase: () => getLicenseService().refusal('cases:open', []),
       onWrite: () => getCloudSync().nudge(),
       emit: broadcast,
     });

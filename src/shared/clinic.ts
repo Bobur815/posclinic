@@ -222,7 +222,8 @@ export interface QuoteDto {
   discountAmount: number;
   followUpIsFree: boolean;
   maxDiscountPercent: number;
-  adminApproved: boolean;
+  /** A line is above the receptionist's limit: saving needs an admin's phone + password. */
+  needsAdminApproval: boolean;
 }
 
 export type CaseStatus =

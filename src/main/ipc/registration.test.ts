@@ -3,6 +3,7 @@ import { after, before, describe, it } from 'node:test';
 import bcrypt from 'bcryptjs';
 import type { AppointmentDto, OpenCaseDto, PatientDto, QuoteDto } from '../../shared/clinic';
 import { priceLines, sessionPlan, type PricingFacts } from '../clinic/pricing';
+import { resetApprovalThrottle } from '../clinic/register-order';
 import { useDatabaseClient } from '../database/sqlite-client';
 import { createTestDb, type TestDb } from '../test-utils/db';
 import { setupIpcHandlers } from './handlers';
@@ -309,8 +310,16 @@ describe('registration (appointments:create / quote)', () => {
         items: [{ ...rest, discountPercent: 25 }],
         approval: { phone: desk.phone, password: 'secret1' }, // not an admin
       }),
-      'errors.discountNeedsAdmin',
+      'errors.approvalFailed',
     );
+    // A quote never checks the password (no oracle): it prices as approved and says so.
+    const q = await call<QuoteDto>('appointments:quote', {
+      patientId: patient.id,
+      caseId: firstVisit.caseId,
+      items: [{ ...rest, discountPercent: 25 }],
+      approval: { phone: admin.phone, password: 'wrong' },
+    });
+    assert.deepEqual([q.totalAmount, q.needsAdminApproval], [300000, true]);
     const full = await call<AppointmentDto>('appointments:create', {
       patientId: patient.id,
       caseId: firstVisit.caseId,
@@ -354,6 +363,132 @@ describe('registration (appointments:create / quote)', () => {
     assert.equal(a.doctorId, null);
     const c = await t.db.clinicalCase.findUnique({ where: { id: a.caseId as string } });
     assert.deepEqual([c?.doctorId, c?.status], [null, 'WAITING_ANALYSIS']);
+  });
+});
+
+describe('security (review 2026-11-15)', () => {
+  it('locks admin approvals after 5 wrong passwords', async () => {
+    resetApprovalThrottle();
+    const r = await t.db.referral.create({
+      data: {
+        id: 'ref-lock',
+        caseId: (await t.db.clinicalCase.findFirstOrThrow({ where: { patientId: patient.id } })).id,
+        patientId: patient.id,
+        serviceId: ids.enema,
+        quantity: 4,
+      },
+    });
+    const input = {
+      patientId: patient.id,
+      items: [
+        {
+          serviceId: ids.enema,
+          quantity: 4,
+          referralId: r.id,
+          fullCourse: true,
+          discountPercent: 50,
+        },
+      ],
+      approval: { phone: admin.phone, password: 'guess' },
+    };
+    for (let i = 0; i < 5; i++)
+      await refusedWith(call('appointments:create', input), 'errors.approvalFailed');
+    // Locked: even the right password waits.
+    await refusedWith(
+      call('appointments:create', {
+        ...input,
+        approval: { phone: admin.phone, password: 'secret1' },
+      }),
+      'errors.tooManyAttempts',
+    );
+    resetApprovalThrottle();
+    const ok = await call<AppointmentDto>('appointments:create', {
+      ...input,
+      approval: { phone: admin.phone, password: 'secret1' },
+    });
+    assert.equal(ok.totalAmount, 100000);
+  });
+
+  it('asks the visit limit when a case is really opened, whatever caseId says', async () => {
+    let asked = 0;
+    configureHandlers({
+      openCase: async () => {
+        asked++;
+        return 'license.limit.monthlyVisits';
+      },
+    });
+    try {
+      await assert.rejects(
+        call('appointments:create', {
+          patientId: other.id,
+          caseId: true, // not a case id: must not skip the limit
+          items: [{ serviceId: ids.stool, quantity: 1 }],
+        }),
+        (e: Error) => e.message === 'LICENSE:license.limit.monthlyVisits',
+      );
+      assert.equal(asked, 1);
+      // Inside an existing open case: no new visit, not asked.
+      const open = await t.db.clinicalCase.findFirstOrThrow({
+        where: { patientId: other.id, status: { not: 'CLOSED' } },
+      });
+      await call('appointments:create', {
+        patientId: other.id,
+        caseId: open.id,
+        items: [{ serviceId: ids.stool, quantity: 1 }],
+      });
+      assert.equal(asked, 1);
+    } finally {
+      configureHandlers({ openCase: async () => null });
+    }
+  });
+
+  it('refuses a backdated registration', async () => {
+    await refusedWith(
+      call('appointments:create', {
+        patientId: other.id,
+        appointmentDate: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+        items: [{ serviceId: ids.stool, quantity: 1 }],
+      }),
+      'errors.invalidDate',
+    );
+  });
+
+  it('cancels only an unpaid order, and its referral quantity returns to reception', async () => {
+    const r = await t.db.referral.create({
+      data: {
+        id: 'ref-cancel',
+        caseId: (await t.db.clinicalCase.findFirstOrThrow({ where: { patientId: patient.id } })).id,
+        patientId: patient.id,
+        serviceId: ids.stool,
+        quantity: 1,
+      },
+    });
+    const order = await call<AppointmentDto>('appointments:create', {
+      patientId: patient.id,
+      items: [{ serviceId: ids.stool, quantity: 1, referralId: r.id }],
+    });
+    assert.equal((await t.db.referral.findUnique({ where: { id: r.id } }))?.status, 'REGISTERED');
+    await refusedWith(
+      call('appointments:update', order.id, { status: 'COMPLETED' }),
+      'errors.forbidden',
+    );
+    await refusedWith(
+      call('appointments:update', order.id, { diagnosis: 'x' }),
+      'errors.forbidden',
+    );
+    await call('appointments:update', order.id, { status: 'CANCELLED' });
+    const back = await t.db.referral.findUnique({ where: { id: r.id } });
+    assert.deepEqual([back?.registeredQty, back?.status], [0, 'PENDING']);
+
+    const paid = await call<AppointmentDto>('appointments:create', {
+      patientId: patient.id,
+      items: [{ serviceId: ids.stool, quantity: 1, referralId: r.id }],
+    });
+    await call('appointments:checkout', paid.id, { paymentMethod: 'CASH', amount: 80000 });
+    await refusedWith(
+      call('appointments:update', paid.id, { status: 'CANCELLED' }),
+      'errors.cannotCancelPaid',
+    );
   });
 });
 

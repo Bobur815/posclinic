@@ -48,6 +48,26 @@ async function requireClinician(db: Db, ctx: HandlerContext): Promise<string | n
   return id;
 }
 
+/**
+ * A doctor decides only on their own patients: the case's lead doctor, or a doctor with a
+ * consultation line in it (a colleague the patient was sent to). Admins decide on any case.
+ */
+async function requireCaseClinician(
+  db: Db,
+  ctx: HandlerContext,
+  c: { id: string; doctorId: string | null },
+  alsoAllowDoctor?: string | null,
+): Promise<string | null> {
+  const myDoctor = await requireClinician(db, ctx);
+  if (isAdminRole(actorOf(ctx).role)) return myDoctor;
+  if (myDoctor && (c.doctorId === myDoctor || alsoAllowDoctor === myDoctor)) return myDoctor;
+  const lines = await db.appointmentItem.count({
+    where: { doctorId: myDoctor, appointment: { caseId: c.id } },
+  });
+  if (!lines) throw new RefusedError('errors.notYourPatient');
+  return myDoctor;
+}
+
 const num = (v: unknown, min: number, max: number): number | null | undefined => {
   if (v === undefined) return undefined;
   if (v === null || v === '') return null;
@@ -226,10 +246,10 @@ export function setupCareHandlers(): void {
   /** Complaint / diagnosis, close or reopen: the doctor (or an admin). */
   handle('cases:update', async (ctx, caseId: unknown, data: Record<string, unknown>) => {
     const db = getPrismaClient();
-    await requireClinician(db, ctx);
     const id = String(caseId ?? '');
     const c = await db.clinicalCase.findUnique({ where: { id } });
     if (!c) throw new RefusedError('errors.notFound');
+    await requireCaseClinician(db, ctx, c);
     const updated = await db.$transaction(async (tx) => {
       await tx.clinicalCase.update({
         where: { id },
@@ -258,7 +278,9 @@ export function setupCareHandlers(): void {
     }
     const caseId = typeof data?.caseId === 'string' && data.caseId ? data.caseId : null;
     if (caseId) {
-      const c = await db.clinicalCase.findFirst({ where: { id: caseId, patientId } });
+      const c = await db.clinicalCase.findFirst({
+        where: { id: caseId, patientId, status: { not: 'CLOSED' } },
+      });
       if (!c) throw new RefusedError('errors.caseUnavailable');
     }
     const v = {
@@ -297,9 +319,9 @@ export function setupCareHandlers(): void {
    */
   handle('cases:addReferral', async (ctx, caseId: unknown, data: Record<string, unknown>) => {
     const db = getPrismaClient();
-    const myDoctor = await requireClinician(db, ctx);
     const c = await db.clinicalCase.findUnique({ where: { id: String(caseId ?? '') } });
     if (!c || c.status === 'CLOSED') throw new RefusedError('errors.caseUnavailable');
+    const myDoctor = await requireCaseClinician(db, ctx, c);
     const service = await db.service.findFirst({
       where: { id: String(data?.serviceId ?? ''), active: true },
     });
@@ -341,9 +363,12 @@ export function setupCareHandlers(): void {
   /** Withdraw a referral (what is already registered stays). */
   handle('cases:cancelReferral', async (ctx, referralId: unknown) => {
     const db = getPrismaClient();
-    await requireClinician(db, ctx);
-    const r = await db.referral.findUnique({ where: { id: String(referralId ?? '') } });
+    const r = await db.referral.findUnique({
+      where: { id: String(referralId ?? '') },
+      include: { case: { select: { id: true, doctorId: true } } },
+    });
     if (!r) throw new RefusedError('errors.notFound');
+    await requireCaseClinician(db, ctx, r.case, r.doctorId);
     if (!['PENDING', 'PARTIAL'].includes(r.status)) throw new RefusedError('errors.alreadyDone');
     const updated = await db.$transaction(async (tx) => {
       const u = await tx.referral.update({ where: { id: r.id }, data: { status: 'CANCELLED' } });
@@ -363,10 +388,12 @@ export function setupCareHandlers(): void {
     const doctor = await db.doctor.findUnique({ where: { id: String(doctorId ?? '') } });
     if (!doctor) throw new RefusedError('errors.notFound');
     if (doctor.userId) throw new RefusedError('errors.loginExists');
+    if (!doctor.active) throw new RefusedError('errors.doctorInactive');
     const phone = normalizePhone(typeof data?.phone === 'string' ? data.phone : null);
     if (!phone) throw new RefusedError('errors.invalidPhone');
     const password = typeof data?.password === 'string' ? data.password : '';
     if (password.length < 6) throw new RefusedError('errors.passwordTooShort');
+    if (password.length > 72) throw new RefusedError('errors.passwordTooLong');
     const hash = await bcrypt.hash(password, 10);
     const linked = await db
       .$transaction(async (tx) => {

@@ -1,4 +1,12 @@
-import { handle, ipcSafe, RefusedError, requireReception } from './ipc-safe';
+import { recomputeCaseStatus } from '../clinic/case-status';
+import {
+  ADMIN_ROLES,
+  errorSummary,
+  handle,
+  ipcSafe,
+  RefusedError,
+  requireReception,
+} from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
@@ -64,7 +72,7 @@ export function setupAppointmentHandlers(): void {
       );
       return ipcSafe(appointment);
     } catch (error) {
-      log.error('[appointments:create]', error);
+      log.error('[appointments:create]', errorSummary(error));
       throw error;
     }
   });
@@ -114,7 +122,7 @@ export function setupAppointmentHandlers(): void {
 
         return ipcSafe(appointments);
       } catch (error) {
-        log.error('[appointments:getAll]', error);
+        log.error('[appointments:getAll]', errorSummary(error));
         throw error;
       }
     },
@@ -129,27 +137,76 @@ export function setupAppointmentHandlers(): void {
       });
       return ipcSafe(appointment);
     } catch (error) {
-      log.error('[appointments:getById]', error);
+      log.error('[appointments:getById]', errorSummary(error));
       throw error;
     }
   });
 
-  handle('appointments:update', async (_event, id: string, data: Record<string, unknown>) => {
+  /**
+   * What a visit page may change (v2.5): cancel an UNPAID order (reception: its lines are
+   * cancelled and referral quantities return to reception), its notes, and the diagnosis /
+   * prescription (a doctor or an admin). Status otherwise moves only through the queues.
+   */
+  handle('appointments:update', async (ctx, id: unknown, data: Record<string, unknown>) => {
     try {
+      if (!ctx.actor) throw new RefusedError('errors.notAuthenticated');
+      const role = ctx.actor.role;
       const prisma = getPrismaClient();
-      const appointment = await prisma.appointment.update({
-        where: { id },
-        data: {
-          status: data.status as string | undefined,
-          diagnosis: data.diagnosis as string | null | undefined,
-          prescription: data.prescription as string | null | undefined,
-          notes: data.notes as string | null | undefined,
-        },
-        include: { patient: true, doctor: true, items: true },
+      const apptId = String(id ?? '');
+      const current = await prisma.appointment.findUnique({
+        where: { id: apptId },
+        include: { items: true },
+      });
+      if (!current) throw new RefusedError('errors.notFound');
+      const str = (v: unknown) =>
+        v === undefined ? undefined : typeof v === 'string' && v.trim() ? v.trim().slice(0, 4000) : null;
+
+      const clinical = data?.diagnosis !== undefined || data?.prescription !== undefined;
+      if (clinical && role !== 'DOCTOR' && !ADMIN_ROLES.has(role)) {
+        throw new RefusedError('errors.forbidden');
+      }
+      if (data?.status !== undefined) {
+        if (data.status !== 'CANCELLED') throw new RefusedError('errors.forbidden');
+        requireReception(ctx);
+        if (Number(current.paidAmount) > 0 || current.items.some((i) => i.status === 'DONE' || i.status === 'IN_PROGRESS')) {
+          throw new RefusedError('errors.cannotCancelPaid');
+        }
+      }
+
+      const appointment = await prisma.$transaction(async (tx) => {
+        if (data?.status === 'CANCELLED' && current.status !== 'CANCELLED') {
+          await tx.appointmentItem.updateMany({
+            where: { appointmentId: apptId },
+            data: { status: 'CANCELLED' },
+          });
+          // Registered referral quantities go back to reception.
+          for (const i of current.items) {
+            if (!i.referralId) continue;
+            const r = await tx.referral.findUnique({ where: { id: i.referralId } });
+            if (!r || r.status === 'CANCELLED') continue;
+            const registeredQty = Math.max(0, r.registeredQty - i.quantity);
+            await tx.referral.update({
+              where: { id: r.id },
+              data: { registeredQty, status: registeredQty === 0 ? 'PENDING' : 'PARTIAL' },
+            });
+          }
+        }
+        const u = await tx.appointment.update({
+          where: { id: apptId },
+          data: {
+            ...(data?.status === 'CANCELLED' ? { status: 'CANCELLED' } : {}),
+            diagnosis: str(data?.diagnosis),
+            prescription: str(data?.prescription),
+            notes: str(data?.notes),
+          },
+          include: { patient: true, doctor: true, items: true },
+        });
+        if (current.caseId) await recomputeCaseStatus(tx, current.caseId);
+        return u;
       });
       return ipcSafe(appointment);
     } catch (error) {
-      log.error('[appointments:update]', error);
+      log.error('[appointments:update]', errorSummary(error));
       throw error;
     }
   });
@@ -196,7 +253,7 @@ export function setupAppointmentHandlers(): void {
         recentAppointments: appointments,
       });
     } catch (error) {
-      log.error('[appointments:getTodaySummary]', error);
+      log.error('[appointments:getTodaySummary]', errorSummary(error));
       throw error;
     }
   });
@@ -250,7 +307,7 @@ export function setupAppointmentHandlers(): void {
 
         return ipcSafe(updated);
       } catch (error) {
-        log.error('[appointments:checkout]', error);
+        log.error('[appointments:checkout]', errorSummary(error));
         throw error;
       }
     },

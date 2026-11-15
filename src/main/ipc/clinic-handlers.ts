@@ -2,7 +2,7 @@ import { getClinicSettings, setClinicSettings } from '../clinic/clinic-settings'
 import { registerOrder, type RegisterInput } from '../clinic/register-order';
 import { getAppConfig } from '../config/app-config';
 import { getPrismaClient } from '../database/sqlite-client';
-import { handle, ipcSafe, RefusedError, requireAdmin } from './ipc-safe';
+import { handle, ipcSafe, RefusedError, requireAdmin, requireReception } from './ipc-safe';
 
 /**
  * Reception reads for the registration flow (v2.5): a price quote, the patient's open cases with
@@ -13,8 +13,9 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export function setupClinicHandlers(): void {
   /** What `appointments:create` would charge for this input; writes nothing. */
-  handle('appointments:quote', async (ctx, data: RegisterInput) =>
-    ipcSafe(
+  handle('appointments:quote', async (ctx, data: RegisterInput) => {
+    requireReception(ctx);
+    return ipcSafe(
       await registerOrder(
         getPrismaClient(),
         ctx,
@@ -22,8 +23,8 @@ export function setupClinicHandlers(): void {
         ctx.terminalId || getAppConfig().terminalId,
         { dryRun: true },
       ),
-    ),
-  );
+    );
+  });
 
   /**
    * Open cases of a patient, newest first, each with its referrals still to register and until

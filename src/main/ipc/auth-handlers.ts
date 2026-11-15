@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { normalizePhone } from '../../shared/phone';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
-import { type Actor, handle } from './ipc-safe';
+import { type Actor, errorSummary, handle } from './ipc-safe';
 
 function toActor(user: {
   id: string;
@@ -110,7 +110,7 @@ export function setupAuthHandlers(): void {
       log.info(`[auth] User logged in: ${user.id} (${user.role}) at ${ctx.terminalId || 'main'}`);
       return { success: true, user: actor, token: await signToken(user.id) };
     } catch (error) {
-      log.error('[auth] Login error:', error);
+      log.error('[auth] Login error:', errorSummary(error));
       return { success: false, error: 'login_failed' };
     }
   });
@@ -150,7 +150,7 @@ export function setupAuthHandlers(): void {
       await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
       return true;
     } catch (error) {
-      log.error('[auth] Change password error:', error);
+      log.error('[auth] Change password error:', errorSummary(error));
       return false;
     }
   });
