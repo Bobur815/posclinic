@@ -166,6 +166,15 @@ export interface AppointmentDto {
 /** `patients:getById`: the patient with the last 20 visits. */
 export interface PatientWithVisitsDto extends PatientDto {
   appointments: Array<Omit<AppointmentDto, 'patient'>>;
+  /** At most one: the latest measurement (v2.5). */
+  vitals: VitalsDto[];
+  cases: Array<{
+    id: string;
+    caseNumber: string;
+    status: CaseStatus;
+    openedAt: string;
+    diagnosis: string | null;
+  }>;
 }
 
 /** One line of a registration at reception (`appointments:create` / `appointments:quote`). */

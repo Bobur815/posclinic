@@ -280,6 +280,31 @@ describe('the case page', () => {
   });
 });
 
+describe('patient form and details (P5)', () => {
+  it('stores chronic conditions; details read the latest measurement and the cases', async () => {
+    const p = await as(desk)<PatientDto>('patients:create', {
+      fullName: 'Yangi',
+      phone: '+998935550000',
+      chronicConditions: 'Gastrit',
+    });
+    // PatientForm records height / weight as a measurement without a case.
+    await as(desk)('cases:recordVitals', { patientId: p.id, heightCm: 160, weightKg: 55 });
+    const d = await as(desk)<{
+      chronicConditions: string;
+      vitals: Array<{ heightCm: number; weightKg: number }>;
+      cases: unknown[];
+    }>('patients:getById', p.id);
+    assert.equal(d.chronicConditions, 'Gastrit');
+    assert.deepEqual([d.vitals.length, d.vitals[0].heightCm, d.vitals[0].weightKg], [1, 160, 55]);
+    assert.deepEqual(d.cases, []);
+    const withCase = await as(desk)<{ cases: Array<{ caseNumber: string }> }>(
+      'patients:getById',
+      patient.id,
+    );
+    assert.equal(withCase.cases.length, 1);
+  });
+});
+
 describe('live updates', () => {
   it('reads announce nothing; clinical writes announce cases + appointments', () => {
     for (const ch of [

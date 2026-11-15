@@ -159,6 +159,7 @@ export function PatientForm() {
     gender: '' as Gender | '',
     bloodType: '',
     allergies: '',
+    chronicConditions: '',
     address: '',
     regionCode: null as string | null,
     districtCode: null as string | null,
@@ -166,6 +167,12 @@ export function PatientForm() {
   });
   /** Free-text city of a patient saved before the address selector; shown until replaced. */
   const [legacyCity, setLegacyCity] = useState('');
+  /**
+   * Height / weight are per-visit measurements (patient_vitals), not patient columns: the form
+   * shows the latest and records a new measurement only when they change.
+   */
+  const [measure, setMeasure] = useState({ heightCm: '', weightKg: '' });
+  const [lastMeasure, setLastMeasure] = useState({ heightCm: '', weightKg: '' });
 
   const handleAddress = useCallback(
     (v: AddressValue) => setForm((prev) => ({ ...prev, ...v })),
@@ -184,12 +191,20 @@ export function PatientForm() {
             gender: (data.gender as Gender | null) || '',
             bloodType: data.bloodType || '',
             allergies: data.allergies || '',
+            chronicConditions: data.chronicConditions || '',
             address: data.address || '',
             regionCode: data.regionCode,
             districtCode: data.districtCode,
             notes: data.notes || '',
           });
           if (!data.regionCode) setLegacyCity(data.city || '');
+          const v = data.vitals?.[0];
+          const m = {
+            heightCm: v?.heightCm != null ? String(v.heightCm) : '',
+            weightKg: v?.weightKg != null ? String(v.weightKg) : '',
+          };
+          setMeasure(m);
+          setLastMeasure(m);
         }
         setIsFetching(false);
       });
@@ -208,11 +223,25 @@ export function PatientForm() {
       // city is left as it was (update omits the address so main does not clear it).
       const { regionCode, districtCode, ...rest } = form;
       const payload = regionCode || !legacyCity ? { ...rest, regionCode, districtCode } : rest;
+      const num = (s: string) => (s.trim() === '' ? null : Number(s.replace(',', '.')));
+      const measured =
+        (measure.heightCm !== lastMeasure.heightCm || measure.weightKg !== lastMeasure.weightKg) &&
+        (num(measure.heightCm) !== null || num(measure.weightKg) !== null);
+      const record = (patientId: string) =>
+        measured
+          ? window.electronAPI.cases.recordVitals({
+              patientId,
+              heightCm: num(measure.heightCm),
+              weightKg: num(measure.weightKg),
+            })
+          : Promise.resolve();
       if (isEdit && id) {
         await window.electronAPI.patients.update(id, payload);
+        await record(id);
         toast.success(t('common.success'));
       } else {
         const created = await window.electronAPI.patients.create(payload);
+        await record(created.id);
         toast.success(t('common.success'));
         // Opened from registration: carry on registering services for the new patient.
         if (searchParams.get('return') === 'register') {
@@ -274,6 +303,22 @@ export function PatientForm() {
                 ))}
               </Select>
             </FormGroup>
+            <FormGroup>
+              <Label>{t('care.height')}</Label>
+              <Input
+                inputMode="decimal"
+                value={measure.heightCm}
+                onChange={(e) => setMeasure({ ...measure, heightCm: e.target.value })}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('care.weight')}</Label>
+              <Input
+                inputMode="decimal"
+                value={measure.weightKg}
+                onChange={(e) => setMeasure({ ...measure, weightKg: e.target.value })}
+              />
+            </FormGroup>
             <FormGroup />
             <FullWidth>
               <AddressSelector
@@ -290,6 +335,12 @@ export function PatientForm() {
               <FormGroup>
                 <Label>{t('patients.allergies')}</Label>
                 <Input value={form.allergies} onChange={handleChange('allergies')} />
+              </FormGroup>
+            </FullWidth>
+            <FullWidth>
+              <FormGroup>
+                <Label>{t('care.chronicConditions')}</Label>
+                <Input value={form.chronicConditions} onChange={handleChange('chronicConditions')} />
               </FormGroup>
             </FullWidth>
             <FullWidth>

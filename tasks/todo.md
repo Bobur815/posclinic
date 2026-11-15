@@ -225,7 +225,7 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 - [x] Treatment sessions: sessions due up to today (overdue flagged), tick done, "3 of 10"; undo within 24 h on the case page.
 
 ### P5: Patient form
-- [ ] Add height, weight (written as a vitals record), allergies, chronic conditions; the latest vitals shown in PatientDetails.
+- [x] Add height, weight (written as a vitals record when changed), allergies, chronic conditions; the latest vitals and the patient's cases shown in PatientDetails.
 
 ### P6: Server + web (read-only display)
 - [ ] Sync up the new tables and fields. Server `doctorId` becomes nullable plus the new columns/tables in an additive Postgres migration (the user runs deploy). `TILL_ROLES` gains NURSE.

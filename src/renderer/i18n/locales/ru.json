@@ -858,7 +858,8 @@
     "sessionsDone": "Сеансы: {{done}} / {{total}}",
     "otherCases": "Другие обращения",
     "confirmResult": "Подтвердить",
-    "resultsReady": "Пациенты с готовыми результатами"
+    "resultsReady": "Пациенты с готовыми результатами",
+    "cases": "Обращения"
   },
   "lab": {
     "analyses": "Анализы",

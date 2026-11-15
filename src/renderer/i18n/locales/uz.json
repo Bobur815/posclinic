@@ -858,7 +858,8 @@
     "sessionsDone": "Seanslar: {{done}} / {{total}}",
     "otherCases": "Boshqa murojaatlar",
     "confirmResult": "Tasdiqlash",
-    "resultsReady": "Natijalari tayyor bemorlar"
+    "resultsReady": "Natijalari tayyor bemorlar",
+    "cases": "Murojaatlar"
   },
   "lab": {
     "analyses": "Tahlillar",

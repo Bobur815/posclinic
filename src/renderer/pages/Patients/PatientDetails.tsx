@@ -6,6 +6,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { ArrowLeft, Edit2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import type { CaseStatus, VitalsDto } from '../../../shared/clinic';
+import { vitalsLine } from '../Care/care-format';
+import { StatusBadge } from '../Care/care-ui';
 
 interface PatientData {
   id: string;
@@ -16,6 +19,7 @@ interface PatientData {
   gender: string | null;
   bloodType: string | null;
   allergies: string | null;
+  chronicConditions: string | null;
   address: string | null;
   city: string | null;
   regionCode: string | null;
@@ -28,6 +32,15 @@ interface PatientData {
     status: string;
     totalAmount: number;
     doctor: { fullName: string } | null;
+  }>;
+  /** The latest measurement (patients:getById takes one). */
+  vitals: VitalsDto[];
+  cases: Array<{
+    id: string;
+    caseNumber: string;
+    status: CaseStatus;
+    openedAt: string;
+    diagnosis: string | null;
   }>;
 }
 
@@ -204,6 +217,14 @@ export function PatientDetails() {
             <InfoValue>{patient.allergies || '—'}</InfoValue>
           </InfoRow>
           <InfoRow>
+            <InfoLabel>{t('care.chronicConditions')}</InfoLabel>
+            <InfoValue>{patient.chronicConditions || '—'}</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>{t('care.latestVitals')}</InfoLabel>
+            <InfoValue>{vitalsLine(patient.vitals?.[0], t)}</InfoValue>
+          </InfoRow>
+          <InfoRow>
             <InfoLabel>{t('address.street')}</InfoLabel>
             <InfoValue>{patient.address || '—'}</InfoValue>
           </InfoRow>
@@ -223,6 +244,23 @@ export function PatientDetails() {
           </InfoRow>
         </InfoCard>
       </Grid>
+
+      {patient.cases?.length > 0 && (
+        <InfoCard>
+          <SectionTitle>{t('care.cases')}</SectionTitle>
+          {patient.cases.map((c) => (
+            <InfoRow key={c.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/cases/${c.id}`)}>
+              <InfoLabel>
+                {c.caseNumber} · {format(new Date(c.openedAt), 'dd.MM.yyyy')}
+              </InfoLabel>
+              <InfoValue>
+                {c.diagnosis ? `${c.diagnosis} ` : ''}
+                <StatusBadge $status={c.status}>{t(`cases.status.${c.status}`)}</StatusBadge>
+              </InfoValue>
+            </InfoRow>
+          ))}
+        </InfoCard>
+      )}
 
       <InfoCard>
         <SectionTitle>

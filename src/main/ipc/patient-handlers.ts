@@ -129,12 +129,19 @@ export function setupPatientHandlers(): void {
     try {
       const prisma = getPrismaClient();
       const patient = await prisma.patient.findUnique({
-        where: { id },
+        where: { id: String(id ?? '') },
         include: {
           appointments: {
             include: { items: true, doctor: true },
             orderBy: { appointmentDate: 'desc' },
             take: 20,
+          },
+          // The latest measurement is the patient's current height / weight (v2.5).
+          vitals: { orderBy: { recordedAt: 'desc' }, take: 1 },
+          cases: {
+            orderBy: { openedAt: 'desc' },
+            take: 20,
+            select: { id: true, caseNumber: true, status: true, openedAt: true, diagnosis: true },
           },
         },
       });
