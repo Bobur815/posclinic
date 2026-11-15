@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Subtle diagonal teal-cyan gradient (#0891b2 to #0e7490) -->
+    <linearGradient id="iconBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0891b2"/>
+      <stop offset="100%" stop-color="#0e7490"/>
+    </linearGradient>
+
+    <!-- Mask cutting a soft rounded-end plus out of the inner white disc -->
+    <mask id="plusCutout">
+      <circle cx="512" cy="512" r="134" fill="#ffffff"/>
+      <line x1="512" y1="434" x2="512" y2="590" stroke="#000000" stroke-width="52" stroke-linecap="round"/>
+      <line x1="434" y1="512" x2="590" y2="512" stroke="#000000" stroke-width="52" stroke-linecap="round"/>
+    </mask>
+  </defs>
+
+  <!-- Plain white 1024x1024 canvas -->
+  <rect width="1024" height="1024" fill="#ffffff"/>
+
+  <!-- Softly rounded square app icon (900x900 centered, 20% internal padding) -->
+  <rect x="62" y="62" width="900" height="900" rx="200" fill="url(#iconBg)"/>
+
+  <!-- Thick circular eyepiece ring (r: 214 to 270) -->
+  <circle cx="512" cy="512" r="242" fill="none" stroke="#ffffff" stroke-width="56"/>
+
+  <!-- Inner white disc with negative-space plus cut out -->
+  <circle cx="512" cy="512" r="134" fill="#ffffff" mask="url(#plusCutout)"/>
+
+  <!-- Small solid white dot (single cell) in upper-right quadrant, slightly off-center -->
+  <circle cx="653" cy="410" r="21" fill="#ffffff"/>
+</svg>
