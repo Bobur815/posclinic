@@ -11,7 +11,7 @@ interface Service {
   name: string;
   price: number;
   duration: number | null;
-  isActive: boolean;
+  active: boolean;
 }
 
 interface ServiceForm {
@@ -19,7 +19,7 @@ interface ServiceForm {
   name: string;
   price: string;
   duration: string;
-  isActive: boolean;
+  active: boolean;
 }
 
 const Page = styled.div``;
@@ -261,7 +261,7 @@ const SaveBtn = styled.button`
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
-const emptyForm: ServiceForm = { code: '', name: '', price: '', duration: '', isActive: true };
+const emptyForm: ServiceForm = { code: '', name: '', price: '', duration: '', active: true };
 
 export function ServiceList() {
   const { t } = useTranslation();
@@ -317,7 +317,7 @@ export function ServiceList() {
       name: svc.name,
       price: String(svc.price),
       duration: svc.duration ? String(svc.duration) : '',
-      isActive: svc.isActive,
+      active: svc.active,
     });
     setShowModal(true);
   };
@@ -331,7 +331,7 @@ export function ServiceList() {
         name: form.name.trim(),
         price: parseFloat(form.price),
         duration: form.duration ? parseInt(form.duration) : null,
-        isActive: form.isActive,
+        active: form.active,
       };
       if (editingService) {
         await window.electronAPI.services.update(editingService.id, payload);
@@ -351,7 +351,7 @@ export function ServiceList() {
   const handleChange = (field: keyof ServiceForm) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const value = field === 'isActive' ? (e.target as HTMLSelectElement).value === 'true' : e.target.value;
+    const value = field === 'active' ? (e.target as HTMLSelectElement).value === 'true' : e.target.value;
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -383,7 +383,7 @@ export function ServiceList() {
               </FormGroup>
               <FormGroup>
                 <Label>{t('common.status')}</Label>
-                <Select value={String(form.isActive)} onChange={handleChange('isActive')}>
+                <Select value={String(form.active)} onChange={handleChange('active')}>
                   <option value="true">{t('common.active')}</option>
                   <option value="false">{t('common.inactive')}</option>
                 </Select>
@@ -445,8 +445,8 @@ export function ServiceList() {
                   <Td>{Number(svc.price).toLocaleString()} {t('common.currency')}</Td>
                   <Td>{svc.duration ? `${svc.duration} ${t('common.minutes')}` : '—'}</Td>
                   <Td>
-                    <Badge $active={svc.isActive}>
-                      {svc.isActive ? t('common.active') : t('common.inactive')}
+                    <Badge $active={svc.active}>
+                      {svc.active ? t('common.active') : t('common.inactive')}
                     </Badge>
                   </Td>
                   <Td>

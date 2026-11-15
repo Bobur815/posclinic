@@ -53,7 +53,7 @@ export interface Doctor {
   fullName: string;
   specialty?: string | null;
   phone?: string | null;
-  isActive: boolean;
+  active: boolean;
   clinicId: string;
 }
 
@@ -63,7 +63,7 @@ export interface Service {
   name: string;
   price: number;
   duration?: number | null;
-  isActive: boolean;
+  active: boolean;
   clinicId: string;
 }
 

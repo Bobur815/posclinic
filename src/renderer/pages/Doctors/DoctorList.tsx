@@ -9,14 +9,14 @@ interface Doctor {
   fullName: string;
   specialty: string | null;
   phone: string | null;
-  isActive: boolean;
+  active: boolean;
 }
 
 interface DoctorForm {
   fullName: string;
   specialty: string;
   phone: string;
-  isActive: boolean;
+  active: boolean;
 }
 
 const Page = styled.div``;
@@ -253,7 +253,7 @@ const SaveBtn = styled.button`
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
-const emptyForm: DoctorForm = { fullName: '', specialty: '', phone: '', isActive: true };
+const emptyForm: DoctorForm = { fullName: '', specialty: '', phone: '', active: true };
 
 export function DoctorList() {
   const { t } = useTranslation();
@@ -300,7 +300,7 @@ export function DoctorList() {
       fullName: doc.fullName,
       specialty: doc.specialty || '',
       phone: doc.phone || '',
-      isActive: doc.isActive,
+      active: doc.active,
     });
     setShowModal(true);
   };
@@ -313,7 +313,7 @@ export function DoctorList() {
         fullName: form.fullName.trim(),
         specialty: form.specialty.trim() || null,
         phone: form.phone.trim() || null,
-        isActive: form.isActive,
+        active: form.active,
       };
       if (editingDoctor) {
         await window.electronAPI.doctors.update(editingDoctor.id, payload);
@@ -333,7 +333,7 @@ export function DoctorList() {
   const handleChange = (field: keyof DoctorForm) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const value = field === 'isActive' ? (e.target as HTMLSelectElement).value === 'true' : e.target.value;
+    const value = field === 'active' ? (e.target as HTMLSelectElement).value === 'true' : e.target.value;
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -361,7 +361,7 @@ export function DoctorList() {
             </FormGroup>
             <FormGroup>
               <Label>{t('common.status')}</Label>
-              <Select value={String(form.isActive)} onChange={handleChange('isActive')}>
+              <Select value={String(form.active)} onChange={handleChange('active')}>
                 <option value="true">{t('common.active')}</option>
                 <option value="false">{t('common.inactive')}</option>
               </Select>
@@ -419,8 +419,8 @@ export function DoctorList() {
                   <Td>{doc.specialty || '—'}</Td>
                   <Td>{doc.phone || '—'}</Td>
                   <Td>
-                    <Badge $active={doc.isActive}>
-                      {doc.isActive ? t('common.active') : t('common.inactive')}
+                    <Badge $active={doc.active}>
+                      {doc.active ? t('common.active') : t('common.inactive')}
                     </Badge>
                   </Td>
                   <Td>
