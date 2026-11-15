@@ -195,7 +195,24 @@
     "price": "Цена",
     "duration": "Продолжительность (минуты)",
     "searchPlaceholder": "Название или код услуги...",
-    "noServices": "Услуги не найдены"
+    "noServices": "Услуги не найдены",
+    "kind": "Тип",
+    "kinds": {
+      "CONSULTATION": "Консультация",
+      "ANALYSIS": "Анализ",
+      "PROCEDURE": "Процедура"
+    },
+    "followUp": "Повторная консультация",
+    "followUpYes": "Да: бесплатно в течение 14 дней",
+    "followUpShort": "повторная",
+    "resultType": "Тип результата",
+    "resultTypes": {
+      "QUALITATIVE": "Положительный / отрицательный",
+      "QUANTITATIVE": "Число (титр)",
+      "TEXT": "Текст"
+    },
+    "resultUnit": "Единица измерения",
+    "referenceRange": "Норма"
   },
   "doctors": {
     "title": "Врачи",
@@ -426,7 +443,8 @@
     "invalidDate": "Неверная дата",
     "serviceUnavailable": "Выбранная услуга не найдена или неактивна. Обновите список",
     "visitCancelled": "Оплата отменённого приёма невозможна",
-    "invalidAddress": "Неверный адрес: район не относится к выбранной области"
+    "invalidAddress": "Неверный адрес: район не относится к выбранной области",
+    "invalidServiceKind": "Неверный тип услуги"
   },
   "license": {
     "title": "Подписка",

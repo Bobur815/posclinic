@@ -194,8 +194,8 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 
 ## Phases
 ### P1: Data + catalog
-- [ ] Schema upgrades above. Migration-reviewer pass. Upgrade test on a v2.4 DB with real-shaped rows.
-- [ ] Services page: type, follow-up flag, result type/unit/range. Seed update (in place, codes unchanged).
+- [x] Schema upgrades above. Migration-reviewer pass (fixes applied: orphan lines set aside, atomic service classification, completed_at kept). Upgrade test on a v2.4 DB with real-shaped rows (`schema-upgrade.test.ts`).
+- [x] Services page: type, follow-up flag, result type/unit/range. Seed update (in place, codes unchanged; + PAR-ENEMA procedure). `service-kind.test.ts`.
 
 ### P2: Reception: new registration flow (replaces NewAppointmentPage)
 - [ ] Step 1, Patient:
@@ -243,3 +243,5 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 - **Q4.** Should the doctor be able to edit the patient's identity (name, phone, address) or only medical fields? *Recommendation: medical fields only; identity stays at reception.*
 
 **Answers (owner, 2026-11-15):** Q1–Q4 all as recommended: rebuild `appointments` once so `doctor_id` is nullable; receptionist discount up to `maxDiscountPercent` (default 10 %), more needs an admin; walk-in analysis allowed (case without lead doctor); doctors edit medical fields only.
+
+**More answers (owner, 2026-11-15):** the plan limit `monthlyVisits` counts **new cases** (patient journeys) per calendar month, not orders: till-side meaning only, posgro just stores the number. Commit after each finished phase (not pushed).

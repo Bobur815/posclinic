@@ -15,12 +15,12 @@ datasource db {
 // ==================== LOCAL CONFIG ====================
 
 model LocalConfig {
-  id          String   @id @default("config")
-  clinicId    String   @map("clinic_id")
-  clinicName  String   @map("clinic_name")
-  terminalId  String   @map("terminal_id")
-  apiUrl      String   @map("api_url")
-  lastSync    DateTime @default(now()) @map("last_sync")
+  id         String   @id @default("config")
+  clinicId   String   @map("clinic_id")
+  clinicName String   @map("clinic_name")
+  terminalId String   @map("terminal_id")
+  apiUrl     String   @map("api_url")
+  lastSync   DateTime @default(now()) @map("last_sync")
 
   @@map("local_config")
 }
@@ -54,6 +54,8 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  doctor Doctor?
+
   @@index([clinicId])
   @@map("users")
 }
@@ -61,30 +63,36 @@ model User {
 // ==================== PATIENTS ====================
 
 model Patient {
-  id          String    @id @default(cuid())
-  patientCode String    @unique @map("patient_code")
-  fullName    String    @map("full_name")
-  phone       String    @unique
-  birthDate   DateTime? @map("birth_date")
-  gender      String?
-  bloodType   String?   @map("blood_type")
-  allergies   String?
+  id                String     @id @default(cuid())
+  patientCode       String     @unique @map("patient_code")
+  fullName          String     @map("full_name")
+  phone             String     @unique
+  birthDate         DateTime?  @map("birth_date")
+  gender            String?
+  bloodType         String?    @map("blood_type")
+  allergies         String?
   /// Street / house, free text (the administrative part is regionCode + districtCode).
-  address     String?
+  address           String?
   /// Display text kept for the server/web (which have no address dataset): "District, Region".
-  city        String?
+  city              String?
   /// SOATO code of the region / republic / Tashkent City (admin_units, level 1).
-  regionCode   String?    @map("region_code")
-  region       AdminUnit? @relation("PatientRegion", fields: [regionCode], references: [code])
+  regionCode        String?    @map("region_code")
+  region            AdminUnit? @relation("PatientRegion", fields: [regionCode], references: [code])
   /// SOATO code of the district / city inside regionCode (admin_units, level 2).
-  districtCode String?    @map("district_code")
-  district     AdminUnit? @relation("PatientDistrict", fields: [districtCode], references: [code])
-  notes       String?
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  districtCode      String?    @map("district_code")
+  district          AdminUnit? @relation("PatientDistrict", fields: [districtCode], references: [code])
+  /// Chronic illnesses, free text (doctor-editable, like allergies).
+  chronicConditions String?    @map("chronic_conditions")
+  notes             String?
+  active            Boolean    @default(true)
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
 
-  appointments Appointment[]
+  appointments    Appointment[]
+  cases           ClinicalCase[]
+  vitals          PatientVitals[]
+  referrals       Referral[]
+  analysisResults AnalysisResult[]
 
   @@index([regionCode])
   @@index([districtCode])
@@ -128,11 +136,17 @@ model Doctor {
   phone     String?
   specialty String?
   licenseNo String?  @map("license_no")
+  /// The doctor's till login (role DOCTOR); null = no login yet.
+  userId    String?  @unique @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   appointments Appointment[]
+  items        AppointmentItem[]
+  cases        ClinicalCase[]
+  referrals    Referral[]
 
   @@map("doctors")
 }
@@ -140,49 +154,94 @@ model Doctor {
 // ==================== SERVICES ====================
 
 model Service {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  name        String
-  description String?
-  price       Decimal
-  duration    Int      @default(30)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  code           String   @unique
+  name           String
+  description    String?
+  price          Decimal
+  duration       Int      @default(30)
+  /// CONSULTATION (needs a doctor) | ANALYSIS (has a result) | PROCEDURE (can be a course)
+  kind           String   @default("PROCEDURE")
+  /// Repeat consultation: free within `followUpFreeDays` of a paid consultation in the case.
+  isFollowUp     Boolean  @default(false) @map("is_follow_up")
+  /// ANALYSIS only: QUALITATIVE | QUANTITATIVE | TEXT
+  resultType     String?  @map("result_type")
+  resultUnit     String?  @map("result_unit")
+  referenceRange String?  @map("reference_range")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   appointmentItems AppointmentItem[]
+  referrals        Referral[]
+  analysisResults  AnalysisResult[]
 
   @@map("services")
 }
 
-// ==================== APPOINTMENTS ====================
+// ==================== CASES (one patient journey) ====================
+
+model ClinicalCase {
+  id         String    @id @default(cuid())
+  caseNumber String    @unique @map("case_number")
+  patientId  String    @map("patient_id")
+  patient    Patient   @relation(fields: [patientId], references: [id])
+  /// Lead doctor; null for a walk-in analysis.
+  doctorId   String?   @map("doctor_id")
+  doctor     Doctor?   @relation(fields: [doctorId], references: [id])
+  /// OPEN | WAITING_DOCTOR | WAITING_ANALYSIS | RESULT_READY | ON_TREATMENT | CLOSED
+  status     String    @default("OPEN")
+  complaint  String?
+  diagnosis  String?
+  openedAt   DateTime  @default(now()) @map("opened_at")
+  closedAt   DateTime? @map("closed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  appointments    Appointment[]
+  vitals          PatientVitals[]
+  referrals       Referral[]
+  analysisResults AnalysisResult[]
+
+  @@index([patientId, status])
+  @@index([doctorId, status])
+  @@map("clinical_cases")
+}
+
+// ==================== APPOINTMENTS (paid orders) ====================
 
 model Appointment {
-  id                String    @id @default(cuid())
-  appointmentNumber String    @unique @map("appointment_number")
-  patientId         String    @map("patient_id")
-  patient           Patient   @relation(fields: [patientId], references: [id])
-  doctorId          String    @map("doctor_id")
-  doctor            Doctor    @relation(fields: [doctorId], references: [id])
-  appointmentDate   DateTime  @map("appointment_date")
-  status            String    @default("SCHEDULED")
-  totalAmount       Decimal   @default(0) @map("total_amount")
-  paidAmount        Decimal   @default(0) @map("paid_amount")
-  paymentStatus     String    @default("PENDING") @map("payment_status")
-  paymentMethod     String?   @map("payment_method")
+  id                String        @id @default(cuid())
+  appointmentNumber String        @unique @map("appointment_number")
+  patientId         String        @map("patient_id")
+  patient           Patient       @relation(fields: [patientId], references: [id])
+  /// Doctor of the consultation in this order; null for analysis / procedure orders.
+  doctorId          String?       @map("doctor_id")
+  doctor            Doctor?       @relation(fields: [doctorId], references: [id])
+  caseId            String?       @map("case_id")
+  case              ClinicalCase? @relation(fields: [caseId], references: [id])
+  appointmentDate   DateTime      @map("appointment_date")
+  status            String        @default("SCHEDULED")
+  totalAmount       Decimal       @default(0) @map("total_amount")
+  /// Sum of item discounts (already taken off totalAmount).
+  discountAmount    Decimal       @default(0) @map("discount_amount")
+  paidAmount        Decimal       @default(0) @map("paid_amount")
+  paymentStatus     String        @default("PENDING") @map("payment_status")
+  paymentMethod     String?       @map("payment_method")
   diagnosis         String?
   prescription      String?
   notes             String?
-  terminalId        String?   @map("terminal_id")
-  synced            Boolean   @default(false)
-  syncedAt          DateTime? @map("synced_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  terminalId        String?       @map("terminal_id")
+  synced            Boolean       @default(false)
+  syncedAt          DateTime?     @map("synced_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
 
   items AppointmentItem[]
 
   @@index([patientId])
   @@index([doctorId])
+  @@index([caseId])
   @@index([appointmentDate])
   @@index([synced])
   @@map("appointments")
@@ -197,10 +256,131 @@ model AppointmentItem {
   serviceName   String      @map("service_name")
   quantity      Int         @default(1)
   unitPrice     Decimal     @map("unit_price")
+  /// Discount on this line (a full course paid upfront); `total` is after it.
+  discount      Decimal     @default(0)
   total         Decimal
+  /// Consultation lines: whose queue it is in.
+  doctorId      String?     @map("doctor_id")
+  doctor        Doctor?     @relation(fields: [doctorId], references: [id])
+  /// The doctor's referral this line was registered from.
+  referralId    String?     @map("referral_id")
+  referral      Referral?   @relation(fields: [referralId], references: [id])
+  /// Queue state: WAITING | IN_PROGRESS | DONE | CANCELLED
+  status        String      @default("WAITING")
+  /// User (doctor / nurse) who took or finished it.
+  performedBy   String?     @map("performed_by")
+  startedAt     DateTime?   @map("started_at")
+  completedAt   DateTime?   @map("completed_at")
+
+  results  AnalysisResult[]
+  sessions TreatmentSession[]
 
   @@index([appointmentId])
+  @@index([doctorId, status])
+  @@index([status])
   @@map("appointment_items")
+}
+
+// ==================== CLINICAL RECORDS ====================
+
+/// One measurement per visit; the latest is the patient's current height / weight.
+model PatientVitals {
+  id          String        @id @default(cuid())
+  patientId   String        @map("patient_id")
+  patient     Patient       @relation(fields: [patientId], references: [id])
+  caseId      String?       @map("case_id")
+  case        ClinicalCase? @relation(fields: [caseId], references: [id])
+  heightCm    Decimal?      @map("height_cm")
+  weightKg    Decimal?      @map("weight_kg")
+  temperature Decimal?
+  bpSystolic  Int?          @map("bp_systolic")
+  bpDiastolic Int?          @map("bp_diastolic")
+  pregnant    Boolean?
+  complaints  String?
+  recordedBy  String?       @map("recorded_by")
+  recordedAt  DateTime      @default(now()) @map("recorded_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([patientId, recordedAt])
+  @@map("patient_vitals")
+}
+
+/// A doctor's order for reception: "send to analysis X" or "course Y, 2 a day for 5 days".
+model Referral {
+  id            String       @id @default(cuid())
+  caseId        String       @map("case_id")
+  case          ClinicalCase @relation(fields: [caseId], references: [id])
+  patientId     String       @map("patient_id")
+  patient       Patient      @relation(fields: [patientId], references: [id])
+  doctorId      String?      @map("doctor_id")
+  doctor        Doctor?      @relation(fields: [doctorId], references: [id])
+  serviceId     String       @map("service_id")
+  service       Service      @relation(fields: [serviceId], references: [id])
+  /// Total sessions / units (perDay × days for a course).
+  quantity      Int          @default(1)
+  perDay        Int?         @map("per_day")
+  days          Int?
+  instructions  String?
+  /// How many of `quantity` reception has registered so far.
+  registeredQty Int          @default(0) @map("registered_qty")
+  /// PENDING | PARTIAL | REGISTERED | CANCELLED
+  status        String       @default("PENDING")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  items AppointmentItem[]
+
+  @@index([patientId, status])
+  @@index([caseId])
+  @@map("referrals")
+}
+
+model AnalysisResult {
+  id            String          @id @default(cuid())
+  itemId        String          @map("item_id")
+  item          AppointmentItem @relation(fields: [itemId], references: [id])
+  caseId        String?         @map("case_id")
+  case          ClinicalCase?   @relation(fields: [caseId], references: [id])
+  patientId     String          @map("patient_id")
+  patient       Patient         @relation(fields: [patientId], references: [id])
+  serviceId     String          @map("service_id")
+  service       Service         @relation(fields: [serviceId], references: [id])
+  /// QUALITATIVE: POSITIVE | NEGATIVE
+  outcome       String?
+  value         Decimal?
+  unit          String?
+  /// e.g. which parasite was found
+  finding       String?
+  comment       String?
+  sampleTakenAt DateTime?       @map("sample_taken_at")
+  enteredBy     String?         @map("entered_by")
+  enteredAt     DateTime?       @map("entered_at")
+  confirmedBy   String?         @map("confirmed_by")
+  confirmedAt   DateTime?       @map("confirmed_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([caseId])
+  @@index([itemId])
+  @@map("analysis_results")
+}
+
+/// One session of a course line ("3 of 10"), ticked off by the nurse.
+model TreatmentSession {
+  id          String          @id @default(cuid())
+  itemId      String          @map("item_id")
+  item        AppointmentItem @relation(fields: [itemId], references: [id])
+  number      Int
+  plannedDate DateTime?       @map("planned_date")
+  doneAt      DateTime?       @map("done_at")
+  doneBy      String?         @map("done_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@unique([itemId, number])
+  @@index([plannedDate, doneAt])
+  @@map("treatment_sessions")
 }
 
 // ==================== SYNC QUEUE ====================

@@ -10,6 +10,13 @@ export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID';
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'INSURANCE';
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
+/** CONSULTATION needs a doctor; ANALYSIS has a result; PROCEDURE can be a course. */
+export type ServiceKind = 'CONSULTATION' | 'ANALYSIS' | 'PROCEDURE';
+export const SERVICE_KINDS: readonly ServiceKind[] = ['CONSULTATION', 'ANALYSIS', 'PROCEDURE'];
+/** How an analysis result is entered: positive/negative, a number, or text. */
+export type ResultType = 'QUALITATIVE' | 'QUANTITATIVE' | 'TEXT';
+export const RESULT_TYPES: readonly ResultType[] = ['QUALITATIVE', 'QUANTITATIVE', 'TEXT'];
+
 export interface PatientDto {
   id: string;
   patientCode: string;
@@ -79,6 +86,13 @@ export interface ServiceDto {
   price: number;
   /** Minutes. */
   duration: number;
+  kind: ServiceKind;
+  /** Repeat consultation: free within the follow-up window of a paid consultation. */
+  isFollowUp: boolean;
+  /** ANALYSIS only. */
+  resultType: ResultType | null;
+  resultUnit: string | null;
+  referenceRange: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -90,6 +104,11 @@ export interface ServiceInput {
   description?: string | null;
   price?: number;
   duration?: number;
+  kind?: ServiceKind;
+  isFollowUp?: boolean;
+  resultType?: ResultType | null;
+  resultUnit?: string | null;
+  referenceRange?: string | null;
   active?: boolean;
 }
 

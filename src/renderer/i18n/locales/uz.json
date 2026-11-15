@@ -195,7 +195,24 @@
     "price": "Narx",
     "duration": "Davomiyligi (daqiqa)",
     "searchPlaceholder": "Xizmat nomi yoki kod...",
-    "noServices": "Xizmatlar topilmadi"
+    "noServices": "Xizmatlar topilmadi",
+    "kind": "Turi",
+    "kinds": {
+      "CONSULTATION": "Konsultatsiya",
+      "ANALYSIS": "Tahlil",
+      "PROCEDURE": "Muolaja"
+    },
+    "followUp": "Takroriy konsultatsiya",
+    "followUpYes": "Ha: 14 kun ichida bepul",
+    "followUpShort": "takroriy",
+    "resultType": "Natija turi",
+    "resultTypes": {
+      "QUALITATIVE": "Musbat / manfiy",
+      "QUANTITATIVE": "Son (titr)",
+      "TEXT": "Matn"
+    },
+    "resultUnit": "O‘lchov birligi",
+    "referenceRange": "Me’yor"
   },
   "doctors": {
     "title": "Shifokorlar",
@@ -426,7 +443,8 @@
     "invalidDate": "Sana noto'g'ri",
     "serviceUnavailable": "Tanlangan xizmat topilmadi yoki faol emas. Ro'yxatni yangilang",
     "visitCancelled": "Bekor qilingan qabul uchun to'lov qabul qilinmaydi",
-    "invalidAddress": "Manzil noto‘g‘ri: tuman tanlangan viloyatga tegishli emas"
+    "invalidAddress": "Manzil noto‘g‘ri: tuman tanlangan viloyatga tegishli emas",
+    "invalidServiceKind": "Xizmat turi noto‘g‘ri"
   },
   "license": {
     "title": "Obuna",

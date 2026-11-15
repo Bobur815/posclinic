@@ -6,13 +6,24 @@ import { Plus, Search, Edit2, X, Save } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
 import { ipcErrorKey } from '../../store/lan-store';
-import type { ServiceDto as Service } from '../../../shared/clinic';
+import {
+  RESULT_TYPES,
+  SERVICE_KINDS,
+  type ResultType,
+  type ServiceDto as Service,
+  type ServiceKind,
+} from '../../../shared/clinic';
 
 interface ServiceForm {
   code: string;
   name: string;
   price: string;
   duration: string;
+  kind: ServiceKind;
+  isFollowUp: boolean;
+  resultType: ResultType;
+  resultUnit: string;
+  referenceRange: string;
   active: boolean;
 }
 
@@ -255,7 +266,18 @@ const SaveBtn = styled.button`
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
-const emptyForm: ServiceForm = { code: '', name: '', price: '', duration: '', active: true };
+const emptyForm: ServiceForm = {
+  code: '',
+  name: '',
+  price: '',
+  duration: '',
+  kind: 'PROCEDURE',
+  isFollowUp: false,
+  resultType: 'QUALITATIVE',
+  resultUnit: '',
+  referenceRange: '',
+  active: true,
+};
 
 export function ServiceList() {
   const { t } = useTranslation();
@@ -305,6 +327,11 @@ export function ServiceList() {
       name: svc.name,
       price: String(svc.price),
       duration: svc.duration ? String(svc.duration) : '',
+      kind: svc.kind,
+      isFollowUp: svc.isFollowUp,
+      resultType: svc.resultType ?? 'QUALITATIVE',
+      resultUnit: svc.resultUnit ?? '',
+      referenceRange: svc.referenceRange ?? '',
       active: svc.active,
     });
     setShowModal(true);
@@ -321,6 +348,12 @@ export function ServiceList() {
         price,
         // duration is NOT NULL in the DB: an empty field is the default 30 minutes.
         duration: parseInt(form.duration, 10) || 30,
+        // main keeps these consistent with the type (service-handlers.ts serviceTypeFields)
+        kind: form.kind,
+        isFollowUp: form.isFollowUp,
+        resultType: form.resultType,
+        resultUnit: form.resultUnit,
+        referenceRange: form.referenceRange,
         active: form.active,
       };
       if (editingService) {
@@ -343,7 +376,10 @@ export function ServiceList() {
   const handleChange = (field: keyof ServiceForm) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const value = field === 'active' ? (e.target as HTMLSelectElement).value === 'true' : e.target.value;
+    const value =
+      field === 'active' || field === 'isFollowUp'
+        ? (e.target as HTMLSelectElement).value === 'true'
+        : e.target.value;
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -373,6 +409,55 @@ export function ServiceList() {
                 <Label>{t('services.duration')} ({t('common.minutes')})</Label>
                 <Input type="number" min={0} value={form.duration} onChange={handleChange('duration')} placeholder="30" />
               </FormGroup>
+              <FormGroup>
+                <Label>{t('services.kind')}</Label>
+                <Select value={form.kind} onChange={handleChange('kind')}>
+                  {SERVICE_KINDS.map((k) => (
+                    <option key={k} value={k}>
+                      {t(`services.kinds.${k}`)}
+                    </option>
+                  ))}
+                </Select>
+              </FormGroup>
+              {form.kind === 'CONSULTATION' && (
+                <FormGroup>
+                  <Label>{t('services.followUp')}</Label>
+                  <Select value={String(form.isFollowUp)} onChange={handleChange('isFollowUp')}>
+                    <option value="false">{t('common.no')}</option>
+                    <option value="true">{t('services.followUpYes')}</option>
+                  </Select>
+                </FormGroup>
+              )}
+              {form.kind === 'ANALYSIS' && (
+                <>
+                  <FormGroup>
+                    <Label>{t('services.resultType')}</Label>
+                    <Select value={form.resultType} onChange={handleChange('resultType')}>
+                      {RESULT_TYPES.map((r) => (
+                        <option key={r} value={r}>
+                          {t(`services.resultTypes.${r}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormGroup>
+                  {form.resultType === 'QUANTITATIVE' && (
+                    <>
+                      <FormGroup>
+                        <Label>{t('services.resultUnit')}</Label>
+                        <Input value={form.resultUnit} onChange={handleChange('resultUnit')} />
+                      </FormGroup>
+                      <FormGroup>
+                        <Label>{t('services.referenceRange')}</Label>
+                        <Input
+                          value={form.referenceRange}
+                          onChange={handleChange('referenceRange')}
+                          placeholder="< 1:100"
+                        />
+                      </FormGroup>
+                    </>
+                  )}
+                </>
+              )}
               <FormGroup>
                 <Label>{t('common.status')}</Label>
                 <Select value={String(form.active)} onChange={handleChange('active')}>
@@ -423,6 +508,7 @@ export function ServiceList() {
               <tr>
                 <Th>{t('services.code')}</Th>
                 <Th>{t('services.name')}</Th>
+                <Th>{t('services.kind')}</Th>
                 <Th>{t('services.price')}</Th>
                 <Th>{t('services.duration')}</Th>
                 <Th>{t('common.status')}</Th>
@@ -434,6 +520,10 @@ export function ServiceList() {
                 <Tr key={svc.id}>
                   <Td style={{ color: '#0891b2', fontWeight: 500 }}>{svc.code}</Td>
                   <Td>{svc.name}</Td>
+                  <Td>
+                    {t(`services.kinds.${svc.kind}`)}
+                    {svc.isFollowUp ? ` · ${t('services.followUpShort')}` : ''}
+                  </Td>
                   <Td>{Number(svc.price).toLocaleString()} {t('common.currency')}</Td>
                   <Td>{svc.duration ? `${svc.duration} ${t('common.minutes')}` : '—'}</Td>
                   <Td>
