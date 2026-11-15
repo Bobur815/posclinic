@@ -1,8 +1,8 @@
-import { ipcMain } from 'electron';
 import { getCloudSync } from '../sync/sync-service';
+import { handle } from './ipc-safe';
 
-/** Cloud sync status and "sync now" (Settings → Cloud sync). */
+/** Cloud sync status and "sync now" (Settings → Cloud sync; main till only). */
 export function setupSyncHandlers(): void {
-  ipcMain.handle('sync:status', () => getCloudSync().getStatus());
-  ipcMain.handle('sync:now', () => getCloudSync().run());
+  handle('sync:status', () => getCloudSync().getStatus());
+  handle('sync:now', () => getCloudSync().run());
 }

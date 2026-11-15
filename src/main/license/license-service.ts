@@ -201,6 +201,16 @@ export class LicenseService {
   }
 
   /**
+   * Tills the licence allows (the main one plus its satellites); null = unlimited (omitted in
+   * the licence). Without a licence: 1, so no satellite pairs.
+   */
+  terminalLimit(): number | null {
+    if (!this.payload) return 1;
+    const t = this.payload.terminals;
+    return typeof t === 'number' && Number.isFinite(t) ? t : null;
+  }
+
+  /**
    * What the till shows the posclinic server (cloud sync): the signed licence itself is the
    * credential, verified there with the same public key. Null until a valid licence is held.
    */

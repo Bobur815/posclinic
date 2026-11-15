@@ -179,3 +179,29 @@ model SyncQueue {
   @@index([entity])
   @@map("sync_queue")
 }
+
+// ==================== LAN (satellite tills) ====================
+
+/// Key/value settings of this till (JSON values): lan_role, lan_enabled, lan_port, lan_link,
+/// lan_lineage, auth_secret. src/main/lan/config.ts
+model Setting {
+  key       String    @id
+  value     String
+  updatedAt DateTime? @default(now()) @map("updated_at")
+
+  @@map("settings")
+}
+
+/// Satellite tills paired with this main till. Only a SHA-256 of the device secret is kept.
+/// src/main/lan/devices.ts
+model LanDevice {
+  id         String    @id
+  name       String
+  secretHash String    @map("secret_hash")
+  ip         String?
+  lastSeenAt DateTime? @map("last_seen_at")
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("lan_devices")
+}

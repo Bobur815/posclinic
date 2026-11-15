@@ -61,23 +61,29 @@ Previous plan (posgro licensing, v2.0.0) is done and committed in `2856f9d`; its
 - [ ] Builds into `dist/web`, served by Nest at `/web` (as now).
 
 ## Phase 4 — satellites (port of SavdoChef `src/main/lan/`)
-- [ ] **Handler context refactor first:** handlers get `ctx = { actor, terminalId }` instead of reading the module-global `currentUser` (auth-handlers). Add role checks the review flagged (receptionist cannot edit services, doctors or staff).
-- [ ] Port `config.ts`, `devices.ts`, `pairing.ts`, `serve-policy.ts`, `server.ts`, `main-link.ts`, `lan-service.ts` + `lan.test.ts`, `satellite.e2e.test.ts`. Adapt:
+- [x] **Handler context refactor first:** handlers get `ctx = { actor, terminalId }` instead of reading the module-global `currentUser` (auth-handlers). Add role checks the review flagged (receptionist cannot edit services, doctors or staff).
+- [x] Port `config.ts`, `devices.ts`, `pairing.ts`, `serve-policy.ts`, `server.ts`, `main-link.ts`, `lan-service.ts` + `lan.test.ts`, `satellite.e2e.test.ts`. Adapt:
   - app id `posclinic`, default port 5180;
   - header `Authorization: Posclinic <deviceId>.<secret>`;
   - `NOT_OVER_LAN` = `license:*`, `setup:*`, `update:*`, `lan:*`, `config:*`.
-- [ ] SQLite (additive): `lan_devices(id, name, secret_hash, ip, last_seen_at, active, created_at)`; `lan_role` and `lan_link` (secret encrypted with `safeStorage`) in a `settings` table (new).
-- [ ] RPC: `handle()` → on a satellite, forward; on the main, run with the caller's session actor. Login on a satellite gives a per-device session token on the main.
-- [ ] **Printing on a satellite stays local:** `print:*` runs on the satellite's own printer, fetching the visit over RPC.
-- [ ] Concurrency: `appointmentNumber` is generated inside a transaction with retry on the unique conflict (two desks at once).
-- [ ] Device limit = licence `terminals − 1` (null = unlimited). Satellites never contact posgro or the posclinic server; the main's licence gates every forwarded call.
-- [ ] Events: main → satellites SSE so lists refresh (`appointments/patients/catalog changed`).
-- [ ] Renderer (React):
+- [x] SQLite (additive): `lan_devices(id, name, secret_hash, ip, last_seen_at, active, created_at)`; `lan_role` and `lan_link` (secret encrypted with `safeStorage`) in a `settings` table (new).
+- [x] RPC: `handle()` → on a satellite, forward; on the main, run with the caller's session actor. Login on a satellite gives a per-device session token on the main.
+- [x] **Printing on a satellite stays local:** `print:*` runs on the satellite's own printer, fetching the visit over RPC.
+- [x] Concurrency: `appointmentNumber` is generated inside a transaction with retry on the unique conflict (two desks at once).
+- [x] Device limit = licence `terminals − 1` (null = unlimited). Satellites never contact posgro or the posclinic server; the main's licence gates every forwarded call.
+- [x] Events: main → satellites SSE so lists refresh (`appointments/patients/catalog changed`).
+- [x] Renderer (React):
   - setup wizard step 0 "Main till / Extra till";
   - join form (main address + 6-digit code);
   - Settings → Satellites (enable, port, addresses, code with countdown, devices + revoke, firewall command);
   - "Waiting for main till" overlay driven by link state.
-- [ ] i18n ru + uz.
+- [x] i18n ru + uz.
+
+### Phase 4 review (2026-11-15, v2.2.0)
+- `handle()` only records handlers (`ipc/ipc-safe.ts`, Electron-free); `ipc/dispatch.ts` binds them to ipcMain and is the one branch point (main: run with the window's actor; satellite: forward over `lan/main-link.ts`).
+- Deviations from SavdoChef: `license:status` is forwarded (a satellite shows and hides by its main's plan); `sync:*`, `app:*`, `print:*` are also local-only; join only from the setup wizard (no unattended re-pair; leave → setup again); patient codes get the same transaction + retry as visit numbers; the remember-me token is now HMAC-signed (old unsigned tokens are refused once, users sign in again after the update).
+- Tests: `lan/lan.test.ts` (13) + `lan/satellite.e2e.test.ts` (19, real handlers over a real server on 127.0.0.1); `npm run check` 90/90, `electron-vite build` green.
+- Not verified without two machines: real LAN + Windows firewall, safeStorage on the satellite, relaunch after join/leave, printing on a satellite printer (printing is still a log stub).
 
 ## Phase 5 — deploy (posgro VPS)
 - [ ] `Dockerfile` + `docker-compose.yml` / `docker-compose.staging.yml` in posclinic: `posclinic-server` + its **own** `posclinic-postgres` (separate from posgro's database: medical data, own backups), not published publicly; `RUN_MIGRATIONS`.

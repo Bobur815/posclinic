@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Stethoscope, KeyRound, UserPlus, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import {
+  Stethoscope,
+  KeyRound,
+  UserPlus,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  Server,
+  MonitorSmartphone,
+} from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { ipcErrorKey } from '../../store/lan-store';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -78,8 +88,7 @@ const StepDot = styled.div<{ $active: boolean; $done: boolean }>`
   transition: all 0.2s;
   background: ${({ $active, $done, theme }) =>
     $done || $active ? theme.colors.primary : theme.colors.border};
-  color: ${({ $active, $done, theme }) =>
-    $done || $active ? '#fff' : theme.colors.textSecondary};
+  color: ${({ $active, $done, theme }) => ($done || $active ? '#fff' : theme.colors.textSecondary)};
 `;
 
 const StepLine = styled.div<{ $done: boolean }>`
@@ -217,6 +226,57 @@ const SuccessBox = styled.div`
   color: ${({ theme }) => theme.colors.primary};
 `;
 
+// ─── Role choice ──────────────────────────────────────────────────────────────
+
+const Choices = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const Choice = styled.button`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
+  cursor: pointer;
+  svg {
+    color: ${({ theme }) => theme.colors.primary};
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  span {
+    font-size: 12px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    line-height: 1.4;
+  }
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const LinkBtn = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -239,7 +299,9 @@ const LangBtn = styled.button<{ $active: boolean }>`
 `;
 
 /**
- * First run, two steps:
+ * First run. Step 0: is this the clinic's MAIN till or an extra (satellite) till? A satellite
+ * only joins its main till (address + 6-digit code from the main's Settings) and restarts.
+ * A main till then has two steps:
  * 1. Link the till to the clinic the posgro super admin created: owner phone + one-time
  *    activation code. Main calls posgro and stores the signed licence.
  * 2. Create the clinic's first admin (phone login), which also seeds parasitology services.
@@ -250,6 +312,10 @@ export function SetupWizard() {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const [step, setStep] = useState<1 | 2>(1);
+  const [mode, setMode] = useState<'choose' | 'main' | 'join'>('choose');
+  const [mainAddress, setMainAddress] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [joined, setJoined] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isDone, setIsDone] = useState(false);
@@ -270,6 +336,7 @@ export function SetupWizard() {
     window.electronAPI.license.status().then((s) => {
       if (s.linked) {
         setClinicName(s.storeName ?? '');
+        setMode('main');
         setStep(2);
       }
     });
@@ -327,10 +394,43 @@ export function SetupWizard() {
     }
   };
 
+  const handleJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      await window.electronAPI.lan.join({ mainAddress, code: joinCode });
+      // The app restarts as a satellite of that main till.
+      setJoined(true);
+    } catch (err) {
+      setError(t(ipcErrorKey(err, 'lan.errors.joinFailed')));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const backToChoice = () => {
+    setError('');
+    setMode('choose');
+  };
+
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang);
     localStorage.setItem('language', lang);
   };
+
+  if (joined) {
+    return (
+      <Page>
+        <Card>
+          <SuccessBox>
+            <CheckCircle size={56} />
+            <Subtitle>{t('setup.join.done')}</Subtitle>
+          </SuccessBox>
+        </Card>
+      </Page>
+    );
+  }
 
   if (isDone) {
     return (
@@ -375,17 +475,96 @@ export function SetupWizard() {
           </LangRow>
         </Header>
 
-        <StepBar>
-          <StepDot $active={step === 1} $done={step > 1}>
-            {step > 1 ? '✓' : '1'}
-          </StepDot>
-          <StepLine $done={step > 1} />
-          <StepDot $active={step === 2} $done={false}>
-            2
-          </StepDot>
-        </StepBar>
+        {mode === 'choose' && (
+          <Form as="div">
+            <StepHeading>
+              <h2>{t('setup.role.title')}</h2>
+              <p>{t('setup.role.subtitle')}</p>
+            </StepHeading>
+            <Choices>
+              <Choice type="button" onClick={() => setMode('main')}>
+                <Server size={22} />
+                <div>
+                  <strong>{t('setup.role.main')}</strong>
+                  <span>{t('setup.role.mainDesc')}</span>
+                </div>
+              </Choice>
+              <Choice type="button" onClick={() => setMode('join')}>
+                <MonitorSmartphone size={22} />
+                <div>
+                  <strong>{t('setup.role.satellite')}</strong>
+                  <span>{t('setup.role.satelliteDesc')}</span>
+                </div>
+              </Choice>
+            </Choices>
+          </Form>
+        )}
 
-        {step === 1 && (
+        {mode === 'join' && (
+          <Form onSubmit={handleJoin}>
+            <StepHeading>
+              <h2>
+                <MonitorSmartphone size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                {t('setup.join.title')}
+              </h2>
+              <p>{t('setup.join.subtitle')}</p>
+            </StepHeading>
+
+            <FormGroup>
+              <Label>{t('setup.join.address')}</Label>
+              <Input
+                placeholder="192.168.1.10"
+                value={mainAddress}
+                onChange={(e) => {
+                  setError('');
+                  setMainAddress(e.target.value);
+                }}
+                required
+                autoFocus
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>{t('setup.join.code')}</Label>
+              <CodeInput
+                inputMode="numeric"
+                placeholder="000000"
+                value={joinCode}
+                onChange={(e) => {
+                  setError('');
+                  setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                }}
+                required
+              />
+            </FormGroup>
+
+            {error && <ErrorMsg>{error}</ErrorMsg>}
+
+            <SubmitBtn
+              type="submit"
+              disabled={isLoading || joinCode.length !== 6 || !mainAddress.trim()}
+            >
+              {isLoading ? t('setup.join.joining') : `${t('setup.join.submit')} →`}
+            </SubmitBtn>
+            <LinkBtn type="button" onClick={backToChoice}>
+              ← {t('setup.join.back')}
+            </LinkBtn>
+          </Form>
+        )}
+
+        {mode === 'main' && (
+          <StepBar>
+            <StepDot $active={step === 1} $done={step > 1}>
+              {step > 1 ? '✓' : '1'}
+            </StepDot>
+            <StepLine $done={step > 1} />
+            <StepDot $active={step === 2} $done={false}>
+              2
+            </StepDot>
+          </StepBar>
+        )}
+
+        {mode === 'main' && step === 1 && (
           <Form onSubmit={handleLink}>
             <StepHeading>
               <h2>
@@ -436,10 +615,13 @@ export function SetupWizard() {
             >
               {isLoading ? t('setup.link.checking') : `${t('setup.link.submit')} →`}
             </SubmitBtn>
+            <LinkBtn type="button" onClick={backToChoice}>
+              ← {t('setup.join.back')}
+            </LinkBtn>
           </Form>
         )}
 
-        {step === 2 && (
+        {mode === 'main' && step === 2 && (
           <Form onSubmit={handleAdmin}>
             <StepHeading>
               <h2>

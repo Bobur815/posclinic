@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { ipcMain } from 'electron';
 import { z } from 'zod';
 import { normalizePhone } from '../../shared/phone';
 import { seedParasitologyServices } from '../database/seed-parasitology';
@@ -12,6 +11,7 @@ import {
 } from '../database/sqlite-client';
 import { getLicenseService, licenseApiUrl } from '../license/license-service';
 import { log } from '../logger';
+import { handle } from './ipc-safe';
 
 /** The renderer is told to re-read `license:status` whenever this fires (`license:changed`). */
 export function setupLicenseHandlers(): void {
@@ -38,15 +38,15 @@ export function setupLicenseHandlers(): void {
     },
   });
 
-  ipcMain.handle('license:status', () => license.status());
-  ipcMain.handle('license:checkNow', () => license.renew());
+  handle('license:status', () => license.status());
+  handle('license:checkNow', () => license.renew());
 
   /**
    * Setup step 1: link to the clinic the posgro super admin created (owner phone + one-time
    * activation code), then open that clinic's own DB file. Allowed only before setup finished:
    * re-linking a working till to another clinic is a super-admin job.
    */
-  ipcMain.handle('license:activate', async (_event, phone: unknown, code: unknown) => {
+  handle('license:activate', async (_ctx, phone: unknown, code: unknown) => {
     if (typeof phone !== 'string' || typeof code !== 'string') {
       return { ok: false, error: 'license.errors.invalid_code' };
     }
@@ -97,7 +97,7 @@ export function setupLicenseHandlers(): void {
     lang: z.enum(['uz', 'ru']).default('uz'),
   });
 
-  ipcMain.handle('setup:createAdmin', async (_event, raw: unknown) => {
+  handle('setup:createAdmin', async (_ctx, raw: unknown) => {
     try {
       if (!license.isLinked()) return { success: false, error: 'license.refused.setup' };
       if (await setupFinished()) return { success: false, error: 'license.errors.already_setup' };

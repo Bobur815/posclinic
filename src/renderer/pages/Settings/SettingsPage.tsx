@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { CloudSyncSection } from './CloudSyncSection';
+import { LanSection } from './LanSection';
+import { followLan, useIsSatellite } from '../../store/lan-store';
 import { SubscriptionSection } from './SubscriptionSection';
 import { UpdateSection } from './UpdateSection';
 import { Sun, Moon, Globe, Monitor, Info } from 'lucide-react';
@@ -130,7 +132,9 @@ export function SettingsPage() {
   };
   const [localConfig, setLocalConfig] = useState<LocalConfig | null>(null);
   const [appVersion, setAppVersion] = useState('');
+  const isSatellite = useIsSatellite();
   useEffect(() => {
+    followLan();
     window.electronAPI.config.getLocalConfig().then((cfg) => setLocalConfig(cfg as LocalConfig));
     window.electronAPI.app.getVersion().then(setAppVersion);
   }, []);
@@ -146,7 +150,10 @@ export function SettingsPage() {
 
       {/* Appearance */}
       <Section>
-        <SectionTitle><Monitor size={15} />{t('settings.appearance')}</SectionTitle>
+        <SectionTitle>
+          <Monitor size={15} />
+          {t('settings.appearance')}
+        </SectionTitle>
         <Card>
           <SettingRow>
             <SettingInfo>
@@ -155,10 +162,12 @@ export function SettingsPage() {
             </SettingInfo>
             <ToggleGroup>
               <ToggleBtn $active={mode === 'light'} onClick={() => setMode('light')}>
-                <Sun size={14} />{t('settings.light')}
+                <Sun size={14} />
+                {t('settings.light')}
               </ToggleBtn>
               <ToggleBtn $active={mode === 'dark'} onClick={() => setMode('dark')}>
-                <Moon size={14} />{t('settings.dark')}
+                <Moon size={14} />
+                {t('settings.dark')}
               </ToggleBtn>
             </ToggleGroup>
           </SettingRow>
@@ -169,10 +178,12 @@ export function SettingsPage() {
             </SettingInfo>
             <ToggleGroup>
               <ToggleBtn $active={i18n.language === 'uz'} onClick={() => handleLangChange('uz')}>
-                <Globe size={14} />UZ
+                <Globe size={14} />
+                UZ
               </ToggleBtn>
               <ToggleBtn $active={i18n.language === 'ru'} onClick={() => handleLangChange('ru')}>
-                <Globe size={14} />RU
+                <Globe size={14} />
+                RU
               </ToggleBtn>
             </ToggleGroup>
           </SettingRow>
@@ -182,7 +193,10 @@ export function SettingsPage() {
       {/* Clinic Info */}
       {localConfig && (
         <Section>
-          <SectionTitle><Info size={15} />{t('settings.clinicInfo')}</SectionTitle>
+          <SectionTitle>
+            <Info size={15} />
+            {t('settings.clinicInfo')}
+          </SectionTitle>
           <Card>
             <InfoItem>
               <InfoLabel>{t('settings.clinicName')}</InfoLabel>
@@ -204,15 +218,21 @@ export function SettingsPage() {
         </Section>
       )}
 
-      <SubscriptionSection />
+      {/* The licence and the cloud sync belong to the main till; a satellite shows its link. */}
+      {!isSatellite && <SubscriptionSection />}
 
-      <CloudSyncSection />
+      {!isSatellite && <CloudSyncSection />}
+
+      <LanSection />
 
       <UpdateSection />
 
       {/* About */}
       <Section>
-        <SectionTitle><Info size={15} />{t('settings.about')}</SectionTitle>
+        <SectionTitle>
+          <Info size={15} />
+          {t('settings.about')}
+        </SectionTitle>
         <Card>
           <InfoItem>
             <InfoLabel>{t('settings.appName')}</InfoLabel>

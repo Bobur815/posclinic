@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { ActivateResult, LicenseStatusDto } from '../shared/license';
 import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
+import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 
 interface SetupAdminInput {
   fullName: string;
@@ -128,6 +129,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
 
+  // Satellite tills on the clinic LAN (main: settings; satellite: its link to the main till).
+  lan: {
+    status: () => ipcRenderer.invoke('lan:status'),
+    update: (input: { enabled?: boolean; port?: number }) =>
+      ipcRenderer.invoke('lan:update', input),
+    issueCode: () => ipcRenderer.invoke('lan:issueCode'),
+    cancelCode: () => ipcRenderer.invoke('lan:cancelCode'),
+    revoke: (deviceId: string) => ipcRenderer.invoke('lan:revoke', deviceId),
+    link: () => ipcRenderer.invoke('lan:link'),
+    join: (input: LanJoinInput) => ipcRenderer.invoke('lan:join', input),
+    leave: () => ipcRenderer.invoke('lan:leave'),
+    onChanged: (callback: () => void) => {
+      ipcRenderer.on('lan:changed', callback);
+      return () => ipcRenderer.removeListener('lan:changed', callback);
+    },
+  },
+
+  // Something changed on the main till (this window, another window, or a satellite).
+  data: {
+    onChanged: (callback: (event: DataChangedEvent) => void) => {
+      const handler = (_e: unknown, event: DataChangedEvent) => callback(event);
+      ipcRenderer.on('data:changed', handler);
+      return () => ipcRenderer.removeListener('data:changed', handler);
+    },
+  },
+
   // Config
   config: {
     getLocalConfig: () => ipcRenderer.invoke('config:getLocalConfig'),
@@ -215,6 +242,20 @@ declare global {
         download: () => Promise<UpdateStatusDto>;
         install: () => Promise<void>;
         onChanged: (callback: () => void) => () => void;
+      };
+      lan: {
+        status: () => Promise<LanStatusDto>;
+        update: (input: { enabled?: boolean; port?: number }) => Promise<LanStatusDto>;
+        issueCode: () => Promise<LanStatusDto>;
+        cancelCode: () => Promise<LanStatusDto>;
+        revoke: (deviceId: string) => Promise<LanStatusDto>;
+        link: () => Promise<LanLinkDto>;
+        join: (input: LanJoinInput) => Promise<LanLinkDto>;
+        leave: () => Promise<LanLinkDto>;
+        onChanged: (callback: () => void) => () => void;
+      };
+      data: {
+        onChanged: (callback: (event: DataChangedEvent) => void) => () => void;
       };
       config: {
         getLocalConfig: () => Promise<{ clinicId: string; apiUrl: string; clinicName: string; terminalId: string } | null>;

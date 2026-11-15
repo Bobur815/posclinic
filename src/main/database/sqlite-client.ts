@@ -3,13 +3,27 @@ import { app } from 'electron';
 import fs from 'fs';
 import { createSchemaIfNeeded } from './schema';
 
-const prismaClientPath = path.join(app.getAppPath(), 'src', 'generated', 'prisma-sqlite');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { PrismaClient } = require(prismaClientPath);
+import type { PrismaClient as GeneratedClient } from '../../generated/prisma-sqlite';
 
-type PrismaClientType = InstanceType<typeof PrismaClient>;
+/**
+ * Loaded on first use, not at import: handler modules import this file, and the tests
+ * (plain node, no Electron `app`) give them a client of their own via `useDatabaseClient`.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: the generated client's constructor
+function PrismaClientCtor(): any {
+  const prismaClientPath = path.join(app.getAppPath(), 'src', 'generated', 'prisma-sqlite');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require(prismaClientPath).PrismaClient;
+}
+
+type PrismaClientType = GeneratedClient;
 
 let prisma: PrismaClientType | null = null;
+
+/** Tests only: the handlers use this (already connected, schema created) client. */
+export function useDatabaseClient(client: PrismaClientType | null): void {
+  prisma = client;
+}
 
 export function getPrismaClient(): PrismaClientType {
   if (!prisma) {
@@ -57,6 +71,7 @@ export async function initializeDatabase(): Promise<void> {
 
   process.env.SQLITE_DATABASE_URL = `file:${dbPath}`;
 
+  const PrismaClient = PrismaClientCtor();
   prisma = new PrismaClient({
     datasources: {
       db: {
@@ -67,8 +82,8 @@ export async function initializeDatabase(): Promise<void> {
   });
 
   try {
-    await prisma.$connect();
-    await createSchemaIfNeeded(prisma);
+    await prisma!.$connect();
+    await createSchemaIfNeeded(prisma!);
   } catch (error) {
     console.error('Failed to connect to database:', error);
     throw error;
@@ -87,12 +102,11 @@ export async function reinitializeDatabaseForClinic(clinicId: string): Promise<v
   const userDataPath = app.getPath('userData');
   const dbPath = path.join(userDataPath, `clinic-${clinicId}.db`);
   process.env.SQLITE_DATABASE_URL = `file:${dbPath}`;
+  const PrismaClient = PrismaClientCtor();
   prisma = new PrismaClient({
     datasources: { db: { url: `file:${dbPath}` } },
     log: ['error'],
   });
-  await prisma.$connect();
-  await createSchemaIfNeeded(prisma);
+  await prisma!.$connect();
+  await createSchemaIfNeeded(prisma!);
 }
-
-export { prisma };

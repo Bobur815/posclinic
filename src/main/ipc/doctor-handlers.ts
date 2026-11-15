@@ -1,4 +1,4 @@
-import { handle, ipcSafe } from './ipc-safe';
+import { handle, ipcSafe, requireAdmin } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 
@@ -30,8 +30,9 @@ export function setupDoctorHandlers(): void {
     }
   });
 
-  handle('doctors:create', async (_event, data: Record<string, unknown>) => {
+  handle('doctors:create', async (ctx, data: Record<string, unknown>) => {
     try {
+      requireAdmin(ctx);
       const prisma = getPrismaClient();
       const { randomUUID } = await import('crypto');
       const doctor = await prisma.doctor.create({
@@ -50,8 +51,9 @@ export function setupDoctorHandlers(): void {
     }
   });
 
-  handle('doctors:update', async (_event, id: string, data: Record<string, unknown>) => {
+  handle('doctors:update', async (ctx, id: string, data: Record<string, unknown>) => {
     try {
+      requireAdmin(ctx);
       const prisma = getPrismaClient();
       const doctor = await prisma.doctor.update({
         where: { id },

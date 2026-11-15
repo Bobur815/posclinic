@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/protected/ProtectedRoute';
 import { ConfirmDialog } from './components/common/ConfirmDialog';
+import { WaitingForMain } from './components/layout/WaitingForMain';
 import { useAuthStore } from './store/auth-store';
 
 // Pages
@@ -42,6 +43,7 @@ function App() {
 
   return (
     <>
+      <WaitingForMain />
       {showExitConfirm && (
         <ConfirmDialog
           title={t('common.exitApp')}

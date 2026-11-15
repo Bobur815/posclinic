@@ -59,6 +59,7 @@
       "invalid_credentials": "Telefon yoki parol noto'g'ri",
       "user_not_found": "Foydalanuvchi topilmadi",
       "user_deactivated": "Foydalanuvchi hisobi o'chirilgan",
+      "too_many_attempts": "Juda ko'p noto'g'ri urinish. 5 daqiqadan keyin qayta urinib ko'ring",
       "login_failed": "Kirish xatosi",
       "invalid_phone": "Telefon raqam noto'g'ri. Masalan: +998 90 123 45 67"
     },
@@ -362,6 +363,24 @@
     "done": {
       "title": "Tayyor!",
       "subtitle": "Ilova ishga tushirilmoqda..."
+    },
+    "role": {
+      "title": "Bu kompyuter qanday ishlaydi?",
+      "subtitle": "Klinikada bitta asosiy kassa bo'ladi. Qolgan kompyuterlar unga mahalliy tarmoq orqali ulanadi.",
+      "main": "Asosiy kassa",
+      "mainDesc": "Ma'lumotlar bazasi, litsenziya va bulutga sinxronlash shu kompyuterda bo'ladi",
+      "satellite": "Qo'shimcha kassa",
+      "satelliteDesc": "Asosiy kassaga ulanadi: bemorlar, qabullar, to'lov va chop etish"
+    },
+    "join": {
+      "title": "Asosiy kassaga ulash",
+      "subtitle": "Asosiy kassada: Sozlamalar → Qo'shimcha kassalar → «Ulash kodi». U yerda ko'rsatilgan manzil va 6 xonali kodni kiriting.",
+      "address": "Asosiy kassa manzili",
+      "code": "Ulash kodi",
+      "submit": "Ulash",
+      "joining": "Ulanmoqda...",
+      "back": "Orqaga",
+      "done": "Ulandi. Dastur qayta ishga tushmoqda..."
     }
   },
   "users": {
@@ -393,7 +412,9 @@
   "errors": {
     "noInternet": "Internet aloqasi yo'q",
     "serverError": "Server xatosi",
-    "unknownError": "Noma'lum xato"
+    "unknownError": "Noma'lum xato",
+    "notAuthenticated": "Avval tizimga kiring",
+    "forbidden": "Bu amal faqat klinika administratoriga ruxsat etilgan"
   },
   "license": {
     "title": "Obuna",
@@ -518,6 +539,79 @@
       "license_blocked": "Obuna muddati tugagan: sinxronlash to'xtatildi",
       "license_checkin_required": "Litsenziya uzoq vaqt tekshirilmagan. Sozlamalar → Obuna → «Hozir tekshirish»",
       "batch_too_large": "Sinxronlash paketi juda katta"
+    }
+  },
+  "lan": {
+    "title": "Qo'shimcha kassalar",
+    "description": "Klinikaning boshqa kompyuterlari shu kassaga mahalliy tarmoq orqali ulanib, to'liq ishlay oladi.",
+    "enabled": "Qo'shimcha kassalarni qabul qilish",
+    "port": "Port",
+    "save": "Saqlash",
+    "serving": "Tarmoqda ishlayapti",
+    "notServing": "Tarmoqda ishlamayapti",
+    "addresses": "Bu kompyuter manzili",
+    "noAddresses": "Tarmoq manzili topilmadi",
+    "issueCode": "Ulash kodi",
+    "cancelCode": "Bekor qilish",
+    "codeHint": "Qo'shimcha kassada shu manzil va kodni kiriting. Kod {{time}} amal qiladi, bir marta ishlatiladi.",
+    "devices": "Ulangan kassalar",
+    "noDevices": "Hali ulangan kassa yo'q",
+    "limit": "Tarif bo'yicha: {{used}} / {{limit}}",
+    "unlimited": "Tarif bo'yicha: cheklanmagan",
+    "lastSeen": "Oxirgi aloqa",
+    "never": "hech qachon",
+    "revoke": "Uzish",
+    "revokeConfirm": "«{{name}}» kassasi uziladi. Qayta ulash uchun yangi kod kerak bo'ladi. Davom etasizmi?",
+    "revoked": "uzilgan",
+    "firewall": "Windows tarmoq ekrani (firewall) ulanishni to'sib qo'ysa, administrator PowerShell'ida bir marta bajaring:",
+    "copy": "Nusxa olish",
+    "copied": "Nusxa olindi",
+    "linkTitle": "Asosiy kassa",
+    "linkDescription": "Bu qo'shimcha kassa. Barcha ma'lumotlar asosiy kassada saqlanadi.",
+    "mainAddress": "Manzil",
+    "clinic": "Klinika",
+    "mainVersion": "Asosiy kassa versiyasi",
+    "leave": "Asosiy kassadan ajralish",
+    "leaveConfirm": "Bu kompyuter asosiy kassadan ajraladi va qaytadan sozlanadi. Davom etasizmi?",
+    "state": {
+      "connecting": "Ulanmoqda...",
+      "online": "Ulangan",
+      "unreachable": "Aloqa yo'q",
+      "unpaired": "Ajratilgan",
+      "superseded": "Boshqa kassa javob bermoqda",
+      "version": "Versiyalar mos emas"
+    },
+    "waiting": {
+      "title": "Asosiy kassa kutilmoqda",
+      "connecting": "Asosiy kassaga ulanmoqda...",
+      "unreachable": "Asosiy kassa javob bermayapti. U yoqilganini va tarmoqqa ulanganini tekshiring. Ulanish avtomatik tiklanadi.",
+      "unpaired": "Asosiy kassa bu kompyuterni endi tanimaydi (uzilgan). Ajraling va yangi kod bilan qayta ulang.",
+      "superseded": "Bu manzilda boshqa klinikaning kassasi javob bermoqda. Asosiy kassa manzilini tekshiring.",
+      "version": "Asosiy kassa ({{main}}) va bu kassa ({{mine}}) versiyalari mos emas. Ikkalasini ham yangilang.",
+      "address": "Manzil: {{url}}"
+    },
+    "errors": {
+      "mainOnly": "Bu amal faqat asosiy kassada bajariladi",
+      "unreachable": "Asosiy kassa bilan aloqa yo'q",
+      "unpaired": "Bu kassa asosiy kassadan ajratilgan",
+      "superseded": "Bu manzilda boshqa kassa javob bermoqda",
+      "version": "Asosiy kassa va bu kassa versiyalari mos emas",
+      "internal": "Asosiy kassada kutilmagan xatolik",
+      "codeClosed": "Asosiy kassada ulash kodi ochilmagan yoki muddati tugagan",
+      "codeWrong": "Kod noto'g'ri",
+      "throttled": "Ko'p marta noto'g'ri kod. 10 daqiqadan keyin urinib ko'ring",
+      "deviceLimit": "Tarifingiz bo'yicha qo'shimcha kassalar soni to'lgan",
+      "badAddress": "Manzil noto'g'ri. Masalan: 192.168.1.10",
+      "badPort": "Port 1024 dan 65535 gacha bo'lishi kerak",
+      "notEnabled": "Avval qo'shimcha kassalarni yoqing",
+      "noDevice": "Kassa topilmadi",
+      "portInUse": "Bu port band (boshqa dastur ishlatmoqda). Boshqa portni tanlang",
+      "startFailed": "Tarmoqda ishga tushirib bo'lmadi",
+      "joinUnreachable": "Asosiy kassaga ulanib bo'lmadi. Manzilni, tarmoqni va asosiy kassada qo'shimcha kassalar yoqilganini tekshiring",
+      "joinFailed": "Ulanib bo'lmadi",
+      "alreadySetUp": "Bu kompyuter allaqachon asosiy kassa sifatida sozlangan",
+      "alreadySatellite": "Bu kompyuter allaqachon qo'shimcha kassa",
+      "notSatellite": "Bu kompyuter qo'shimcha kassa emas"
     }
   }
 }

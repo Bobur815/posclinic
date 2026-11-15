@@ -4,61 +4,99 @@ import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
 import { randomUUID } from 'crypto';
 
-async function getNextAppointmentNumber(prisma: ReturnType<typeof getPrismaClient>): Promise<string> {
-  const today = new Date();
-  const prefix = `A${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+type Db = ReturnType<typeof getPrismaClient>;
+type Tx = Parameters<Parameters<Db['$transaction']>[0]>[0];
 
-  const last = await prisma.appointment.findFirst({
-    where: { appointmentNumber: { startsWith: prefix } },
-    orderBy: { createdAt: 'desc' },
+/** `A20261115-007`: today's prefix and the next number after the highest one used today. */
+export async function nextAppointmentNumber(
+  db: Pick<Tx, 'appointment'>,
+  now = new Date(),
+): Promise<string> {
+  const prefix = `A${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  // The highest sequence, not the newest row: two desks may create in the same millisecond, and
+  // `-1000` sorts below `-999` as text.
+  const rows = await db.appointment.findMany({
+    where: { appointmentNumber: { startsWith: `${prefix}-` } },
     select: { appointmentNumber: true },
   });
+  const max = rows.reduce((m: number, r: { appointmentNumber: string }) => {
+    const n = parseInt(r.appointmentNumber.slice(prefix.length + 1), 10);
+    return Number.isFinite(n) && n > m ? n : m;
+  }, 0);
+  return `${prefix}-${String(max + 1).padStart(3, '0')}`;
+}
 
-  if (!last) return `${prefix}-001`;
-  const seq = parseInt(last.appointmentNumber.split('-')[1] || '0', 10);
-  return `${prefix}-${String(seq + 1).padStart(3, '0')}`;
+/** Prisma's unique-constraint failure. */
+export function isUniqueConflict(error: unknown, fields: string[]): boolean {
+  const e = error as { code?: string; meta?: { target?: unknown }; message?: string };
+  if (e?.code !== 'P2002') return false;
+  const target = e.meta?.target;
+  const text = Array.isArray(target) ? target.join(',') : String(target ?? e.message ?? '');
+  return fields.some((f) => text.includes(f));
+}
+
+/**
+ * Two desks (the main till and a satellite, or two satellites) may take the same number at the
+ * same moment. The number is read and used inside one transaction, and a unique conflict on it
+ * (the other desk won) simply tries again with the next one.
+ */
+export async function withUniqueRetry<T>(
+  fields: string[],
+  run: () => Promise<T>,
+  attempts = 5,
+): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await run();
+    } catch (error) {
+      if (i >= attempts || !isUniqueConflict(error, fields)) throw error;
+    }
+  }
 }
 
 export function setupAppointmentHandlers(): void {
-  handle('appointments:create', async (_event, data: Record<string, unknown>) => {
+  handle('appointments:create', async (ctx, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
-      const config = getAppConfig();
-      const appointmentNumber = await getNextAppointmentNumber(prisma);
 
-      const items = (data.items as Array<{
-        serviceId: string;
-        serviceName: string;
-        quantity: number;
-        unitPrice: number;
-        total: number;
-      }>) || [];
+      const items =
+        (data.items as Array<{
+          serviceId: string;
+          serviceName: string;
+          quantity: number;
+          unitPrice: number;
+          total: number;
+        }>) || [];
 
       const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
-      const appointment = await prisma.appointment.create({
-        data: {
-          id: randomUUID(),
-          appointmentNumber,
-          patientId: data.patientId as string,
-          doctorId: data.doctorId as string,
-          appointmentDate: new Date(data.appointmentDate as string),
-          notes: (data.notes as string) || null,
-          totalAmount,
-          terminalId: config.terminalId,
-          items: {
-            create: items.map((item) => ({
+      const appointment = await withUniqueRetry(['appointment_number', 'appointmentNumber'], () =>
+        prisma.$transaction(async (tx: Tx) =>
+          tx.appointment.create({
+            data: {
               id: randomUUID(),
-              serviceId: item.serviceId,
-              serviceName: item.serviceName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: item.total,
-            })),
-          },
-        },
-        include: { items: true, patient: true, doctor: true },
-      });
+              appointmentNumber: await nextAppointmentNumber(tx),
+              patientId: data.patientId as string,
+              doctorId: data.doctorId as string,
+              appointmentDate: new Date(data.appointmentDate as string),
+              notes: (data.notes as string) || null,
+              totalAmount,
+              terminalId: ctx.terminalId || getAppConfig().terminalId,
+              items: {
+                create: items.map((item) => ({
+                  id: randomUUID(),
+                  serviceId: item.serviceId,
+                  serviceName: item.serviceName,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  total: item.total,
+                })),
+              },
+            },
+            include: { items: true, patient: true, doctor: true },
+          }),
+        ),
+      );
 
       return ipcSafe(appointment);
     } catch (error) {
@@ -67,48 +105,56 @@ export function setupAppointmentHandlers(): void {
     }
   });
 
-  handle('appointments:getAll', async (_event, filters?: {
-    status?: string;
-    startDate?: string;
-    endDate?: string;
-    today?: boolean;
-    /** One calendar day, `YYYY-MM-DD` (Daily report). */
-    date?: string;
-  }) => {
-    try {
-      const prisma = getPrismaClient();
-      const where: Record<string, unknown> = {};
+  handle(
+    'appointments:getAll',
+    async (
+      _event,
+      filters?: {
+        status?: string;
+        startDate?: string;
+        endDate?: string;
+        today?: boolean;
+        /** One calendar day, `YYYY-MM-DD` (Daily report). */
+        date?: string;
+      },
+    ) => {
+      try {
+        const prisma = getPrismaClient();
+        const where: Record<string, unknown> = {};
 
-      if (filters?.status) where.status = filters.status;
-      const day = filters?.today
-        ? new Date()
-        : filters?.date && /^\d{4}-\d{2}-\d{2}$/.test(filters.date)
-          ? new Date(`${filters.date}T00:00:00`)
-          : null;
-      if (day) {
-        const start = new Date(day);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(day);
-        end.setHours(23, 59, 59, 999);
-        where.appointmentDate = { gte: start, lte: end };
-      } else if (filters?.startDate || filters?.endDate) {
-        where.appointmentDate = {};
-        if (filters.startDate) (where.appointmentDate as Record<string, unknown>).gte = new Date(filters.startDate);
-        if (filters.endDate) (where.appointmentDate as Record<string, unknown>).lte = new Date(filters.endDate);
+        if (filters?.status) where.status = filters.status;
+        const day = filters?.today
+          ? new Date()
+          : filters?.date && /^\d{4}-\d{2}-\d{2}$/.test(filters.date)
+            ? new Date(`${filters.date}T00:00:00`)
+            : null;
+        if (day) {
+          const start = new Date(day);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(day);
+          end.setHours(23, 59, 59, 999);
+          where.appointmentDate = { gte: start, lte: end };
+        } else if (filters?.startDate || filters?.endDate) {
+          where.appointmentDate = {};
+          if (filters.startDate)
+            (where.appointmentDate as Record<string, unknown>).gte = new Date(filters.startDate);
+          if (filters.endDate)
+            (where.appointmentDate as Record<string, unknown>).lte = new Date(filters.endDate);
+        }
+
+        const appointments = await prisma.appointment.findMany({
+          where,
+          include: { patient: true, doctor: true, items: true },
+          orderBy: { appointmentDate: 'desc' },
+        });
+
+        return ipcSafe(appointments);
+      } catch (error) {
+        log.error('[appointments:getAll]', error);
+        throw error;
       }
-
-      const appointments = await prisma.appointment.findMany({
-        where,
-        include: { patient: true, doctor: true, items: true },
-        orderBy: { appointmentDate: 'desc' },
-      });
-
-      return ipcSafe(appointments);
-    } catch (error) {
-      log.error('[appointments:getAll]', error);
-      throw error;
-    }
-  });
+    },
+  );
 
   handle('appointments:getById', async (_event, id: string) => {
     try {
@@ -189,38 +235,46 @@ export function setupAppointmentHandlers(): void {
     }
   });
 
-  handle('appointments:checkout', async (_event, id: string, data: {
-    paymentMethod: string;
-    paidAmount: number;
-  }) => {
-    try {
-      const prisma = getPrismaClient();
-      const appointment = await prisma.appointment.findUnique({
-        where: { id },
-        select: { totalAmount: true },
-      });
+  handle(
+    'appointments:checkout',
+    async (
+      _event,
+      id: string,
+      data: {
+        paymentMethod: string;
+        paidAmount: number;
+      },
+    ) => {
+      try {
+        const prisma = getPrismaClient();
+        const appointment = await prisma.appointment.findUnique({
+          where: { id },
+          select: { totalAmount: true },
+        });
 
-      if (!appointment) throw new Error('Appointment not found');
+        if (!appointment) throw new Error('Appointment not found');
 
-      const totalAmount = Number(appointment.totalAmount);
-      const paidAmount = Number(data.paidAmount);
-      const paymentStatus = paidAmount >= totalAmount ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'PENDING';
+        const totalAmount = Number(appointment.totalAmount);
+        const paidAmount = Number(data.paidAmount);
+        const paymentStatus =
+          paidAmount >= totalAmount ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'PENDING';
 
-      const updated = await prisma.appointment.update({
-        where: { id },
-        data: {
-          status: paymentStatus === 'PAID' ? 'COMPLETED' : undefined,
-          paymentStatus,
-          paymentMethod: data.paymentMethod,
-          paidAmount,
-        },
-        include: { patient: true, doctor: true, items: true },
-      });
+        const updated = await prisma.appointment.update({
+          where: { id },
+          data: {
+            status: paymentStatus === 'PAID' ? 'COMPLETED' : undefined,
+            paymentStatus,
+            paymentMethod: data.paymentMethod,
+            paidAmount,
+          },
+          include: { patient: true, doctor: true, items: true },
+        });
 
-      return ipcSafe(updated);
-    } catch (error) {
-      log.error('[appointments:checkout]', error);
-      throw error;
-    }
-  });
+        return ipcSafe(updated);
+      } catch (error) {
+        log.error('[appointments:checkout]', error);
+        throw error;
+      }
+    },
+  );
 }

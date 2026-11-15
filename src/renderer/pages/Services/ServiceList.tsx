@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Plus, Search, Edit2, X, Save } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { useAuthStore } from '../../store/auth-store';
 
 interface Service {
   id: string;
@@ -265,6 +266,8 @@ const emptyForm: ServiceForm = { code: '', name: '', price: '', duration: '', is
 export function ServiceList() {
   const { t } = useTranslation();
   const toast = useToast();
+  // Main refuses services:create/update for other roles; this only hides the controls.
+  const canEdit = useAuthStore((s) => s.user?.role === 'CLINIC_ADMIN' || s.user?.role === 'SUPER_ADMIN');
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -408,10 +411,12 @@ export function ServiceList() {
               onChange={(e) => handleSearch(e.target.value)}
             />
           </SearchWrapper>
-          <AddBtn onClick={openAdd}>
-            <Plus size={16} />
-            {t('services.newService')}
-          </AddBtn>
+          {canEdit && (
+            <AddBtn onClick={openAdd}>
+              <Plus size={16} />
+              {t('services.newService')}
+            </AddBtn>
+          )}
         </Controls>
       </Header>
 
@@ -445,9 +450,11 @@ export function ServiceList() {
                     </Badge>
                   </Td>
                   <Td>
-                    <ActionBtn onClick={() => openEdit(svc)}>
-                      <Edit2 size={14} />
-                    </ActionBtn>
+                    {canEdit && (
+                      <ActionBtn onClick={() => openEdit(svc)}>
+                        <Edit2 size={14} />
+                      </ActionBtn>
+                    )}
                   </Td>
                 </Tr>
               ))}

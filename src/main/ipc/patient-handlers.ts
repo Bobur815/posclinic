@@ -2,17 +2,21 @@ import { handle, ipcSafe } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 import { randomUUID } from 'crypto';
+import { withUniqueRetry } from './appointment-handlers';
 
-async function getNextPatientCode(prisma: ReturnType<typeof getPrismaClient>): Promise<string> {
-  const last = await prisma.patient.findFirst({
-    orderBy: { createdAt: 'desc' },
+type Tx = Parameters<Parameters<ReturnType<typeof getPrismaClient>['$transaction']>[0]>[0];
+
+/** `P-0042`: the next code after the highest one used (two desks: see withUniqueRetry). */
+async function nextPatientCode(db: Pick<Tx, 'patient'>): Promise<string> {
+  const rows = await db.patient.findMany({
+    where: { patientCode: { startsWith: 'P-' } },
     select: { patientCode: true },
   });
-
-  if (!last) return 'P-0001';
-
-  const num = parseInt(last.patientCode.replace('P-', ''), 10);
-  return `P-${String(num + 1).padStart(4, '0')}`;
+  const max = rows.reduce((m: number, r: { patientCode: string }) => {
+    const n = parseInt(r.patientCode.slice(2), 10);
+    return Number.isFinite(n) && n > m ? n : m;
+  }, 0);
+  return `P-${String(max + 1).padStart(4, '0')}`;
 }
 
 export function setupPatientHandlers(): void {
@@ -75,23 +79,25 @@ export function setupPatientHandlers(): void {
   handle('patients:create', async (_event, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
-      const patientCode = await getNextPatientCode(prisma);
-
-      const patient = await prisma.patient.create({
-        data: {
-          id: randomUUID(),
-          patientCode,
-          fullName: data.fullName as string,
-          phone: data.phone as string,
-          birthDate: data.birthDate ? new Date(data.birthDate as string) : null,
-          gender: (data.gender as string) || null,
-          bloodType: (data.bloodType as string) || null,
-          allergies: (data.allergies as string) || null,
-          address: (data.address as string) || null,
-          city: (data.city as string) || null,
-          notes: (data.notes as string) || null,
-        },
-      });
+      const patient = await withUniqueRetry(['patient_code', 'patientCode'], () =>
+        prisma.$transaction(async (tx: Tx) =>
+          tx.patient.create({
+            data: {
+              id: randomUUID(),
+              patientCode: await nextPatientCode(tx),
+              fullName: data.fullName as string,
+              phone: data.phone as string,
+              birthDate: data.birthDate ? new Date(data.birthDate as string) : null,
+              gender: (data.gender as string) || null,
+              bloodType: (data.bloodType as string) || null,
+              allergies: (data.allergies as string) || null,
+              address: (data.address as string) || null,
+              city: (data.city as string) || null,
+              notes: (data.notes as string) || null,
+            },
+          }),
+        ),
+      );
 
       return ipcSafe(patient);
     } catch (error) {

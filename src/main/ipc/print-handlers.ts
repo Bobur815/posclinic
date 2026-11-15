@@ -1,42 +1,49 @@
-import { handle } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
+import { handle } from './ipc-safe';
+
+/** What the printers need of a visit (as `appointments:getById` returns it). */
+interface PrintableAppointment {
+  id: string;
+  appointmentNumber: string;
+}
+
+type PrintResult = { success: boolean; error?: string };
+
+/**
+ * Prints on THIS machine's printer. A satellite prints on its own printer: it fetches the visit
+ * from its main till (`appointments:getById`) and calls these (dispatch.ts `satellitePrint`).
+ * For now the receipt content is only logged (printer integration comes later).
+ */
+export function printServiceReceipt(appointment: PrintableAppointment): PrintResult {
+  log.info('[print] Service receipt for appointment:', appointment.appointmentNumber);
+  return { success: true };
+}
+
+export function printPrescription(appointment: PrintableAppointment): PrintResult {
+  log.info('[print] Prescription for appointment:', appointment.appointmentNumber);
+  return { success: true };
+}
+
+export const PRINTERS: Record<string, (a: PrintableAppointment) => PrintResult> = {
+  'print:serviceReceipt': printServiceReceipt,
+  'print:prescription': printPrescription,
+};
 
 export function setupPrintHandlers(): void {
-  handle('print:serviceReceipt', async (_event, appointmentId: string) => {
-    try {
-      const prisma = getPrismaClient();
-      const appointment = await prisma.appointment.findUnique({
-        where: { id: appointmentId },
-        include: { patient: true, doctor: true, items: true },
-      });
-
-      if (!appointment) return { success: false, error: 'Appointment not found' };
-
-      // For now, log the receipt content (actual printer integration can be added later)
-      log.info('[print] Service receipt for appointment:', appointment.appointmentNumber);
-      return { success: true };
-    } catch (error) {
-      log.error('[print:serviceReceipt]', error);
-      return { success: false, error: String(error) };
-    }
-  });
-
-  handle('print:prescription', async (_event, appointmentId: string) => {
-    try {
-      const prisma = getPrismaClient();
-      const appointment = await prisma.appointment.findUnique({
-        where: { id: appointmentId },
-        include: { patient: true, doctor: true },
-      });
-
-      if (!appointment) return { success: false, error: 'Appointment not found' };
-
-      log.info('[print] Prescription for appointment:', appointment.appointmentNumber);
-      return { success: true };
-    } catch (error) {
-      log.error('[print:prescription]', error);
-      return { success: false, error: String(error) };
-    }
-  });
+  for (const [channel, print] of Object.entries(PRINTERS)) {
+    handle(channel, async (_ctx, appointmentId: string) => {
+      try {
+        const appointment = await getPrismaClient().appointment.findUnique({
+          where: { id: String(appointmentId) },
+          select: { id: true, appointmentNumber: true },
+        });
+        if (!appointment) return { success: false, error: 'Appointment not found' };
+        return print(appointment);
+      } catch (error) {
+        log.error(`[${channel}]`, error);
+        return { success: false, error: String(error) };
+      }
+    });
+  }
 }

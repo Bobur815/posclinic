@@ -65,6 +65,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     // DB already exists — run any pending in-place upgrades (each one idempotent)
     await migrateUsersTableIfNeeded(prisma);
     await addSyncTablesIfNeeded(prisma);
+    await addLanTablesIfNeeded(prisma);
     return;
   }
 
@@ -188,6 +189,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
   await prisma.$executeRaw`CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity)`;
 
   await addSyncTablesIfNeeded(prisma);
+  await addLanTablesIfNeeded(prisma);
 }
 
 /**
@@ -209,4 +211,29 @@ async function addSyncTablesIfNeeded(prisma: SchemaClient): Promise<void> {
       `CREATE INDEX IF NOT EXISTS idx_${table}_updated ON ${table}(updated_at)`,
     );
   }
+}
+
+/**
+ * v2.2.0, satellite tills (src/main/lan): a key/value `settings` table (the LAN role, port,
+ * link, lineage, the session-signing secret) and the paired satellites. Additive and idempotent.
+ */
+async function addLanTablesIfNeeded(prisma: SchemaClient): Promise<void> {
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS lan_devices (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      secret_hash TEXT NOT NULL,
+      ip TEXT,
+      last_seen_at DATETIME,
+      active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
 }

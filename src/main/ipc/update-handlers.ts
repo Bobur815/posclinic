@@ -1,16 +1,13 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { closeDatabase } from '../database/sqlite-client';
 import { getLicenseService } from '../license/license-service';
 import { log } from '../logger';
 import { createUpdater, UPDATE_FEED_URL, type UpdaterEngine } from '../updater/updater';
-import { getCurrentUser } from './auth-handlers';
+import { handle, isAdmin } from './ipc-safe';
 
 /** One quiet check this long after start, so the clinic opens first. */
 const STARTUP_CHECK_MS = 30_000;
-const ADMIN_ROLES = new Set(['CLINIC_ADMIN', 'SUPER_ADMIN']);
-
-const isAdmin = () => ADMIN_ROLES.has(getCurrentUser()?.role ?? '');
 
 /**
  * Software update over IPC. Anyone signed in may see the status; only a clinic admin may
@@ -43,11 +40,13 @@ export function setupUpdateHandlers(): void {
     },
   });
 
-  ipcMain.handle('update:status', () => updater.status());
-  ipcMain.handle('update:check', () => updater.check());
-  ipcMain.handle('update:download', () => (isAdmin() ? updater.download() : updater.status()));
-  ipcMain.handle('update:install', async () => {
-    if (isAdmin()) await updater.install();
+  // Per machine: a satellite updates itself (dispatch.ts runs update:* locally there, with the
+  // actor its main till reports for the window).
+  handle('update:status', () => updater.status());
+  handle('update:check', () => updater.check());
+  handle('update:download', (ctx) => (isAdmin(ctx) ? updater.download() : updater.status()));
+  handle('update:install', async (ctx) => {
+    if (isAdmin(ctx)) await updater.install();
   });
 
   setTimeout(() => void updater.check({ quiet: true }), STARTUP_CHECK_MS).unref?.();
