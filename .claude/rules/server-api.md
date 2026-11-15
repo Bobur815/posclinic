@@ -60,7 +60,28 @@ from `storeId`/`storeName`, and its plan and expiry are copied from the licence.
   - The till stores `serverTime` as its next `since` and applies rows with the same last-write-wins rule.
 - Every authenticated sync call upserts `TerminalHeartbeat(clinicId, terminalId)` (`lastSyncAt`, app version).
 
+### Sync details (as implemented, 2026-11-15)
+- **LicenseGuard order:**
+  - invalid/foreign token → 401 `invalid_license`;
+  - `blockAt` passed → 403 `license_blocked`;
+  - `checkinBy` passed → 403 `license_checkin_required`.
+- **`accepted`** counts every row not rejected, including rows skipped because the server already has the same or a newer version. The till always advances its cursor.
+- **Reject reasons:** `invalid`, `foreign_id` (the id belongs to another clinic), `phone_invalid`, `phone_taken`, `role_invalid`, `code_taken`, `missing_patient`, `missing_doctor`, `missing_service`.
+  - `passwordHash` must be bcrypt.
+  - An array over 200 rows fails the whole call with 400 `batch_too_large`.
+- **Pull:** `serverTime` = now − 5 s, so rows may come twice. Last-write-wins makes that harmless.
+- **Heartbeat:** without `X-Terminal-Id` it is recorded as `unknown`.
+
 ## Dashboard (web). Auth: JWT `{ sub, clinicId, role }`, 12 h
+As implemented:
+- The guard reloads the user on every request. A deactivated or demoted admin, or a clinic past `blockAt`, gets 403 at once.
+- Lists answer `{items, total}`, `pageSize` ≤ 100. Appointment lists include `patient` and `doctor` stubs. `PUT` is a partial update.
+- Money terms:
+  - dashboard `revenue` = paid;
+  - report `totals.revenue` = billed, with `paid` and `debt` given separately;
+  - cancelled visits count only as cancelled;
+  - days and months are in clinic time (UTC+5).
+- Extra error codes: `unauthorized`, `not_found`, `wrong_password`, `self_demote`, `invalid_date`. Phone and code conflicts → 409.
 - `POST /api/auth/login { phone, password }` returns `{ token, user: { id, fullName, phone, email, role }, clinic: { id, name, plan, expiresAt } }`.
   - Refused: unknown or wrong password (`invalid_credentials`, 401), not an admin role (`not_admin`, 403), inactive user (`user_inactive`, 403), licence blocked (`license_blocked`, 403).
 - `GET /api/auth/profile`, `PUT /api/auth/change-password { currentPassword, newPassword }`

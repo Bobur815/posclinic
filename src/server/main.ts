@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { CorsConfig } from './common/utils/config';
@@ -7,9 +8,15 @@ import { CorsConfig } from './common/utils/config';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug'],
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger:
+      process.env.NODE_ENV === 'production'
+        ? ['error', 'warn', 'log']
+        : ['error', 'warn', 'log', 'debug'],
   });
+  // Sync batches: 200 appointments with items fit well within this.
+  // biome-ignore lint/correctness/useHookAtTopLevel: NestJS method, not a React hook
+  app.useBodyParser('json', { limit: '5mb' });
 
   // ── CORS ──────────────────────────────────────────────────────────────────
   new CorsConfig(app).enable(process.env.CORS ?? 'http://localhost:5173,http://localhost:5174');
@@ -31,8 +38,9 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('POSCLINIC API')
     .setDescription(
-      'Clinic Management POS System — REST API\n\n' +
-        '**Auth:** Use `POST /api/auth/login` to get a Bearer token, then click **Authorize** above.',
+      'posclinic cloud server\n\n' +
+        '**Dashboard:** `POST /api/auth/login` (phone + password) gives a Bearer token.\n' +
+        '**Sync:** the main till sends `Authorization: License <posgro licence token>`.',
     )
     .setVersion('1.0')
     .addBearerAuth(
@@ -44,13 +52,23 @@ async function bootstrap() {
       },
       'JWT',
     )
-    .addTag('auth', 'Authentication & session management')
-    .addTag('clinics', 'Clinic management (Super Admin)')
-    .addTag('patients', 'Patient records')
-    .addTag('doctors', 'Doctor management')
-    .addTag('services', 'Medical services catalog')
-    .addTag('appointments', 'Appointment scheduling & checkout')
-    .addTag('sync', 'Terminal sync endpoints')
+    .addSecurity('License', {
+      type: 'apiKey',
+      in: 'header',
+      name: 'Authorization',
+      description: 'Main till sync: `License <posgro licence token>`',
+    })
+    .addTag('sync', 'Main till sync (licence auth)')
+    .addTag('auth', 'Dashboard login (clinic admins)')
+    .addTag('clinic', 'This clinic and its tills')
+    .addTag('dashboard', 'Daily summary')
+    .addTag('patients', 'Patients (read-only)')
+    .addTag('appointments', 'Visits (read-only)')
+    .addTag('reports', 'Daily / monthly reports')
+    .addTag('services', 'Services catalog')
+    .addTag('doctors', 'Doctors')
+    .addTag('users', 'Staff')
+    .addTag('audit', 'Audit log')
     .addServer('http://localhost:4000', 'Local development')
     .build();
 

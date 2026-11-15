@@ -1,25 +1,25 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppointmentsModule } from './modules/appointments/appointments.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { ClinicsModule } from './modules/clinics/clinics.module';
-import { DoctorsModule } from './modules/doctors/doctors.module';
-import { PatientsModule } from './modules/patients/patients.module';
-import { ServicesModule } from './modules/services/services.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { PrismaModule } from './prisma/prisma.module';
 
+/**
+ * posclinic cloud server: the main till syncs here (licence auth), clinic admins use the web
+ * dashboard (JWT). Contract: `.claude/rules/server-api.md`.
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    AuditModule,
     AuthModule,
-    ClinicsModule,
-    PatientsModule,
-    DoctorsModule,
-    ServicesModule,
-    AppointmentsModule,
     SyncModule,
+    CatalogModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

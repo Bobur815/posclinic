@@ -515,7 +515,9 @@
       "server": "Server xatosi. Keyinroq qayta urinadi",
       "unknown": "Sinxronlashda xatolik",
       "invalid_license": "Litsenziya server tomonidan qabul qilinmadi",
-      "license_blocked": "Obuna muddati tugagan: sinxronlash to'xtatildi"
+      "license_blocked": "Obuna muddati tugagan: sinxronlash to'xtatildi",
+      "license_checkin_required": "Litsenziya uzoq vaqt tekshirilmagan. Sozlamalar → Obuna → «Hozir tekshirish»",
+      "batch_too_large": "Sinxronlash paketi juda katta"
     }
   }
 }

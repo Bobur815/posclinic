@@ -1,3 +1,13 @@
+// posclinic server (VPS) - PostgreSQL.
+// The main till syncs its SQLite data up here; clinic admins read it and edit the catalog on the web.
+// Contract: .claude/rules/server-api.md. Clinics and licences are owned by posgro: a clinic row is
+// created from the first verified licence (Clinic.id = posgro storeId).
+//
+// Every business row carries clinicId and two clocks:
+//   updatedAt - the writer's change time (till or web), compared for last-write-wins;
+//   syncedAt  - set by the server on every write, the cursor for GET /sync/pull.
+// Statuses and roles are plain strings, the same values the till stores.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,397 +17,198 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== ENUMS ====================
-
-enum Platform {
-  WEB
-  ELECTRON
-}
-
-enum SubscriptionTier {
-  FREE
-  TRIAL
-  START
-  PRO
-  ENTERPRISE
-}
-
-enum SubscriptionStatus {
-  TRIAL
-  ACTIVE
-  PAST_DUE
-  SUSPENDED
-  CANCELLED
-}
-
-enum ClinicType {
-  GENERAL
-  DENTAL
-  OPHTHALMOLOGY
-  PEDIATRIC
-  ORTHOPEDIC
-  DERMATOLOGY
-  CARDIOLOGY
-  NEUROLOGY
-  OTHER
-}
-
-enum UserRole {
-  PLATFORM_ADMIN
-  SUPERADMIN
-  ADMIN
-  NURSE
-  PATIENT
-}
-
-enum OtpType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
-}
-
-enum Gender {
-  MALE
-  FEMALE
-}
-
-enum AppointmentStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-  NO_SHOW
-}
-
-enum PaymentStatus {
-  PENDING
-  PARTIAL
-  PAID
-  REFUNDED
-}
-
-enum PaymentMethod {
-  CASH
-  CARD
-  TRANSFER
-  INSURANCE
-}
-
-// ==================== TENANT ====================
-
-model Tenant {
-  id                 String             @id @default(cuid())
-
-  // Organization details
-  organizationName   String
-  organizationNameUz String?            @map("organization_name_uz")
-  organizationNameRu String?            @map("organization_name_ru")
-  slug               String             @unique
-  clinicCode         String             @unique @map("clinic_code") // 8-char: PC-A1B2C3
-
-  // Contact
-  contactEmail       String             @unique @map("contact_email")
-  contactPhone       String?            @map("contact_phone")
-  address            String?
-  city               String             @default("Tashkent")
-  region             String?
-
-  // Subscription
-  subscriptionTier   SubscriptionTier   @default(TRIAL) @map("subscription_tier")
-  subscriptionStatus SubscriptionStatus @default(TRIAL) @map("subscription_status")
-  trialEndsAt        DateTime?          @map("trial_ends_at")
-  subscriptionEndsAt DateTime?          @map("subscription_ends_at")
-
-  // Limits
-  maxServicePoints   Int                @default(2) @map("max_service_points")
-  maxNurses          Int                @default(5) @map("max_nurses")
-  maxMonthlyVisits   Int                @default(100) @map("max_monthly_visits")
-
-  // Platform tracking
-  primaryPlatform    Platform           @default(WEB) @map("primary_platform")
-  lastAccessedAt     DateTime           @default(now()) @map("last_accessed_at")
-
-  // Metadata
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
-  isActive           Boolean            @default(true) @map("is_active")
-
-  // Relations
-  users              User[]
-  clinics            Clinic[]
-
-  @@index([clinicCode])
-  @@index([contactEmail])
-  @@index([subscriptionStatus])
-  @@index([city])
-  @@map("tenants")
-}
-
-// ==================== CLINIC ====================
-
 model Clinic {
-  id          String      @id @default(cuid())
-  tenantId    String      @map("tenant_id")
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  type        ClinicType  @default(GENERAL)
-  address     String?
-  phone       String?
-  email       String?
-  licenseNo   String?     @map("license_no")
-  active      Boolean     @default(true)
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  /// posgro storeId
+  id         String    @id
+  name       String
+  /// Copied from the last verified licence, display only.
+  plan       String?
+  expiresAt  DateTime? @map("expires_at")
+  /// Licence blockAt; dashboard login is refused once it has passed.
+  blockAt    DateTime? @map("block_at")
+  lastSyncAt DateTime? @map("last_sync_at")
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   users        User[]
   patients     Patient[]
   doctors      Doctor[]
   services     Service[]
   appointments Appointment[]
-  settings     ClinicSetting[]
   auditLogs    AuditLog[]
   heartbeats   TerminalHeartbeat[]
 
-  @@index([tenantId])
   @@map("clinics")
 }
 
-// ==================== USERS ====================
-
 model User {
-  id                  String    @id @default(cuid())
-  tenantId            String    @map("tenant_id")
-  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId            String?   @map("clinic_id")
-  clinic              Clinic?   @relation(fields: [clinicId], references: [id])
-  email               String
-  password            String
-  googleId            String?   @map("google_id")
-  firstName           String    @map("first_name")
-  lastName            String    @map("last_name")
-  phone               String?
-  role                UserRole  @default(NURSE)
-  isActive            Boolean   @default(true) @map("is_active")
-  emailVerified       Boolean   @default(false) @map("email_verified")
-  lastLoginAt         DateTime? @map("last_login_at")
-  lastLoginPlatform   Platform? @map("last_login_platform")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id           String   @id
+  clinicId     String   @map("clinic_id")
+  clinic       Clinic   @relation(fields: [clinicId], references: [id])
+  fullName     String   @map("full_name")
+  /// +998XXXXXXXXX
+  phone        String
+  email        String?
+  /// CLINIC_ADMIN | SUPER_ADMIN | DOCTOR | RECEPTIONIST
+  role         String
+  active       Boolean  @default(true)
+  /// bcrypt; never plaintext
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @map("created_at")
+  updatedAt    DateTime @map("updated_at")
+  syncedAt     DateTime @map("synced_at")
 
-  sessions  UserSession[]
-  auditLogs AuditLog[]
-
-  @@unique([tenantId, email])
-  @@index([tenantId])
-  @@index([clinicId])
-  @@index([email])
+  @@unique([clinicId, phone])
+  @@index([clinicId, syncedAt])
   @@map("users")
 }
 
-model UserSession {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  user         User     @relation(fields: [userId], references: [id])
-  refreshToken String   @map("refresh_token")
-  deviceName   String?  @map("device_name")
-  expiresAt    DateTime @map("expires_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  @@index([userId])
-  @@map("user_sessions")
-}
-
-model OtpVerification {
-  id        String    @id @default(cuid())
-  email     String
-  code      String
-  type      OtpType   @default(EMAIL_VERIFICATION)
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  @@index([email, type])
-  @@map("otp_verifications")
-}
-
-// ==================== PATIENTS ====================
-
 model Patient {
-  id           String    @id @default(cuid())
-  clinicId     String    @map("clinic_id")
-  clinic       Clinic    @relation(fields: [clinicId], references: [id])
-  patientCode  String    @map("patient_code")
-  fullName     String    @map("full_name")
-  phone        String
-  birthDate    DateTime? @map("birth_date")
-  gender       Gender?
-  bloodType    String?   @map("blood_type")
-  allergies    String?
-  address      String?
-  city         String?
-  notes        String?
-  active       Boolean   @default(true)
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id          String    @id
+  clinicId    String    @map("clinic_id")
+  clinic      Clinic    @relation(fields: [clinicId], references: [id])
+  patientCode String    @map("patient_code")
+  fullName    String    @map("full_name")
+  phone       String
+  birthDate   DateTime? @map("birth_date")
+  gender      String?
+  bloodType   String?   @map("blood_type")
+  allergies   String?
+  address     String?
+  city        String?
+  notes       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @map("created_at")
+  updatedAt   DateTime  @map("updated_at")
+  syncedAt    DateTime  @map("synced_at")
 
   appointments Appointment[]
 
-  @@unique([clinicId, patientCode])
-  @@unique([clinicId, phone])
-  @@index([clinicId])
+  // Not unique here: the till owns uniqueness, and an in-flight rename on the till must not
+  // fail a whole batch on the server.
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, phone])
+  @@index([clinicId, patientCode])
+  @@index([clinicId, createdAt])
   @@map("patients")
 }
 
-// ==================== DOCTORS ====================
-
 model Doctor {
-  id          String   @id @default(cuid())
-  clinicId    String   @map("clinic_id")
-  clinic      Clinic   @relation(fields: [clinicId], references: [id])
-  fullName    String   @map("full_name")
-  phone       String?
-  specialty   String?
-  licenseNo   String?  @map("license_no")
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String   @id
+  clinicId  String   @map("clinic_id")
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  fullName  String   @map("full_name")
+  phone     String?
+  specialty String?
+  licenseNo String?  @map("license_no")
+  active    Boolean  @default(true)
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  syncedAt  DateTime @map("synced_at")
 
   appointments Appointment[]
 
-  @@index([clinicId])
+  @@index([clinicId, syncedAt])
   @@map("doctors")
 }
 
-// ==================== SERVICES ====================
-
 model Service {
-  id          String   @id @default(cuid())
+  id          String   @id
   clinicId    String   @map("clinic_id")
   clinic      Clinic   @relation(fields: [clinicId], references: [id])
   code        String
   name        String
   description String?
-  price       Decimal
-  duration    Int      @default(30) // minutes
+  price       Decimal  @db.Decimal(14, 2)
+  /// minutes
+  duration    Int      @default(30)
   active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @map("created_at")
+  updatedAt   DateTime @map("updated_at")
+  syncedAt    DateTime @map("synced_at")
 
   appointmentItems AppointmentItem[]
 
   @@unique([clinicId, code])
-  @@index([clinicId])
+  @@index([clinicId, syncedAt])
   @@map("services")
 }
 
-// ==================== APPOINTMENTS ====================
-
 model Appointment {
-  id               String            @id @default(cuid())
-  clinicId         String            @map("clinic_id")
-  clinic           Clinic            @relation(fields: [clinicId], references: [id])
-  appointmentNumber String           @map("appointment_number")
-  patientId        String            @map("patient_id")
-  patient          Patient           @relation(fields: [patientId], references: [id])
-  doctorId         String            @map("doctor_id")
-  doctor           Doctor            @relation(fields: [doctorId], references: [id])
-  appointmentDate  DateTime          @map("appointment_date")
-  status           AppointmentStatus @default(SCHEDULED)
-  totalAmount      Decimal           @default(0) @map("total_amount")
-  paidAmount       Decimal           @default(0) @map("paid_amount")
-  paymentStatus    PaymentStatus     @default(PENDING) @map("payment_status")
-  paymentMethod    PaymentMethod?    @map("payment_method")
-  diagnosis        String?
-  prescription     String?
-  notes            String?
-  terminalId       String?           @map("terminal_id")
-  synced           Boolean           @default(false)
-  syncedAt         DateTime?         @map("synced_at")
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
+  id                String    @id
+  clinicId          String    @map("clinic_id")
+  clinic            Clinic    @relation(fields: [clinicId], references: [id])
+  appointmentNumber String    @map("appointment_number")
+  patientId         String    @map("patient_id")
+  patient           Patient   @relation(fields: [patientId], references: [id])
+  doctorId          String    @map("doctor_id")
+  doctor            Doctor    @relation(fields: [doctorId], references: [id])
+  appointmentDate   DateTime  @map("appointment_date")
+  /// SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED | NO_SHOW
+  status            String
+  totalAmount       Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
+  paidAmount        Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  /// PENDING | PARTIAL | PAID
+  paymentStatus     String    @map("payment_status")
+  paymentMethod     String?   @map("payment_method")
+  diagnosis         String?
+  prescription      String?
+  notes             String?
+  terminalId        String?   @map("terminal_id")
+  createdAt         DateTime  @map("created_at")
+  updatedAt         DateTime  @map("updated_at")
+  syncedAt          DateTime  @map("synced_at")
 
-  items   AppointmentItem[]
-  payment Payment?
+  items AppointmentItem[]
 
-  @@unique([clinicId, appointmentNumber])
-  @@index([clinicId])
-  @@index([patientId])
-  @@index([doctorId])
-  @@index([appointmentDate])
-  @@index([status])
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, appointmentDate])
+  @@index([clinicId, patientId])
+  @@index([clinicId, doctorId])
   @@map("appointments")
 }
 
 model AppointmentItem {
-  id            String      @id @default(cuid())
+  id            String      @id
   appointmentId String      @map("appointment_id")
   appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   serviceId     String      @map("service_id")
   service       Service     @relation(fields: [serviceId], references: [id])
   serviceName   String      @map("service_name")
   quantity      Int         @default(1)
-  unitPrice     Decimal     @map("unit_price")
-  total         Decimal
+  unitPrice     Decimal     @map("unit_price") @db.Decimal(14, 2)
+  total         Decimal     @db.Decimal(14, 2)
 
   @@index([appointmentId])
+  @@index([serviceId])
   @@map("appointment_items")
 }
 
-model Payment {
-  id            String        @id @default(cuid())
-  appointmentId String        @unique @map("appointment_id")
-  appointment   Appointment   @relation(fields: [appointmentId], references: [id])
-  amount        Decimal
-  method        PaymentMethod
-  notes         String?
-  createdAt     DateTime      @default(now()) @map("created_at")
-
-  @@map("payments")
-}
-
-// ==================== CLINIC SETTINGS ====================
-
-model ClinicSetting {
-  id        String   @id @default(cuid())
-  clinicId  String   @map("clinic_id")
-  clinic    Clinic   @relation(fields: [clinicId], references: [id])
-  key       String
-  value     String
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([clinicId, key])
-  @@map("clinic_settings")
-}
-
-// ==================== AUDIT LOG ====================
-
+/// Web mutations by clinic admins (ids only, never patient fields).
 model AuditLog {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   clinicId  String   @map("clinic_id")
   clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  /// The admin who made the change (not a foreign key: users are synced rows).
   userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
   action    String
   entity    String
   entityId  String   @map("entity_id")
+  /// JSON with changed field names / non-sensitive values.
   details   String?
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([clinicId])
-  @@index([userId])
+  @@index([clinicId, createdAt])
   @@map("audit_logs")
 }
 
-// ==================== TERMINAL HEARTBEAT ====================
-
 model TerminalHeartbeat {
-  id            String   @id @default(cuid())
-  clinicId      String   @map("clinic_id")
-  clinic        Clinic   @relation(fields: [clinicId], references: [id])
-  terminalId    String   @map("terminal_id")
-  lastSyncAt    DateTime @map("last_sync_at")
-  unsyncedCount Int      @default(0) @map("unsynced_count")
-  createdAt     DateTime @default(now()) @map("created_at")
+  clinicId   String   @map("clinic_id")
+  clinic     Clinic   @relation(fields: [clinicId], references: [id])
+  terminalId String   @map("terminal_id")
+  lastSyncAt DateTime @map("last_sync_at")
+  appVersion String?  @map("app_version")
 
-  @@unique([clinicId, terminalId])
-  @@index([clinicId])
+  @@id([clinicId, terminalId])
   @@map("terminal_heartbeats")
 }
