@@ -6,8 +6,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode || 'pos', process.cwd(), '')
 
   // Baked into the bundle and extractable: never add secrets here. POSCLINIC_API_URL is honoured
-  // only by unpackaged (dev) builds (src/main/license/license-service.ts licenseApiUrl).
-  const APP_ENV_KEYS = ['POSCLINIC_API_URL']
+  // only by unpackaged (dev) builds (licenseApiUrl / serverApiUrl). POSCLINIC_SERVER_URL is the
+  // posclinic cloud-sync server (src/main/sync/sync-service.ts).
+  const APP_ENV_KEYS = ['POSCLINIC_API_URL', 'POSCLINIC_SERVER_URL']
   // Define every key (as `undefined` when unset) so renderer code like
   // `process.env.X ?? fallback` never references the missing `process` global.
   const envDefines = Object.fromEntries(

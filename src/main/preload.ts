@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ActivateResult, LicenseStatusDto } from '../shared/license';
+import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 
 interface SetupAdminInput {
@@ -105,6 +106,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     confirmClose: () => ipcRenderer.send('app:confirm-close'),
   },
 
+  // Cloud sync to the posclinic server (main till only).
+  sync: {
+    status: () => ipcRenderer.invoke('sync:status'),
+    now: () => ipcRenderer.invoke('sync:now'),
+    onChanged: (callback: () => void) => {
+      ipcRenderer.on('sync:changed', callback);
+      return () => ipcRenderer.removeListener('sync:changed', callback);
+    },
+  },
+
   // Software update (feed: panel.posgro.uz/releases/posclinic). Download/install: admins only.
   update: {
     status: () => ipcRenderer.invoke('update:status'),
@@ -192,6 +203,11 @@ declare global {
         quit: () => Promise<void>;
         onCloseRequested: (callback: () => void) => () => void;
         confirmClose: () => void;
+      };
+      sync: {
+        status: () => Promise<SyncStatusDto>;
+        now: () => Promise<SyncStatusDto>;
+        onChanged: (callback: () => void) => () => void;
       };
       update: {
         status: () => Promise<UpdateStatusDto>;

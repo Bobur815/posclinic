@@ -200,6 +200,15 @@ export class LicenseService {
     return this.payload?.storeId ?? null;
   }
 
+  /**
+   * What the till shows the posclinic server (cloud sync): the signed licence itself is the
+   * credential, verified there with the same public key. Null until a valid licence is held.
+   */
+  syncCredential(): { token: string; terminalId: string } | null {
+    if (!this.payload || !this.state.token) return null;
+    return { token: this.state.token, terminalId: this.state.terminalId };
+  }
+
   tillState(): TillState {
     return tillState({
       license: this.payload,

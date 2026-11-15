@@ -66,5 +66,9 @@ interface PosclinicLicensePayload {
 - Admin (SUPER_ADMIN): `GET/PUT /posclinic/admin/config`, `POST /posclinic/admin/stores/:id/activation-code`
   (8 chars `XXXX-XXXX`, shown once, bcrypt-hashed, 7 days, one-shot), `GET/DELETE /posclinic/admin/stores/:id/terminals[/:terminalId]`.
 
+The same token is also the main till's credential for the posclinic cloud-sync server
+(`Authorization: License <token>`, `.claude/rules/server-api.md`), which verifies it with the
+public key only. Any payload change must keep that verifier working too.
+
 No self-signup, no OTP, no phone verification (owner decision 2026-11-15). Password recovery: none
 yet; Telegram login planned.

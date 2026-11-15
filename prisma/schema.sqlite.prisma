@@ -25,6 +25,20 @@ model LocalConfig {
   @@map("local_config")
 }
 
+// ==================== CLOUD SYNC ====================
+
+/// One row per synced entity (patients, doctors, services, users, appointments).
+/// push_cursor = "<updatedAt ISO>|<id>" of the last row the server accepted;
+/// pull_cursor = the server's serverTime of the last pull. src/main/sync/sync-service.ts
+model SyncState {
+  entity     String    @id
+  pushCursor String?   @map("push_cursor")
+  pullCursor String?   @map("pull_cursor")
+  updatedAt  DateTime? @default(now()) @map("updated_at")
+
+  @@map("sync_state")
+}
+
 // ==================== USERS ====================
 
 model User {

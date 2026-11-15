@@ -3,9 +3,11 @@ import { updateConfig } from './config/app-config';
 import { getPrismaClient, initializeDatabase, readClinicBootstrap } from './database/sqlite-client';
 import { setupIpcHandlers } from './ipc/handlers';
 import { setupLicenseHandlers } from './ipc/license-handlers';
+import { setupSyncHandlers } from './ipc/sync-handlers';
 import { setupUpdateHandlers } from './ipc/update-handlers';
 import { getLicenseService } from './license/license-service';
 import { log } from './logger';
+import { getCloudSync } from './sync/sync-service';
 import { createSetupWindow, createWindow } from './window';
 
 try {
@@ -75,6 +77,7 @@ async function launchMainApp(): Promise<void> {
 
   mainWindow = createWindow();
   getLicenseService().startBackground();
+  getCloudSync().start();
 }
 
 /** A till is set up once it holds a valid licence for the bootstrapped clinic and has a user. */
@@ -97,6 +100,7 @@ async function bootstrap() {
     setupIpcHandlers();
     setupLicenseHandlers();
     setupUpdateHandlers();
+    setupSyncHandlers();
     registerCoreHandlers();
 
     process.on('unhandledRejection', (reason, promise) => {
@@ -142,6 +146,7 @@ app.whenReady().then(bootstrap);
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     getLicenseService().stop();
+    getCloudSync().stop();
     app.quit();
   }
 });
@@ -154,6 +159,7 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   getLicenseService().stop();
+  getCloudSync().stop();
 });
 
 export { mainWindow };

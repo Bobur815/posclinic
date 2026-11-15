@@ -1,5 +1,6 @@
 import { type IpcMainInvokeEvent, ipcMain } from 'electron';
 import { getLicenseService } from '../license/license-service';
+import { getCloudSync } from '../sync/sync-service';
 
 /** Strips non-cloneable values (Prisma Decimal, Date → string) before crossing IPC. */
 export function ipcSafe<T>(value: T): T {
@@ -34,6 +35,11 @@ export function handle<A extends unknown[], R>(
       event.sender.send('license:refused', refused);
       throw new LicenseRefusedError(refused);
     }
-    return fn(event, ...(args as A));
+    const result = await fn(event, ...(args as A));
+    // Any write is worth sending to the cloud soon (debounced; offline is fine).
+    if (WRITES.test(channel)) getCloudSync().nudge();
+    return result;
   });
 }
+
+const WRITES = /:(create|update|checkout)$/;

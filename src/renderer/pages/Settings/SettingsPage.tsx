@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
+import { CloudSyncSection } from './CloudSyncSection';
 import { SubscriptionSection } from './SubscriptionSection';
 import { UpdateSection } from './UpdateSection';
 import { Sun, Moon, Globe, Monitor, Info } from 'lucide-react';
@@ -204,6 +205,8 @@ export function SettingsPage() {
       )}
 
       <SubscriptionSection />
+
+      <CloudSyncSection />
 
       <UpdateSection />
 

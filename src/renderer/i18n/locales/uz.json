@@ -500,5 +500,22 @@
       "offline": "Internetga ulanib bo'lmadi. Ulanishni tekshirib qayta urinib ko'ring",
       "unknown": "Yangilanishni olib bo'lmadi. Qayta urinib ko'ring"
     }
+  },
+  "sync": {
+    "title": "Bulutli sinxronlash",
+    "description": "Bemorlar va qabullar klinikaning web paneliga yuboriladi; xizmatlar, narxlar, shifokorlar va xodimlar paneldan qaytib keladi.",
+    "lastSync": "Oxirgi sinxronlash",
+    "never": "Hali bo'lmagan",
+    "pending": "Yuborilmagan yozuvlar",
+    "disabled": "Klinika ulangandan keyin ishlaydi",
+    "now": "Hozir sinxronlash",
+    "syncing": "Sinxronlanmoqda...",
+    "errors": {
+      "offline": "Serverga ulanib bo'lmadi. Keyinroq avtomatik qayta urinadi",
+      "server": "Server xatosi. Keyinroq qayta urinadi",
+      "unknown": "Sinxronlashda xatolik",
+      "invalid_license": "Litsenziya server tomonidan qabul qilinmadi",
+      "license_blocked": "Obuna muddati tugagan: sinxronlash to'xtatildi"
+    }
   }
 }
