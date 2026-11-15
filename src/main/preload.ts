@@ -5,6 +5,9 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  LabQueueDto,
+  ResultInput,
+  ResultsReadyDto,
   CaseDetailDto,
   CaseUpdateInput,
   QueueItemDto,
@@ -120,6 +123,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     listOverview: () => ipcRenderer.invoke('queue:listOverview'),
     start: (itemId: string) => ipcRenderer.invoke('queue:start', itemId),
     finish: (itemId: string) => ipcRenderer.invoke('queue:finish', itemId),
+    listLab: () => ipcRenderer.invoke('queue:listLab'),
+    listResultsReady: () => ipcRenderer.invoke('queue:listResultsReady'),
+  },
+  results: {
+    sampleTaken: (itemId: string) => ipcRenderer.invoke('results:sampleTaken', itemId),
+    save: (itemId: string, data: ResultInput) => ipcRenderer.invoke('results:save', itemId, data),
+    confirm: (resultId: string) => ipcRenderer.invoke('results:confirm', resultId),
+  },
+  sessions: {
+    tick: (sessionId: string, undo?: boolean) =>
+      ipcRenderer.invoke('sessions:tick', sessionId, undo === true),
   },
   clinic: {
     getSettings: () => ipcRenderer.invoke('clinic:getSettings'),
@@ -290,6 +304,16 @@ declare global {
         listOverview: () => Promise<QueueItemDto[]>;
         start: (itemId: string) => Promise<unknown>;
         finish: (itemId: string) => Promise<unknown>;
+        listLab: () => Promise<LabQueueDto>;
+        listResultsReady: () => Promise<ResultsReadyDto[]>;
+      };
+      results: {
+        sampleTaken: (itemId: string) => Promise<unknown>;
+        save: (itemId: string, data: ResultInput) => Promise<unknown>;
+        confirm: (resultId: string) => Promise<unknown>;
+      };
+      sessions: {
+        tick: (sessionId: string, undo?: boolean) => Promise<unknown>;
       };
       clinic: {
         getSettings: () => Promise<ClinicSettingsDto>;

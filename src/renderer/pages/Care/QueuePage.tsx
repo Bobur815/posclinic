@@ -3,7 +3,7 @@ import { DoorOpen, FileText } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import type { QueueItemDto } from '../../../shared/clinic';
+import type { QueueItemDto, ResultsReadyDto } from '../../../shared/clinic';
 import { useToast } from '../../context/ToastContext';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useAuthStore } from '../../store/auth-store';
@@ -34,6 +34,8 @@ export function QueuePage() {
   const role = useAuthStore((s) => s.user?.role);
   const isDoctor = role === 'DOCTOR';
   const [items, setItems] = useState<QueueItemDto[] | null>(null);
+  // A doctor's cases with analysis results to confirm (the patient is back with them).
+  const [ready, setReady] = useState<ResultsReadyDto[]>([]);
   const [error, setError] = useState(false);
 
   const version = useDataVersion(['appointments', 'cases']);
@@ -47,6 +49,12 @@ export function QueuePage() {
         setError(false);
       })
       .catch(() => setError(true));
+    if (isDoctor) {
+      window.electronAPI.queue
+        .listResultsReady()
+        .then(setReady)
+        .catch(() => setReady([]));
+    }
   }, [isDoctor]);
   useEffect(() => {
     load();
@@ -126,6 +134,29 @@ export function QueuePage() {
             ))
           )}
         </Card>
+        {ready.length > 0 && (
+          <Card>
+            <CardTitle>
+              {t('care.resultsReady')}
+              <Muted>{t('care.waitingCount', { n: ready.length })}</Muted>
+            </CardTitle>
+            {ready.map((c) => (
+              <Row key={c.id}>
+                <div style={{ flex: 1 }}>
+                  <strong>{c.patient.fullName}</strong>
+                  <Muted>
+                    {c.patient.patientCode} · {c.caseNumber} ·{' '}
+                    {c.analysisResults.map((r) => r.service.name).join(', ')}
+                  </Muted>
+                </div>
+                <Btn $variant="primary" onClick={() => navigate(`/cases/${c.id}`)}>
+                  <FileText size={14} />
+                  {t('care.openCase')}
+                </Btn>
+              </Row>
+            ))}
+          </Card>
+        )}
       </Page>
     );
   }

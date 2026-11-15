@@ -448,3 +448,61 @@ export interface ReferralInput {
   days?: number | null;
   instructions?: string | null;
 }
+
+// ── Lab and procedures (v2.5, P4) ─────────────────────────────────────────────────────────
+
+/** `queue:listLab`: paid analyses to do and course sessions due up to today. */
+export interface LabQueueDto {
+  analyses: Array<
+    AppointmentItemDto & {
+      service: {
+        id: string;
+        name: string;
+        kind: ServiceKind;
+        resultType: ResultType | null;
+        resultUnit: string | null;
+        referenceRange: string | null;
+      };
+      results: Array<Omit<AnalysisResultDto, 'service'>>;
+      appointment: {
+        id: string;
+        appointmentNumber: string;
+        createdAt: string;
+        caseId: string | null;
+        patient: Pick<PatientDto, 'id' | 'patientCode' | 'fullName' | 'phone' | 'birthDate' | 'gender'>;
+      };
+    }
+  >;
+  sessions: Array<
+    TreatmentSessionDto & {
+      item: {
+        id: string;
+        serviceName: string;
+        quantity: number;
+        appointment: {
+          id: string;
+          caseId: string | null;
+          patient: Pick<PatientDto, 'id' | 'patientCode' | 'fullName' | 'phone' | 'birthDate' | 'gender'>;
+        };
+        _count: { sessions: number };
+      };
+    }
+  >;
+}
+
+/** `results:save`: shaped by the service's result type. */
+export interface ResultInput {
+  outcome?: 'POSITIVE' | 'NEGATIVE';
+  value?: number | string;
+  finding?: string;
+  comment?: string;
+}
+
+/** `queue:listResultsReady`: the doctor's cases with results to confirm. */
+export interface ResultsReadyDto {
+  id: string;
+  caseNumber: string;
+  status: CaseStatus;
+  patient: Pick<PatientDto, 'id' | 'patientCode' | 'fullName' | 'phone' | 'birthDate' | 'gender'>;
+  analysisResults: Array<{ id: string; enteredAt: string; service: { name: string } }>;
+}

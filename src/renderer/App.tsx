@@ -17,6 +17,7 @@ import { PatientDetails } from './pages/Patients/PatientDetails';
 import { AppointmentList } from './pages/Appointments/AppointmentList';
 import { RegisterVisitPage } from './pages/Appointments/RegisterVisitPage';
 import { CasePage } from './pages/Care/CasePage';
+import { LabPage } from './pages/Care/LabPage';
 import { QueuePage } from './pages/Care/QueuePage';
 import { AppointmentDetails } from './pages/Appointments/AppointmentDetails';
 import { CheckoutPage } from './pages/Appointments/CheckoutPage';
@@ -29,7 +30,8 @@ import { UserSettingsPage } from './pages/Settings/UserSettingsPage';
 /** Home: doctors and nurses work from their queue; everyone else gets the dashboard. */
 function HomeRoute() {
   const role = useAuthStore((st) => st.user?.role);
-  return role === 'DOCTOR' || role === 'NURSE' ? <Navigate to="/queue" replace /> : <DashboardPage />;
+  if (role === 'NURSE') return <Navigate to="/lab" replace />;
+  return role === 'DOCTOR' ? <Navigate to="/queue" replace /> : <DashboardPage />;
 }
 
 function App() {
@@ -83,6 +85,7 @@ function App() {
         >
           <Route index element={<HomeRoute />} />
           <Route path="queue" element={<QueuePage />} />
+          <Route path="lab" element={<LabPage />} />
           <Route path="cases/:id" element={<CasePage />} />
           <Route path="patients" element={<PatientList />} />
           <Route path="patients/new" element={<PatientForm />} />

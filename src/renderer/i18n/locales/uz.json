@@ -84,7 +84,8 @@
     "expand": "Kengaytirish",
     "userSettings": "Mening sozlamalarim",
     "myQueue": "Mening navbatim",
-    "queue": "Navbat"
+    "queue": "Navbat",
+    "lab": "Laboratoriya va muolajalar"
   },
   "dashboard": {
     "title": "Bosh sahifa",
@@ -470,7 +471,11 @@
     "notYourPatient": "Bu bemor sizning qabulingizda emas",
     "doctorInactive": "Shifokor faol emas",
     "passwordTooLong": "Parol 72 belgidan oshmasligi kerak",
-    "cannotCancelPaid": "To‘langan yoki boshlangan buyurtmani bekor qilib bo‘lmaydi"
+    "cannotCancelPaid": "To‘langan yoki boshlangan buyurtmani bekor qilib bo‘lmaydi",
+    "notAnAnalysis": "Bu xizmat tahlil emas",
+    "invalidResult": "Natija noto‘g‘ri yoki to‘liq emas",
+    "resultConfirmed": "Natija allaqachon tasdiqlangan",
+    "cannotUndo": "Faqat 24 soat ichida belgilangan seansni bekor qilish mumkin"
   },
   "license": {
     "title": "Obuna",
@@ -851,6 +856,26 @@
     "sampleWaiting": "Namuna kutilmoqda",
     "history": "Buyurtmalar tarixi",
     "sessionsDone": "Seanslar: {{done}} / {{total}}",
-    "otherCases": "Boshqa murojaatlar"
+    "otherCases": "Boshqa murojaatlar",
+    "confirmResult": "Tasdiqlash",
+    "resultsReady": "Natijalari tayyor bemorlar"
+  },
+  "lab": {
+    "analyses": "Tahlillar",
+    "noAnalyses": "Kutilayotgan tahlil yo‘q",
+    "sessionsToday": "Bugungi muolajalar",
+    "noSessions": "Bugun muolaja yo‘q",
+    "sessionOf": "{{n}}-seans / {{total}}",
+    "overdue": "Kechikkan",
+    "done": "Bajarildi",
+    "undo": "Bekor qilish (oxirgi seans)",
+    "undoHint": "Xato belgilangan seansni murojaat sahifasida 24 soat ichida bekor qilish mumkin.",
+    "sampleTaken": "Namuna olindi",
+    "sampleTakenAt": "Namuna {{time}} da olindi",
+    "chooseOutcome": "Natijani tanlang",
+    "value": "Qiymat",
+    "finding": "Topilgan (masalan, parazit turi)",
+    "comment": "Izoh",
+    "saveResult": "Natijani saqlash"
   }
 }

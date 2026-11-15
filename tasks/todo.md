@@ -221,8 +221,8 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 - [ ] Prescription/referral print (licence `printPrescription`). **Deferred**: the existing appointment prescription print still works; a referral print comes with P4.
 
 ### P4: Lab / procedures (nurse)
-- [ ] Analysis queue: sample taken → result entry (structured by `result_type`). The case moves to RESULT_READY and the doctor sees it.
-- [ ] Treatment sessions: today's planned sessions, tick done, "3 of 10".
+- [x] Analysis queue: sample taken → result entry (structured by `result_type`). The case moves to RESULT_READY; the doctor sees "results ready" on My queue and confirms on the case page.
+- [x] Treatment sessions: sessions due up to today (overdue flagged), tick done, "3 of 10"; undo within 24 h on the case page.
 
 ### P5: Patient form
 - [ ] Add height, weight (written as a vitals record), allergies, chronic conditions; the latest vitals shown in PatientDetails.

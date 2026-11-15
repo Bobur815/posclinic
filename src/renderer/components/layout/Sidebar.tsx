@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   ListOrdered,
+  TestTube,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuthStore } from '../../store/auth-store';
@@ -147,12 +148,17 @@ export function Sidebar() {
   // Doctors and nurses work from their queue; registration and money are reception's.
   const isClinical = user?.role === 'DOCTOR' || user?.role === 'NURSE';
 
-  const mainItems: NavItemConfig[] = isClinical
-    ? [{ to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.myQueue') }]
-    : [
-        { to: '/', icon: <LayoutDashboard size={18} />, label: t('nav.dashboard'), exact: true },
-        { to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.queue') },
-      ];
+  const lab = { to: '/lab', icon: <TestTube size={18} />, label: t('nav.lab') };
+  const mainItems: NavItemConfig[] =
+    user?.role === 'NURSE'
+      ? [lab, { to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.queue') }]
+      : isClinical
+        ? [{ to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.myQueue') }, lab]
+        : [
+            { to: '/', icon: <LayoutDashboard size={18} />, label: t('nav.dashboard'), exact: true },
+            { to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.queue') },
+            lab,
+          ];
 
   const clinicItems: NavItemConfig[] = isClinical
     ? [{ to: '/patients', icon: <Users size={18} />, label: t('nav.patients') }]

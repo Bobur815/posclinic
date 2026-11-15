@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { ArrowLeft, CheckCircle2, FlaskConical, Lock, Save, Unlock, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, FlaskConical, Lock, Save, Undo2, Unlock, X } from 'lucide-react';
 import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -188,13 +188,23 @@ export function CasePage() {
                   {r.comment ? ` · ${r.comment}` : ''}
                 </Muted>
               </div>
-              <Muted>
-                {r.confirmedAt
-                  ? t('care.confirmed')
-                  : r.enteredAt
-                    ? t('care.awaitingConfirmation')
-                    : t('care.sampleWaiting')}
-              </Muted>
+              {canDecide && r.enteredAt && !r.confirmedAt ? (
+                <Btn
+                  $variant="primary"
+                  onClick={() => run(() => window.electronAPI.results.confirm(r.id))}
+                >
+                  <CheckCircle2 size={14} />
+                  {t('care.confirmResult')}
+                </Btn>
+              ) : (
+                <Muted>
+                  {r.confirmedAt
+                    ? t('care.confirmed')
+                    : r.enteredAt
+                      ? t('care.awaitingConfirmation')
+                      : t('care.sampleWaiting')}
+                </Muted>
+              )}
             </Row>
           ))
         )}
@@ -221,6 +231,21 @@ export function CasePage() {
                     {i.sessions.length > 0 && (
                       <Muted>{t('care.sessionsDone', { done, total: i.sessions.length })}</Muted>
                     )}
+                    {(() => {
+                      // Undo the last session ticked in the last 24 h (a mistake at the desk).
+                      const last = [...i.sessions]
+                        .filter((s) => s.doneAt && Date.now() - new Date(s.doneAt).getTime() < 86_400_000)
+                        .sort((x, y) => y.number - x.number)[0];
+                      return last && !closed ? (
+                        <Btn
+                          aria-label={t('lab.undo')}
+                          title={t('lab.undo')}
+                          onClick={() => run(() => window.electronAPI.sessions.tick(last.id, true))}
+                        >
+                          <Undo2 size={14} />
+                        </Btn>
+                      ) : null;
+                    })()}
                     <StatusBadge $status={i.status}>{t(`care.itemStatus.${i.status}`)}</StatusBadge>
                   </Actions>
                 </Row>
