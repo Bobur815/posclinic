@@ -320,5 +320,20 @@
     "confirmPassword": "Parolni tasdiqlang",
     "passwordChanged": "Parol o'zgartirildi",
     "passwordSyncHint": "Bu parol kassada ham ishlaydi (keyingi sinxronlashdan so'ng)."
+  },
+  "login": {
+    "title": "Xush kelibsiz",
+    "subtitle": "Klinika boshqaruv paneli",
+    "pwdPh": "Parolingizni kiriting",
+    "remember": "Meni eslab qol",
+    "loading": "Tekshirilmoqda…",
+    "hint1": "Parolni unutdingizmi?",
+    "hint2": "Klinika administratoriga murojaat qiling",
+    "errPhone": "Telefon raqamni toʻliq kiriting",
+    "errPwd": "Parolni kiriting",
+    "langGroup": "Til",
+    "toDark": "Tungi rejimga oʻtish",
+    "toLight": "Kunduzgi rejimga oʻtish",
+    "value": "Klinikangiz har doim nazoratda"
   }
 }
