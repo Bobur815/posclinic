@@ -84,6 +84,16 @@ export function ClinicWorkflowSection() {
           />
           {t('clinicSettings.printTicketAfterPayment')}
         </Check>
+        <Check>
+          <input
+            type="checkbox"
+            checked={s.savePasswordOnLogin}
+            onChange={(e) => setS({ ...s, savePasswordOnLogin: e.target.checked })}
+            disabled={!isAdmin}
+          />
+          {t('clinicSettings.savePasswordOnLogin')}
+        </Check>
+        <Hint>{t('clinicSettings.savePasswordHint')}</Hint>
         {isAdmin && (
           <Btn onClick={save} disabled={saving}>
             {saving ? t('common.processing') : t('common.save')}
@@ -136,6 +146,11 @@ const Check = styled.label`
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+`;
+const Hint = styled.p`
+  margin: 4px 0 0 24px;
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 const Btn = styled.button`
   margin-top: 12px;

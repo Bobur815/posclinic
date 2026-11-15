@@ -296,6 +296,8 @@ export interface ClinicSettingsDto {
   followUpFreeDays: number;
   maxDiscountPercent: number;
   printTicketAfterPayment: boolean;
+  /** Login page: keep the password too when "Remember me" is ticked (encrypted, that PC only). */
+  savePasswordOnLogin: boolean;
 }
 
 /** `appointments:getAll`. A date range is a report (licence: `reports` beyond one day). */

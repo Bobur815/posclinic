@@ -143,6 +143,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     tick: (sessionId: string, undo?: boolean) =>
       ipcRenderer.invoke('sessions:tick', sessionId, undo === true),
   },
+  credentials: {
+    get: (phone: string) => ipcRenderer.invoke('credentials:get', phone),
+    save: (phone: string, password: string) => ipcRenderer.invoke('credentials:save', phone, password),
+    clear: () => ipcRenderer.invoke('credentials:clear'),
+  },
   users: {
     list: () => ipcRenderer.invoke('users:list'),
     create: (data: StaffInput) => ipcRenderer.invoke('users:create', data),
@@ -333,6 +338,11 @@ declare global {
       };
       sessions: {
         tick: (sessionId: string, undo?: boolean) => Promise<unknown>;
+      };
+      credentials: {
+        get: (phone: string) => Promise<string | null>;
+        save: (phone: string, password: string) => Promise<boolean>;
+        clear: () => Promise<void>;
       };
       users: {
         list: () => Promise<StaffDto[]>;

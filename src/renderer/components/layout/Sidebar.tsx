@@ -15,6 +15,7 @@ import {
   RefreshCw,
   ListOrdered,
   TestTube,
+  KeyRound,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuthStore } from '../../store/auth-store';
@@ -170,7 +171,10 @@ export function Sidebar() {
           ];
 
   const clinicItems: NavItemConfig[] = isClinical
-    ? [{ to: '/patients', icon: <Users size={18} />, label: t('nav.patients') }]
+    ? [
+        { to: '/patients', icon: <Users size={18} />, label: t('nav.patients') },
+        { to: '/settings/user', icon: <KeyRound size={18} />, label: t('nav.myAccount') },
+      ]
     : [
     { to: '/patients', icon: <Users size={18} />, label: t('nav.patients') },
     { to: '/appointments', icon: <Calendar size={18} />, label: t('nav.appointments') },

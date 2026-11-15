@@ -1,8 +1,10 @@
 import os from 'node:os';
+import path from 'node:path';
 import { app, BrowserWindow, ipcMain, net, safeStorage } from 'electron';
 import { updateConfig } from './config/app-config';
 import { getPrismaClient, initializeDatabase, readClinicBootstrap } from './database/sqlite-client';
 import { freshActor } from './ipc/auth-handlers';
+import { CredentialStore } from './ipc/credential-store';
 import { bindIpc, broadcast, sendToWindows } from './ipc/dispatch';
 import { setupIpcHandlers } from './ipc/handlers';
 import { configureHandlers, handle, hasHandler, invokeHandler } from './ipc/ipc-safe';
@@ -73,6 +75,22 @@ function createLanService(): LanService {
 }
 
 function registerCoreHandlers(): void {
+  // The login page's saved password (local to this PC, encrypted; credential-store.ts).
+  const credentials = new CredentialStore(path.join(app.getPath('userData'), 'saved-login.json'), {
+    available: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (s) => safeStorage.encryptString(s).toString('base64'),
+    decrypt: (s) => safeStorage.decryptString(Buffer.from(s, 'base64')),
+  });
+  handle('credentials:get', (_ctx, phone: unknown) =>
+    typeof phone === 'string' ? credentials.get(phone) : null,
+  );
+  handle('credentials:save', (_ctx, phone: unknown, password: unknown) =>
+    typeof phone === 'string' && typeof password === 'string'
+      ? credentials.save(phone, password)
+      : false,
+  );
+  handle('credentials:clear', () => credentials.clear());
+
   handle('app:getVersion', () => app.getVersion());
 
   handle('app:isOnline', () => net.isOnline());

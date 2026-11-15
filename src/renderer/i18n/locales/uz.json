@@ -85,7 +85,8 @@
     "userSettings": "Mening sozlamalarim",
     "myQueue": "Mening navbatim",
     "queue": "Navbat",
-    "lab": "Laboratoriya va muolajalar"
+    "lab": "Laboratoriya va muolajalar",
+    "myAccount": "Mening hisobim"
   },
   "dashboard": {
     "title": "Bosh sahifa",
@@ -733,7 +734,8 @@
       "noyabr",
       "dekabr"
     ],
-    "date": "{{wd}}, {{d}}-{{m}}"
+    "date": "{{wd}}, {{d}}-{{m}}",
+    "rememberNoteWithPassword": "telefon va parol shu kompyuterda saqlanadi"
   },
   "address": {
     "region": "Viloyat",
@@ -799,7 +801,9 @@
     "title": "Klinika ish tartibi",
     "followUpFreeDays": "Takroriy konsultatsiya bepul (kun)",
     "maxDiscountPercent": "Qabulxona chegirmasi chegarasi (%)",
-    "printTicketAfterPayment": "To‘lovdan keyin talon / chek chop etish"
+    "printTicketAfterPayment": "To‘lovdan keyin talon / chek chop etish",
+    "savePasswordOnLogin": "Kirish sahifasida parolni saqlash (“Eslab qolish” belgilanganda)",
+    "savePasswordHint": "Parol shu kompyuterda Windows himoyasi bilan shifrlangan holda saqlanadi. Bu kompyuterdan foydalangan har kim shu xodim nomidan kira oladi."
   },
   "payment": {
     "status": {

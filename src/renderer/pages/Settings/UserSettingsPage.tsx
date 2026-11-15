@@ -147,6 +147,9 @@ export function UserSettingsPage() {
         toast.error(t('users.wrongPassword'));
         return;
       }
+      // A password saved on the login page is now wrong: forget it (saved again at the next
+      // login with "Remember me").
+      void window.electronAPI.credentials.clear().catch(() => undefined);
       toast.success(t('common.success'));
       setCurrentPassword('');
       setNewPassword('');

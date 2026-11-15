@@ -33,7 +33,9 @@ import { useTheme } from '../../theme/ThemeProvider';
 /**
  * Till login, ported from the Claude Design export "POSCLINIC — Login - desktop": a brand panel
  * (clinic, till role + connection, live clock) and a large, keyboard-first form. Phone is the
- * "+998" chip + 9 digits; only the phone is remembered, never the password.
+ * "+998" chip + 9 digits. "Remember me" keeps the phone; the password too only when the clinic
+ * allows it (Settings → Clinic → save password on the login page), encrypted on this PC by main
+ * (credential-store.ts), never in localStorage.
  */
 
 const SAVED_KEY = 'login_saved_phone';
@@ -78,6 +80,32 @@ export function LoginPage() {
   const [lockEnd, setLockEnd] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [version, setVersion] = useState('');
+  /** Settings → Clinic: may the password be kept with "Remember me"? */
+  const [savePassword, setSavePassword] = useState(false);
+
+  // Prefill the saved password for the remembered phone, if the clinic allows it; otherwise make
+  // sure none is kept on this PC (the setting may have been switched off since).
+  useEffect(() => {
+    let alive = true;
+    window.electronAPI.clinic
+      .getSettings()
+      .then(async (s) => {
+        if (!alive) return;
+        setSavePassword(s.savePasswordOnLogin);
+        if (!s.savePasswordOnLogin) {
+          await window.electronAPI.credentials.clear();
+          return;
+        }
+        const digits = saved.replace(/\D/g, '');
+        if (digits.length !== 9) return;
+        const pwd = await window.electronAPI.credentials.get(`+998${digits}`);
+        if (alive && pwd) setPassword(pwd);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [saved]);
   const [mainOnline, setMainOnline] = useState(true);
 
   const license = useLicenseStore((s) => s.status);
@@ -168,6 +196,12 @@ export function LoginPage() {
           else localStorage.removeItem(SAVED_KEY);
         } catch {
           /* nothing to remember */
+        }
+        // The password only with "Remember me" AND the clinic's permission; else none is kept.
+        if (remember && savePassword) {
+          void window.electronAPI.credentials.save(result.user.phone, password).catch(() => false);
+        } else {
+          void window.electronAPI.credentials.clear().catch(() => undefined);
         }
         login(
           {
@@ -352,7 +386,9 @@ export function LoginPage() {
                   />
                   <span>
                     {t('auth.rememberMe')}{' '}
-                    <CheckNote id={`${ids}-rem`}>· {t('login.rememberNote')}</CheckNote>
+                    <CheckNote id={`${ids}-rem`}>
+                      · {savePassword ? t('login.rememberNoteWithPassword') : t('login.rememberNote')}
+                    </CheckNote>
                   </span>
                 </Check>
 

@@ -33,7 +33,7 @@ const AUTH_SCHEME = 'Posclinic ';
  * the main till refuses them over the LAN. `license:status` is the exception: a satellite shows
  * (and hides plan-gated controls by) its main till's licence, which is the one that gates.
  */
-const LOCAL_ONLY = /^(license|setup|update|lan|config|sync|app|print):/;
+const LOCAL_ONLY = /^(license|setup|update|lan|config|sync|app|print|credentials):/;
 export function runsOverLan(channel: string): boolean {
   return channel === 'license:status' || !LOCAL_ONLY.test(channel);
 }

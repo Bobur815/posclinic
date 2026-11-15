@@ -146,7 +146,7 @@ export function emitEvents(events: AppEvent[]): void {
  * Channels the licence never gates: signing in, and the till's own machinery (licence, setup,
  * updater, LAN, config, cloud sync status, app info).
  */
-const UNGATED = /^(auth|license|setup|update|lan|config|sync|app):/;
+const UNGATED = /^(auth|license|setup|update|lan|config|sync|app|credentials):/;
 const WRITES =
   /^(patients|appointments|doctors|services|users):(create|update|checkout|createLogin|linkUser|unlinkUser|resetPassword)$/;
 /** Clinical-record writes (v2.5): every channel of these namespaces that is not a read. */

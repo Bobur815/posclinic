@@ -10,18 +10,25 @@ export interface ClinicSettings {
   maxDiscountPercent: number;
   /** Print a queue ticket / receipt right after payment. */
   printTicketAfterPayment: boolean;
+  /**
+   * The login page may keep the password (encrypted, on that PC only) when "Remember me" is
+   * ticked. Off by default: anyone at that PC could then sign in as that user.
+   */
+  savePasswordOnLogin: boolean;
 }
 
 export const CLINIC_SETTINGS_DEFAULTS: ClinicSettings = {
   followUpFreeDays: 14,
   maxDiscountPercent: 10,
   printTicketAfterPayment: false,
+  savePasswordOnLogin: false,
 };
 
 const KEYS: Record<keyof ClinicSettings, string> = {
   followUpFreeDays: 'clinic_follow_up_free_days',
   maxDiscountPercent: 'clinic_max_discount_percent',
   printTicketAfterPayment: 'clinic_print_ticket',
+  savePasswordOnLogin: 'clinic_save_password_on_login',
 };
 
 interface SettingsDb {
@@ -45,7 +52,7 @@ function parse(value: string): unknown {
 
 /** Valid value or undefined, so a bad stored value falls back to the default. */
 function check<K extends keyof ClinicSettings>(key: K, v: unknown): ClinicSettings[K] | undefined {
-  if (key === 'printTicketAfterPayment') {
+  if (key === 'printTicketAfterPayment' || key === 'savePasswordOnLogin') {
     return (typeof v === 'boolean' ? v : undefined) as ClinicSettings[K] | undefined;
   }
   const max = key === 'followUpFreeDays' ? 365 : 100;

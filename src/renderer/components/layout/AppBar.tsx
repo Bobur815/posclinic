@@ -167,10 +167,16 @@ export function AppBar() {
       <Divider />
 
       {user && (
-        <UserChip>
+        <UserChip
+          as="button"
+          type="button"
+          onClick={() => navigate('/settings/user')}
+          title={t('nav.myAccount')}
+          style={{ cursor: 'pointer', border: 0, font: 'inherit' }}
+        >
           <User size={15} style={{ opacity: 0.6 }} />
           <UserName>{user.fullName}</UserName>
-          <RoleBadge>{user.role}</RoleBadge>
+          <RoleBadge>{t(`staff.roles.${user.role}`, user.role)}</RoleBadge>
         </UserChip>
       )}
 
