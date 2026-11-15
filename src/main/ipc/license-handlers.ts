@@ -101,6 +101,8 @@ export function setupLicenseHandlers(): void {
       .or(z.literal('').transform(() => undefined)),
     password: z.string().min(6).max(128),
     lang: z.enum(['uz', 'ru']).default('uz'),
+    /** The first admin also sees patients: a doctor record linked to this login. */
+    isDoctor: z.boolean().optional().default(false),
   });
 
   handle('setup:createAdmin', async (_ctx, raw: unknown) => {
@@ -114,9 +116,10 @@ export function setupLicenseHandlers(): void {
       }
       const input = parsed.data;
       const prisma = getPrismaClient();
+      const adminId = randomUUID();
       await prisma.user.create({
         data: {
-          id: randomUUID(),
+          id: adminId,
           phone: input.phone,
           email: input.email ?? null,
           password: await bcrypt.hash(input.password, 10),
@@ -125,6 +128,11 @@ export function setupLicenseHandlers(): void {
           clinicId: license.linkedStoreId(),
         },
       });
+      if (input.isDoctor) {
+        await prisma.doctor.create({
+          data: { id: randomUUID(), fullName: input.fullName, phone: input.phone, userId: adminId },
+        });
+      }
       await seedParasitologyServices(prisma, input.lang);
       log.info('[setup] first admin created, parasitology services seeded');
       return { success: true };

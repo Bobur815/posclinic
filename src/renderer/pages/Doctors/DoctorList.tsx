@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Plus, Edit2, X, Save, Search, KeyRound } from 'lucide-react';
+import { Plus, Edit2, X, Save, Search, KeyRound, Link2, Unlink } from 'lucide-react';
+import type { StaffDto } from '../../../shared/clinic';
 import { useToast } from '../../context/ToastContext';
 import { ipcErrorKey } from '../../store/lan-store';
 import type { DoctorDto as Doctor } from '../../../shared/clinic';
@@ -262,6 +263,30 @@ export function DoctorList() {
   const [isSaving, setIsSaving] = useState(false);
   // "Create login": the doctor signs in on their own PC and sees their queue.
   const [loginFor, setLoginFor] = useState<Doctor | null>(null);
+  // "Link existing login": e.g. the clinic admin who also sees patients (one login, one password).
+  const [linkFor, setLinkFor] = useState<Doctor | null>(null);
+  const [staff, setStaff] = useState<StaffDto[]>([]);
+  const [linkUserId, setLinkUserId] = useState('');
+  const openLink = async (doc: Doctor) => {
+    setLinkUserId('');
+    setLinkFor(doc);
+    setStaff(await window.electronAPI.users.list().catch(() => []));
+  };
+  const linkable = staff.filter((u) => u.active && !u.doctor);
+  const runDoctor = async (fn: () => Promise<unknown>) => {
+    setIsSaving(true);
+    try {
+      await fn();
+      toast.success(t('common.success'));
+      setLinkFor(null);
+      loadDoctors();
+    } catch (err) {
+      const key = ipcErrorKey(err, 'common.error');
+      if (!key.startsWith('license.')) toast.error(t(key));
+    } finally {
+      setIsSaving(false);
+    }
+  };
   const [login, setLogin] = useState({ phone: '', password: '' });
 
   const handleCreateLogin = async () => {
@@ -435,6 +460,39 @@ export function DoctorList() {
         </Overlay>
       )}
 
+      {linkFor && (
+        <Overlay onClick={(e) => { if (e.target === e.currentTarget) setLinkFor(null); }}>
+          <Modal>
+            <ModalHeader>
+              <ModalTitle>{t('doctors.linkLogin')}: {linkFor.fullName}</ModalTitle>
+              <CloseBtn onClick={() => setLinkFor(null)}><X size={18} /></CloseBtn>
+            </ModalHeader>
+            <FormGroup>
+              <Label>{t('doctors.chooseLogin')}</Label>
+              <Select value={linkUserId} onChange={(e) => setLinkUserId(e.target.value)}>
+                <option value="">—</option>
+                {linkable.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName} · {u.phone} · {t(`staff.roles.${u.role}`)}
+                  </option>
+                ))}
+              </Select>
+            </FormGroup>
+            <p style={{ fontSize: 12, opacity: 0.75, margin: 0 }}>{t('doctors.linkHint')}</p>
+            <ModalFooter>
+              <CancelBtn onClick={() => setLinkFor(null)}>{t('common.cancel')}</CancelBtn>
+              <SaveBtn
+                disabled={isSaving || !linkUserId}
+                onClick={() => runDoctor(() => window.electronAPI.doctors.linkUser(linkFor.id, linkUserId))}
+              >
+                <Link2 size={14} />
+                {t('doctors.linkLogin')}
+              </SaveBtn>
+            </ModalFooter>
+          </Modal>
+        </Overlay>
+      )}
+
       <Header>
         <Title>{t('doctors.title')}</Title>
         <Controls>
@@ -478,17 +536,31 @@ export function DoctorList() {
                   <Td>{doc.phone || '—'}</Td>
                   <Td>
                     {doc.user ? (
-                      doc.user.phone
+                      <>
+                        {doc.user.phone}{' '}
+                        <ActionBtn
+                          title={t('doctors.unlinkLogin')}
+                          disabled={isSaving}
+                          onClick={() => runDoctor(() => window.electronAPI.doctors.unlinkUser(doc.id))}
+                        >
+                          <Unlink size={14} />
+                        </ActionBtn>
+                      </>
                     ) : (
-                      <ActionBtn
-                        title={t('doctors.createLogin')}
-                        onClick={() => {
-                          setLogin({ phone: doc.phone ?? '', password: '' });
-                          setLoginFor(doc);
-                        }}
-                      >
-                        <KeyRound size={14} />
-                      </ActionBtn>
+                      <>
+                        <ActionBtn
+                          title={t('doctors.createLogin')}
+                          onClick={() => {
+                            setLogin({ phone: doc.phone ?? '', password: '' });
+                            setLoginFor(doc);
+                          }}
+                        >
+                          <KeyRound size={14} />
+                        </ActionBtn>
+                        <ActionBtn title={t('doctors.linkLogin')} onClick={() => openLink(doc)}>
+                          <Link2 size={14} />
+                        </ActionBtn>
+                      </>
                     )}
                   </Td>
                   <Td>

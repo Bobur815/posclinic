@@ -42,6 +42,8 @@ interface SetupAdminInput {
   email?: string;
   password: string;
   lang: 'uz' | 'ru';
+  /** The first admin also sees patients as a doctor. */
+  isDoctor?: boolean;
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -83,6 +85,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('doctors:update', id, data),
     createLogin: (doctorId: string, data: { phone: string; password: string }) =>
       ipcRenderer.invoke('doctors:createLogin', doctorId, data),
+    linkUser: (doctorId: string, userId: string) =>
+      ipcRenderer.invoke('doctors:linkUser', doctorId, userId),
+    unlinkUser: (doctorId: string) => ipcRenderer.invoke('doctors:unlinkUser', doctorId),
+    mine: () => ipcRenderer.invoke('doctors:mine'),
   },
 
   // Services
@@ -284,6 +290,9 @@ declare global {
         create: (data: DoctorInput) => Promise<DoctorDto>;
         update: (id: string, data: DoctorInput) => Promise<DoctorDto>;
         createLogin: (doctorId: string, data: { phone: string; password: string }) => Promise<DoctorDto>;
+        linkUser: (doctorId: string, userId: string) => Promise<DoctorDto>;
+        unlinkUser: (doctorId: string) => Promise<DoctorDto>;
+        mine: () => Promise<{ id: string; fullName: string; active: boolean } | null>;
       };
       services: {
         getAll: () => Promise<ServiceDto[]>;

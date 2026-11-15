@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuthStore } from '../../store/auth-store';
+import { useMyDoctor } from '../../hooks/useMyDoctor';
 import { APP_BAR_HEIGHT } from './AppBar';
 
 const SIDEBAR_WIDTH = 220;
@@ -149,6 +150,13 @@ export function Sidebar() {
   const isClinical = user?.role === 'DOCTOR' || user?.role === 'NURSE';
 
   const lab = { to: '/lab', icon: <TestTube size={18} />, label: t('nav.lab') };
+  // An admin (or receptionist) who also sees patients: their own queue next to the board.
+  const myDoctor = useMyDoctor();
+  const myQueue = {
+    to: '/queue?mine=1',
+    icon: <ListOrdered size={18} />,
+    label: t('nav.myQueue'),
+  };
   const mainItems: NavItemConfig[] =
     user?.role === 'NURSE'
       ? [lab, { to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.queue') }]
@@ -156,6 +164,7 @@ export function Sidebar() {
         ? [{ to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.myQueue') }, lab]
         : [
             { to: '/', icon: <LayoutDashboard size={18} />, label: t('nav.dashboard'), exact: true },
+            ...(myDoctor ? [myQueue] : []),
             { to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.queue') },
             lab,
           ];

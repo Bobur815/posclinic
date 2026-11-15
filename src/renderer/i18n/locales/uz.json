@@ -229,7 +229,11 @@
     "noDoctors": "Shifokorlar topilmadi",
     "searchPlaceholder": "Ism yoki mutaxassislik bo'yicha...",
     "createLogin": "Kirish yaratish",
-    "login": "Kirish (telefon)"
+    "login": "Kirish (telefon)",
+    "linkLogin": "Mavjud kirishni bog‘lash",
+    "unlinkLogin": "Kirishni ajratish",
+    "chooseLogin": "Xodim kirishi",
+    "linkHint": "Masalan, bemor ham ko‘radigan administrator: bitta telefon va parol, lavozimi o‘zgarmaydi, qo‘shimcha xodim o‘rni ketmaydi."
   },
   "checkout": {
     "title": "To'lov",
@@ -380,7 +384,8 @@
       "phone": "Telefon raqam (login)",
       "email": "Email (ixtiyoriy)",
       "password": "Parol (kamida 6 belgi)",
-      "submit": "Sozlashni yakunlash"
+      "submit": "Sozlashni yakunlash",
+      "isDoctor": "Men ham shifokor sifatida bemorlarni ko‘raman"
     },
     "done": {
       "title": "Tayyor!",
@@ -479,7 +484,9 @@
     "useDoctorsPage": "Shifokorga kirish “Shifokorlar” sahifasida beriladi",
     "invalidRole": "Lavozim noto‘g‘ri",
     "nameRequired": "Ismni kiriting",
-    "selfDemote": "O‘zingizni o‘chira yoki lavozimingizni pasaytira olmaysiz"
+    "selfDemote": "O‘zingizni o‘chira yoki lavozimingizni pasaytira olmaysiz",
+    "alreadyADoctor": "Bu kirish boshqa shifokorga bog‘langan",
+    "doctorLoginKeep": "Shifokor kirishini ajratib bo‘lmaydi: kerak bo‘lmasa, “Xodimlar” sahifasida o‘chiring"
   },
   "license": {
     "title": "Obuna",
@@ -903,6 +910,7 @@
     "resetPassword": "Parolni yangilash",
     "newPassword": "Yangi parol (kamida 6 belgi)",
     "deactivate": "O‘chirish",
-    "activate": "Yoqish"
+    "activate": "Yoqish",
+    "alsoDoctor": "shifokor ham"
   }
 }

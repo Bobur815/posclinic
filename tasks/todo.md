@@ -246,3 +246,5 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 **Answers (owner, 2026-11-15):** Q1–Q4 all as recommended: rebuild `appointments` once so `doctor_id` is nullable; receptionist discount up to `maxDiscountPercent` (default 10 %), more needs an admin; walk-in analysis allowed (case without lead doctor); doctors edit medical fields only.
 
 **More answers (owner, 2026-11-15):** the plan limit `monthlyVisits` counts **new cases** (patient journeys) per calendar month, not orders: till-side meaning only, posgro just stores the number. Commit after each finished phase (not pushed).
+
+**Admin-doctors (owner, 2026-11-15):** a clinic admin can also be a doctor. Being a doctor is a profile linked to a login (`doctors.user_id`), not only the DOCTOR role: Doctors page → "Link existing login" (no extra staff seat, the role stays), setup option "I also see patients as a doctor", sidebar shows My queue to anyone with a profile. Admin-doctors may register and take payment (they are admins).

@@ -2,7 +2,8 @@ import { format } from 'date-fns';
 import { DoorOpen, FileText } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMyDoctor } from '../../hooks/useMyDoctor';
 import type { QueueItemDto, ResultsReadyDto } from '../../../shared/clinic';
 import { useToast } from '../../context/ToastContext';
 import { useDataVersion } from '../../hooks/useDataVersion';
@@ -32,7 +33,10 @@ export function QueuePage() {
   const navigate = useNavigate();
   const toast = useToast();
   const role = useAuthStore((s) => s.user?.role);
-  const isDoctor = role === 'DOCTOR';
+  const myDoctor = useMyDoctor();
+  const [params] = useSearchParams();
+  // A DOCTOR always works from their queue; an admin-doctor chooses it (sidebar: My queue).
+  const isDoctor = role === 'DOCTOR' || (myDoctor !== null && params.get('mine') === '1');
   const [items, setItems] = useState<QueueItemDto[] | null>(null);
   // A doctor's cases with analysis results to confirm (the patient is back with them).
   const [ready, setReady] = useState<ResultsReadyDto[]>([]);

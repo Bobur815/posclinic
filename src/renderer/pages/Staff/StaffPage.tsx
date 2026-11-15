@@ -89,7 +89,8 @@ export function StaffPage() {
           <Empty>{t('staff.none')}</Empty>
         ) : (
           users.map((u) => {
-            const isDoctor = u.role === 'DOCTOR' || !!u.doctor;
+            const isDoctor = u.role === 'DOCTOR';
+            const alsoDoctor = !isDoctor && !!u.doctor;
             const self = u.id === me;
             return (
               <Row key={u.id}>
@@ -98,6 +99,7 @@ export function StaffPage() {
                   <Muted>
                     {u.phone}
                     {self ? ` · ${t('staff.you')}` : ''}
+                    {alsoDoctor ? ` · ${t('staff.alsoDoctor')}` : ''}
                   </Muted>
                 </div>
                 <div style={{ minWidth: 170 }}>

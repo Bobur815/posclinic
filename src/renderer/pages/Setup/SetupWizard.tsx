@@ -369,6 +369,9 @@ export function SetupWizard() {
     }
   };
 
+  /** The owner who also sees patients: a doctor profile on this same login. */
+  const [isDoctor, setIsDoctor] = useState(false);
+
   const handleAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -380,6 +383,7 @@ export function SetupWizard() {
         email: email || undefined,
         password,
         lang: i18n.language === 'ru' ? 'ru' : 'uz',
+        isDoctor,
       });
       if (!result.success) {
         setError(t(result.error ?? 'setup.errors.failed', t('setup.errors.failed')));
@@ -688,6 +692,17 @@ export function SetupWizard() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </EyeBtn>
               </InputWrapper>
+            </FormGroup>
+
+            <FormGroup>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={isDoctor}
+                  onChange={(e) => setIsDoctor(e.target.checked)}
+                />
+                {t('setup.admin.isDoctor')}
+              </label>
             </FormGroup>
 
             {error && <ErrorMsg>{error}</ErrorMsg>}

@@ -380,6 +380,66 @@ export function setupCareHandlers(): void {
   });
 
   /**
+   * The signed-in user's doctor profile, if any. Being a doctor is a profile linked to a login,
+   * not a role: a clinic admin can be a doctor too (owner decision 2026-11-15), and then sees
+   * My queue next to the dashboard.
+   */
+  handle('doctors:mine', async (ctx) => {
+    if (!ctx.actor) return null;
+    return getPrismaClient().doctor.findUnique({
+      where: { userId: ctx.actor.id },
+      select: { id: true, fullName: true, active: true },
+    });
+  });
+
+  /**
+   * Link a doctor record to an EXISTING login (e.g. the clinic admin who also sees patients):
+   * one login, one password, no extra staff seat; the user keeps their role.
+   */
+  handle('doctors:linkUser', async (ctx, doctorId: unknown, userId: unknown) => {
+    requireAdmin(ctx);
+    const db = getPrismaClient();
+    const doctor = await db.doctor.findUnique({ where: { id: String(doctorId ?? '') } });
+    if (!doctor) throw new RefusedError('errors.notFound');
+    if (doctor.userId) throw new RefusedError('errors.loginExists');
+    if (!doctor.active) throw new RefusedError('errors.doctorInactive');
+    const user = await db.user.findUnique({
+      where: { id: String(userId ?? '') },
+      include: { doctor: { select: { id: true } } },
+    });
+    if (!user || !user.active) throw new RefusedError('errors.notFound');
+    if (user.doctor) throw new RefusedError('errors.alreadyADoctor');
+    const linked = await db.doctor.update({
+      where: { id: doctor.id },
+      data: { userId: user.id },
+      include: { user: { select: { phone: true, active: true } } },
+    });
+    return ipcSafe(linked);
+  });
+
+  /**
+   * Remove the link (the login stays). A DOCTOR-role login is only a doctor: switch it off on
+   * the Staff page instead, or it would be a login with nothing to do.
+   */
+  handle('doctors:unlinkUser', async (ctx, doctorId: unknown) => {
+    requireAdmin(ctx);
+    const db = getPrismaClient();
+    const doctor = await db.doctor.findUnique({
+      where: { id: String(doctorId ?? '') },
+      include: { user: { select: { role: true } } },
+    });
+    if (!doctor) throw new RefusedError('errors.notFound');
+    if (!doctor.userId) return ipcSafe(doctor);
+    if (doctor.user?.role === 'DOCTOR') throw new RefusedError('errors.doctorLoginKeep');
+    const unlinked = await db.doctor.update({
+      where: { id: doctor.id },
+      data: { userId: null },
+      include: { user: { select: { phone: true, active: true } } },
+    });
+    return ipcSafe(unlinked);
+  });
+
+  /**
    * The admin gives a doctor a till login (role DOCTOR, phone + password); the plan's staff
    * limit is checked by the licence gate first.
    */
