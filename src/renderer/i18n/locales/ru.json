@@ -82,7 +82,9 @@
     "newAppointment": "Новый приём",
     "collapse": "Свернуть",
     "expand": "Развернуть",
-    "userSettings": "Мои настройки"
+    "userSettings": "Мои настройки",
+    "myQueue": "Моя очередь",
+    "queue": "Очередь"
   },
   "dashboard": {
     "title": "Главная",
@@ -224,7 +226,9 @@
     "licenseNo": "Номер лицензии",
     "noActiveDoctors": "Активные врачи не найдены",
     "noDoctors": "Врачи не найдены",
-    "searchPlaceholder": "Поиск по имени или специализации..."
+    "searchPlaceholder": "Поиск по имени или специализации...",
+    "createLogin": "Создать вход",
+    "login": "Вход (телефон)"
   },
   "checkout": {
     "title": "Оплата",
@@ -451,7 +455,16 @@
     "discountNotAllowed": "Скидка только на курс с полной предоплатой",
     "discountNeedsAdmin": "Для этой скидки нужно разрешение администратора",
     "invalidDiscount": "Скидка должна быть 0–100 %",
-    "invalidSetting": "Неверное значение настройки"
+    "invalidSetting": "Неверное значение настройки",
+    "receptionOnly": "Это действие только для регистратуры",
+    "noDoctorProfile": "Ваш вход не привязан к профилю врача",
+    "useLabQueue": "Анализы и процедуры выполняются в очереди лаборатории",
+    "notPaid": "Ещё не оплачено",
+    "alreadyDone": "Уже выполнено",
+    "invalidVitals": "Неверное значение измерения",
+    "referralKind": "Направление только на анализ или процедуру",
+    "loginExists": "У этого врача уже есть вход",
+    "passwordTooShort": "Пароль должен быть не короче 6 символов"
   },
   "license": {
     "title": "Подписка",
@@ -514,7 +527,8 @@
       "telegramBot": "Telegram-бот недоступен на вашем тарифе"
     },
     "limit": {
-      "monthlyVisits": "Лимит приёмов в месяц по тарифу исчерпан"
+      "monthlyVisits": "Лимит приёмов в месяц по тарифу исчерпан",
+      "staff": "Достигнут предел числа сотрудников по тарифу"
     },
     "banner": {
       "warning": "Подписка истекает через {{count}} дн.",
@@ -763,5 +777,73 @@
     "followUpFreeDays": "Повторная консультация бесплатно (дней)",
     "maxDiscountPercent": "Предел скидки регистратуры (%)",
     "printTicketAfterPayment": "Печатать талон / чек после оплаты"
+  },
+  "payment": {
+    "status": {
+      "PENDING": "Не оплачено",
+      "PARTIAL": "Частично",
+      "PAID": "Оплачено"
+    }
+  },
+  "care": {
+    "years": "{{n}} лет",
+    "queueEmpty": "В очереди никого нет",
+    "boardEmpty": "Сейчас никто не ждёт",
+    "waitingCount": "{{n}} чел.",
+    "callIn": "Вызвать",
+    "openCase": "Открыть",
+    "queueOf": {
+      "ANALYSIS": "Анализы",
+      "PROCEDURE": "Процедуры"
+    },
+    "itemStatus": {
+      "WAITING": "Ожидает",
+      "IN_PROGRESS": "На приёме",
+      "DONE": "Выполнено",
+      "CANCELLED": "Отменено"
+    },
+    "finishConsultation": "Завершить приём",
+    "closeCase": "Закрыть обращение",
+    "reopenCase": "Открыть снова",
+    "latestVitals": "Последние измерения",
+    "chronicConditions": "Хронические заболевания",
+    "examination": "Осмотр",
+    "complaint": "Жалобы",
+    "vitals": "Измерения (этот визит)",
+    "height": "Рост (см)",
+    "weight": "Вес (кг)",
+    "temperature": "Температура (°C)",
+    "bpSystolic": "Давление: верхнее",
+    "bpDiastolic": "Давление: нижнее",
+    "pregnant": "Беременность",
+    "recordVitals": "Сохранить измерения",
+    "cm": "см",
+    "kg": "кг",
+    "bmi": "ИМТ",
+    "referrals": "Направления",
+    "noReferrals": "Направлений нет",
+    "referTo": "Направить на анализ или процедуру",
+    "perDay": "Раз в день",
+    "days": "Дней",
+    "instructions": "Указания",
+    "sendToReception": "Отправить в регистратуру",
+    "referralStatus": {
+      "PENDING": "Ожидает",
+      "PARTIAL": "Частично",
+      "REGISTERED": "Зарегистрировано",
+      "CANCELLED": "Отменено"
+    },
+    "results": "Результаты анализов",
+    "noResults": "Результатов нет",
+    "outcome": {
+      "POSITIVE": "Положительный",
+      "NEGATIVE": "Отрицательный"
+    },
+    "confirmed": "Подтверждено",
+    "awaitingConfirmation": "Ждёт подтверждения врача",
+    "sampleWaiting": "Ожидается образец",
+    "history": "История заказов",
+    "sessionsDone": "Сеансы: {{done}} / {{total}}",
+    "otherCases": "Другие обращения"
   }
 }

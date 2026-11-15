@@ -82,7 +82,9 @@
     "newAppointment": "Yangi qabul",
     "collapse": "Yig'ish",
     "expand": "Kengaytirish",
-    "userSettings": "Mening sozlamalarim"
+    "userSettings": "Mening sozlamalarim",
+    "myQueue": "Mening navbatim",
+    "queue": "Navbat"
   },
   "dashboard": {
     "title": "Bosh sahifa",
@@ -224,7 +226,9 @@
     "licenseNo": "Litsenziya raqami",
     "noActiveDoctors": "Faol shifokorlar topilmadi",
     "noDoctors": "Shifokorlar topilmadi",
-    "searchPlaceholder": "Ism yoki mutaxassislik bo'yicha..."
+    "searchPlaceholder": "Ism yoki mutaxassislik bo'yicha...",
+    "createLogin": "Kirish yaratish",
+    "login": "Kirish (telefon)"
   },
   "checkout": {
     "title": "To'lov",
@@ -451,7 +455,16 @@
     "discountNotAllowed": "Chegirma faqat oldindan to‘liq to‘langan kurs uchun",
     "discountNeedsAdmin": "Bu chegirma uchun administrator ruxsati kerak",
     "invalidDiscount": "Chegirma 0–100 % bo‘lishi kerak",
-    "invalidSetting": "Sozlama qiymati noto‘g‘ri"
+    "invalidSetting": "Sozlama qiymati noto‘g‘ri",
+    "receptionOnly": "Bu amal faqat qabulxona uchun",
+    "noDoctorProfile": "Kirishingiz shifokor profiliga bog‘lanmagan",
+    "useLabQueue": "Tahlil va muolajalar laboratoriya navbatida bajariladi",
+    "notPaid": "Hali to‘lanmagan",
+    "alreadyDone": "Allaqachon bajarilgan",
+    "invalidVitals": "O‘lchov qiymati noto‘g‘ri",
+    "referralKind": "Faqat tahlil yoki muolajaga yo‘llanma beriladi",
+    "loginExists": "Bu shifokorning kirishi bor",
+    "passwordTooShort": "Parol kamida 6 belgi bo‘lishi kerak"
   },
   "license": {
     "title": "Obuna",
@@ -514,7 +527,8 @@
       "telegramBot": "Telegram bot tarifingizda yo'q"
     },
     "limit": {
-      "monthlyVisits": "Tarifingizdagi oylik qabullar soni tugagan"
+      "monthlyVisits": "Tarifingizdagi oylik qabullar soni tugagan",
+      "staff": "Tarif bo‘yicha xodimlar soni chegarasiga yetildi"
     },
     "banner": {
       "warning": "Obuna muddati {{count}} kundan keyin tugaydi",
@@ -763,5 +777,73 @@
     "followUpFreeDays": "Takroriy konsultatsiya bepul (kun)",
     "maxDiscountPercent": "Qabulxona chegirmasi chegarasi (%)",
     "printTicketAfterPayment": "To‘lovdan keyin talon / chek chop etish"
+  },
+  "payment": {
+    "status": {
+      "PENDING": "To‘lanmagan",
+      "PARTIAL": "Qisman to‘langan",
+      "PAID": "To‘langan"
+    }
+  },
+  "care": {
+    "years": "{{n}} yosh",
+    "queueEmpty": "Navbatda hech kim yo‘q",
+    "boardEmpty": "Hozir hech kim kutmayapti",
+    "waitingCount": "{{n}} kishi",
+    "callIn": "Chaqirish",
+    "openCase": "Ochish",
+    "queueOf": {
+      "ANALYSIS": "Tahlillar",
+      "PROCEDURE": "Muolajalar"
+    },
+    "itemStatus": {
+      "WAITING": "Kutmoqda",
+      "IN_PROGRESS": "Qabulda",
+      "DONE": "Bajarildi",
+      "CANCELLED": "Bekor qilindi"
+    },
+    "finishConsultation": "Qabulni yakunlash",
+    "closeCase": "Murojaatni yopish",
+    "reopenCase": "Qayta ochish",
+    "latestVitals": "Oxirgi o‘lchovlar",
+    "chronicConditions": "Surunkali kasalliklar",
+    "examination": "Ko‘rik",
+    "complaint": "Shikoyat",
+    "vitals": "O‘lchovlar (bu tashrif)",
+    "height": "Bo‘yi (sm)",
+    "weight": "Vazni (kg)",
+    "temperature": "Harorat (°C)",
+    "bpSystolic": "Bosim: yuqori",
+    "bpDiastolic": "Bosim: pastki",
+    "pregnant": "Homilador",
+    "recordVitals": "O‘lchovlarni saqlash",
+    "cm": "sm",
+    "kg": "kg",
+    "bmi": "TVI",
+    "referrals": "Yo‘llanmalar",
+    "noReferrals": "Yo‘llanma yo‘q",
+    "referTo": "Tahlil yoki muolajaga yuborish",
+    "perDay": "Kuniga (marta)",
+    "days": "Kun",
+    "instructions": "Ko‘rsatma",
+    "sendToReception": "Qabulxonaga yuborish",
+    "referralStatus": {
+      "PENDING": "Kutmoqda",
+      "PARTIAL": "Qisman",
+      "REGISTERED": "Ro‘yxatga olingan",
+      "CANCELLED": "Bekor qilingan"
+    },
+    "results": "Tahlil natijalari",
+    "noResults": "Natija yo‘q",
+    "outcome": {
+      "POSITIVE": "Musbat",
+      "NEGATIVE": "Manfiy"
+    },
+    "confirmed": "Tasdiqlangan",
+    "awaitingConfirmation": "Shifokor tasdig‘ini kutmoqda",
+    "sampleWaiting": "Namuna kutilmoqda",
+    "history": "Buyurtmalar tarixi",
+    "sessionsDone": "Seanslar: {{done}} / {{total}}",
+    "otherCases": "Boshqa murojaatlar"
   }
 }

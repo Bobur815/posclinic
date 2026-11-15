@@ -135,7 +135,7 @@ export function emitEvents(events: AppEvent[]): void {
  * updater, LAN, config, cloud sync status, app info).
  */
 const UNGATED = /^(auth|license|setup|update|lan|config|sync|app):/;
-const WRITES = /^(patients|appointments|doctors|services|users):(create|update|checkout)$/;
+const WRITES = /^(patients|appointments|doctors|services|users):(create|update|checkout|createLogin)$/;
 /** Clinical-record writes (v2.5): every channel of these namespaces that is not a read. */
 const CLINICAL = /^(cases|queue|results|sessions):(?!(get|for|list|quote)[A-Z]?)/;
 
@@ -177,6 +177,13 @@ export const ADMIN_ROLES: ReadonlySet<string> = new Set(['CLINIC_ADMIN', 'SUPER_
 
 export function isAdmin(ctx: HandlerContext): boolean {
   return ADMIN_ROLES.has(ctx.actor?.role ?? '');
+}
+
+/** Reception-only channels (register, pay, new patients): doctors and nurses never take money. */
+export function requireReception(ctx: HandlerContext): void {
+  if (!ctx.actor) throw new RefusedError('errors.notAuthenticated');
+  const role = ctx.actor.role;
+  if (role === 'DOCTOR' || role === 'NURSE') throw new RefusedError('errors.receptionOnly');
 }
 
 /** Clinic admins only (catalog, doctors, staff, LAN settings). */

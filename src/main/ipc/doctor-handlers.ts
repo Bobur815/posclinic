@@ -8,6 +8,7 @@ export function setupDoctorHandlers(): void {
       const prisma = getPrismaClient();
       const doctors = await prisma.doctor.findMany({
         orderBy: { fullName: 'asc' },
+        include: { user: { select: { phone: true, active: true } } },
       });
       return ipcSafe(doctors);
     } catch (error) {

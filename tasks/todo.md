@@ -208,17 +208,17 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
   - free follow-up applied automatically (≤ 14 days);
   - course: "full course (discount)" or "today only".
 - [x] Step 3, Payment: the existing checkout page; optional ticket/receipt print (Settings → Clinic). Paying no longer completes the visit.
-- [ ] Reception queue overview: who is waiting for which doctor or nurse, live across tills. **Moved to P3** (it reads the same queue).
+- [x] Reception queue overview: who is waiting for which doctor or nurse, live across tills. Done in P3 (/queue board).
 
 ### P3: Doctor workspace (doctor's PC, satellite)
-- [ ] Doctor login linked to the doctor record. The home page is **My queue** (paid, waiting, today), live.
-- [ ] Case page:
+- [x] Doctor login linked to the doctor record (Doctors page → Create login; plan staff limit checked). The home page is **My queue** (paid, waiting), live.
+- [x] Case page:
   - complaint, vitals entry (height, weight, …);
   - allergies and chronic conditions;
   - diagnosis, history timeline (orders, results, sessions);
   - "Send to analysis" / "Prescribe course" = referrals;
   - confirm results; finish the consultation.
-- [ ] Prescription/referral print (licence `printPrescription`).
+- [ ] Prescription/referral print (licence `printPrescription`). **Deferred**: the existing appointment prescription print still works; a referral print comes with P4.
 
 ### P4: Lab / procedures (nurse)
 - [ ] Analysis queue: sample taken → result entry (structured by `result_type`). The case moves to RESULT_READY and the doctor sees it.

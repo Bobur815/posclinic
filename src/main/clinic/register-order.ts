@@ -5,6 +5,7 @@ import type { ServiceKind } from '../../shared/clinic';
 import { ADMIN_ROLES, type HandlerContext, RefusedError } from '../ipc/ipc-safe';
 import { normalizePhone } from '../../shared/phone';
 import { nextAppointmentNumber } from '../ipc/appointment-handlers';
+import { recomputeCaseStatus } from './case-status';
 import { getClinicSettings } from './clinic-settings';
 import { type LineInput, PricingError, priceLines, sessionPlan } from './pricing';
 
@@ -52,13 +53,6 @@ export async function nextCaseNumber(tx: Pick<Tx, 'clinicalCase'>, now = new Dat
     return Number.isFinite(n) && n > m ? n : m;
   }, 0);
   return `${prefix}-${String(max + 1).padStart(3, '0')}`;
-}
-
-/** Where the case waits after this order: the doctor first, then analysis, then treatment. */
-export function caseStatusAfter(kinds: ServiceKind[]): string {
-  if (kinds.includes('CONSULTATION')) return 'WAITING_DOCTOR';
-  if (kinds.includes('ANALYSIS')) return 'WAITING_ANALYSIS';
-  return 'ON_TREATMENT';
 }
 
 async function adminApproved(
@@ -289,13 +283,13 @@ export async function registerOrder(
       });
     }
 
-    await tx.clinicalCase.update({
-      where: { id: theCase.id },
-      data: {
-        status: caseStatusAfter(priced.map((p) => p.kind)),
-        ...(theCase.doctorId || !consultDoctor ? {} : { doctorId: consultDoctor }),
-      },
-    });
+    if (!theCase.doctorId && consultDoctor) {
+      await tx.clinicalCase.update({
+        where: { id: theCase.id },
+        data: { doctorId: consultDoctor },
+      });
+    }
+    await recomputeCaseStatus(tx, theCase.id);
 
     return appointment;
   });

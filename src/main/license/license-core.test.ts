@@ -43,6 +43,7 @@ function payload(over: Partial<LicensePayload> = {}): LicensePayload {
 
 const facts = (over: Partial<GateFacts> = {}): GateFacts => ({
   activeDoctors: async () => 0,
+  activeUsers: async () => 0,
   visitsThisMonth: async () => 0,
   appointmentBalance: async () => ({ total: 100_000, paid: 0 }),
   ...over,
@@ -166,6 +167,18 @@ describe('refusal', () => {
     // An order inside an open case is not a new visit.
     assert.equal(
       await refusal('appointments:create', [{ caseId: 'c1' }], s, facts({ visitsThisMonth: async () => 300 })),
+      null,
+    );
+  });
+
+  it('enforces the staff limit when a doctor login is created', async () => {
+    const s = state(start); // START: staff 3
+    assert.equal(
+      await refusal('doctors:createLogin', ['d1', {}], s, facts({ activeUsers: async () => 3 })),
+      'license.limit.staff',
+    );
+    assert.equal(
+      await refusal('doctors:createLogin', ['d1', {}], s, facts({ activeUsers: async () => 2 })),
       null,
     );
   });

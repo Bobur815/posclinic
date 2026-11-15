@@ -230,6 +230,7 @@ export class LicenseService {
   async refusal(channel: string, args: unknown[]): Promise<Refusal | null> {
     const facts: GateFacts = this.facts ?? {
       activeDoctors: async () => 0,
+      activeUsers: async () => 0,
       visitsThisMonth: async () => 0,
       appointmentBalance: async () => null,
     };

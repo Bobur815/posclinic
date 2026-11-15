@@ -1,5 +1,5 @@
 import { resolveAddress } from './address-handlers';
-import { handle, ipcSafe, RefusedError } from './ipc-safe';
+import { handle, ipcSafe, RefusedError, requireReception } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 import { randomUUID } from 'crypto';
@@ -145,8 +145,10 @@ export function setupPatientHandlers(): void {
     }
   });
 
-  handle('patients:create', async (_event, data: Record<string, unknown>) => {
+  handle('patients:create', async (ctx, data: Record<string, unknown>) => {
     try {
+      // Identity is registered at reception (owner decision 2026-11-15).
+      requireReception(ctx);
       const phone = patientPhone(data?.phone);
       const prisma = getPrismaClient();
       const addr = await resolveAddress(prisma, data?.regionCode, data?.districtCode);
@@ -162,6 +164,7 @@ export function setupPatientHandlers(): void {
               gender: optional(data.gender) ?? null,
               bloodType: optional(data.bloodType) ?? null,
               allergies: optional(data.allergies) ?? null,
+              chronicConditions: optional(data.chronicConditions) ?? null,
               address: optional(data.address) ?? null,
               regionCode: addr?.regionCode ?? null,
               districtCode: addr?.districtCode ?? null,
@@ -179,9 +182,22 @@ export function setupPatientHandlers(): void {
     }
   });
 
-  handle('patients:update', async (_event, id: string, data: Record<string, unknown>) => {
+  handle('patients:update', async (ctx, id: string, data: Record<string, unknown>) => {
     try {
       const prisma = getPrismaClient();
+      // A doctor or nurse edits the medical fields only; name, phone and address stay with
+      // reception (owner decision 2026-11-15). Other fields they send are ignored.
+      if (ctx.actor?.role === 'DOCTOR' || ctx.actor?.role === 'NURSE') {
+        const patient = await prisma.patient.update({
+          where: { id },
+          data: {
+            bloodType: optional(data?.bloodType),
+            allergies: optional(data?.allergies),
+            chronicConditions: optional(data?.chronicConditions),
+          },
+        });
+        return ipcSafe(patient);
+      }
       const fullName = typeof data.fullName === 'string' ? data.fullName.trim() : undefined;
       const addr = await resolveAddress(prisma, data.regionCode, data.districtCode);
       const patient = await prisma.patient
@@ -194,6 +210,7 @@ export function setupPatientHandlers(): void {
             gender: optional(data.gender),
             bloodType: optional(data.bloodType),
             allergies: optional(data.allergies),
+            chronicConditions: optional(data.chronicConditions),
             address: optional(data.address),
             ...(addr
               ? { regionCode: addr.regionCode, districtCode: addr.districtCode, city: addr.city }

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Plus, Edit2, X, Save, Search } from 'lucide-react';
+import { Plus, Edit2, X, Save, Search, KeyRound } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { ipcErrorKey } from '../../store/lan-store';
 import type { DoctorDto as Doctor } from '../../../shared/clinic';
@@ -260,6 +260,27 @@ export function DoctorList() {
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
   const [form, setForm] = useState<DoctorForm>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  // "Create login": the doctor signs in on their own PC and sees their queue.
+  const [loginFor, setLoginFor] = useState<Doctor | null>(null);
+  const [login, setLogin] = useState({ phone: '', password: '' });
+
+  const handleCreateLogin = async () => {
+    if (!loginFor) return;
+    setIsSaving(true);
+    try {
+      await window.electronAPI.doctors.createLogin(loginFor.id, login);
+      toast.success(t('common.success'));
+      setLoginFor(null);
+      setLogin({ phone: '', password: '' });
+      loadDoctors();
+    } catch (err) {
+      // errors.phoneTaken / passwordTooShort / loginExists; the staff limit is toasted by LicenseBanner.
+      const key = ipcErrorKey(err, 'common.error');
+      if (!key.startsWith('license.')) toast.error(t(key));
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const loadDoctors = useCallback(async () => {
     setIsLoading(true);
@@ -379,6 +400,41 @@ export function DoctorList() {
         </Overlay>
       )}
 
+      {loginFor && (
+        <Overlay onClick={(e) => { if (e.target === e.currentTarget) setLoginFor(null); }}>
+          <Modal>
+            <ModalHeader>
+              <ModalTitle>{t('doctors.createLogin')}: {loginFor.fullName}</ModalTitle>
+              <CloseBtn onClick={() => setLoginFor(null)}><X size={18} /></CloseBtn>
+            </ModalHeader>
+            <FormGroup>
+              <Label>{t('auth.phone')}<Required>*</Required></Label>
+              <Input
+                type="tel"
+                value={login.phone}
+                onChange={(e) => setLogin({ ...login, phone: e.target.value })}
+                placeholder="+998 90 123 45 67"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('auth.password')}<Required>*</Required></Label>
+              <Input
+                type="password"
+                value={login.password}
+                onChange={(e) => setLogin({ ...login, password: e.target.value })}
+              />
+            </FormGroup>
+            <ModalFooter>
+              <CancelBtn onClick={() => setLoginFor(null)}>{t('common.cancel')}</CancelBtn>
+              <SaveBtn onClick={handleCreateLogin} disabled={isSaving || !login.phone || login.password.length < 6}>
+                <KeyRound size={14} />
+                {isSaving ? t('common.processing') : t('doctors.createLogin')}
+              </SaveBtn>
+            </ModalFooter>
+          </Modal>
+        </Overlay>
+      )}
+
       <Header>
         <Title>{t('doctors.title')}</Title>
         <Controls>
@@ -409,6 +465,7 @@ export function DoctorList() {
                 <Th>{t('doctors.fullName')}</Th>
                 <Th>{t('doctors.specialty')}</Th>
                 <Th>{t('patients.phone')}</Th>
+                <Th>{t('doctors.login')}</Th>
                 <Th>{t('common.status')}</Th>
                 <Th>{t('common.actions')}</Th>
               </tr>
@@ -419,6 +476,21 @@ export function DoctorList() {
                   <Td style={{ fontWeight: 500 }}>{doc.fullName}</Td>
                   <Td>{doc.specialty || '—'}</Td>
                   <Td>{doc.phone || '—'}</Td>
+                  <Td>
+                    {doc.user ? (
+                      doc.user.phone
+                    ) : (
+                      <ActionBtn
+                        title={t('doctors.createLogin')}
+                        onClick={() => {
+                          setLogin({ phone: doc.phone ?? '', password: '' });
+                          setLoginFor(doc);
+                        }}
+                      >
+                        <KeyRound size={14} />
+                      </ActionBtn>
+                    )}
+                  </Td>
                   <Td>
                     <Badge $active={doc.active}>
                       {doc.active ? t('common.active') : t('common.inactive')}

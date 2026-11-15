@@ -23,6 +23,7 @@ export function setupLicenseHandlers(): void {
       getPrismaClient().doctor.count({
         where: { active: true, ...(excludeId ? { id: { not: excludeId } } : {}) },
       }),
+    activeUsers: async () => getPrismaClient().user.count({ where: { active: true } }),
     visitsThisMonth: async () => {
       const start = new Date();
       start.setDate(1);

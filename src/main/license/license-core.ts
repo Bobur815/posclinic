@@ -185,11 +185,16 @@ export const READONLY_REFUSED: ReadonlySet<string> = new Set([
   'services:update',
   'appointments:create',
   'appointments:update',
+  // v2.5 clinical workflow: new referrals and new staff logins are new business.
+  'cases:addReferral',
+  'doctors:createLogin',
 ]);
 
 /** Answers from the database the gate needs; injected so this file stays pure. */
 export interface GateFacts {
   activeDoctors(excludeId?: string): Promise<number>;
+  /** Active staff logins (the plan's `staff` limit). */
+  activeUsers(): Promise<number>;
   visitsThisMonth(): Promise<number>;
   /** What a visit costs and what has been paid on it so far; null if there is no such visit. */
   appointmentBalance(id: string): Promise<{ total: number; paid: number } | null>;
@@ -199,7 +204,8 @@ export interface GateFacts {
 export type Refusal =
   | `license.refused.${'setup' | 'blocked' | 'checkin-required' | 'no-seat' | 'invalid'}`
   | `license.feature.${LicenseFeature}`
-  | 'license.limit.monthlyVisits';
+  | 'license.limit.monthlyVisits'
+  | 'license.limit.staff';
 
 const REPORT_RANGE_FREE_MS = DAY_MS;
 
@@ -259,6 +265,10 @@ async function needed(
       return (await facts.activeDoctors(String(args[0] ?? ''))) >= 1
         ? 'license.feature.multiDoctor'
         : null;
+    case 'doctors:createLogin': {
+      const max = state.limits.staff;
+      return max !== null && (await facts.activeUsers()) >= max ? 'license.limit.staff' : null;
+    }
     case 'print:prescription':
       return has('printPrescription') ? null : 'license.feature.printPrescription';
     default:

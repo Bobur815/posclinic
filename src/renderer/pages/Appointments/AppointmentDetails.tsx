@@ -20,6 +20,7 @@ interface AppointmentData {
   diagnosis: string | null;
   prescription: string | null;
   notes: string | null;
+  caseId: string | null;
   patient: { id: string; fullName: string; phone: string; patientCode: string };
   doctor: { fullName: string; specialty: string | null } | null;
   items: Array<{
@@ -255,6 +256,11 @@ export function AppointmentDetails() {
           <Title>{appointment.appointmentNumber}</Title>
         </TitleBlock>
         <Actions>
+          {appointment.caseId && (
+            <Btn $variant="secondary" onClick={() => navigate(`/cases/${appointment.caseId}`)}>
+              {t('care.openCase')}
+            </Btn>
+          )}
           {appointment.paymentStatus !== 'PAID' && appointment.status !== 'CANCELLED' && (
             <Btn $variant="primary" onClick={() => navigate(`/appointments/${id}/checkout`)}>
               <CreditCard size={15} />

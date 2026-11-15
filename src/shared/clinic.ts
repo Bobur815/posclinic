@@ -33,6 +33,7 @@ export interface PatientDto {
   /** SOATO codes (shared/address.ts); null when no address was chosen. */
   regionCode: string | null;
   districtCode: string | null;
+  chronicConditions: string | null;
   notes: string | null;
   active: boolean;
   createdAt: string;
@@ -55,6 +56,8 @@ export interface PatientInput {
   /** SOATO codes from the AddressSelector; the district must belong to the region. */
   regionCode?: string | null;
   districtCode?: string | null;
+  /** Medical field: a doctor / nurse may edit it (with allergies and blood type). */
+  chronicConditions?: string | null;
   notes?: string | null;
 }
 
@@ -64,6 +67,10 @@ export interface DoctorDto {
   phone: string | null;
   specialty: string | null;
   licenseNo: string | null;
+  /** The doctor's till login; null = none yet. */
+  userId: string | null;
+  /** `doctors:getAll` only. */
+  user?: { phone: string; active: boolean } | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -313,4 +320,130 @@ export interface TodaySummaryDto {
   /** Today's visits not cancelled and not fully paid. */
   pending: number;
   recentAppointments: Array<Omit<AppointmentDto, 'items'>>;
+}
+
+// ── Doctor's side (v2.5, P3) ──────────────────────────────────────────────────────────────
+
+/** `queue:listMine` / `queue:listOverview`: a paid line waiting in a queue. */
+export interface QueueItemDto extends AppointmentItemDto {
+  service: { id: string; name: string; kind: ServiceKind };
+  doctor: { id: string; fullName: string } | null;
+  appointment: {
+    id: string;
+    appointmentNumber: string;
+    appointmentDate: string;
+    createdAt: string;
+    caseId: string | null;
+    patient: Pick<PatientDto, 'id' | 'patientCode' | 'fullName' | 'phone' | 'birthDate' | 'gender'>;
+    case: { id: string; caseNumber: string; status: CaseStatus } | null;
+  };
+}
+
+export interface VitalsDto {
+  id: string;
+  patientId: string;
+  caseId: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  temperature: number | null;
+  bpSystolic: number | null;
+  bpDiastolic: number | null;
+  pregnant: boolean | null;
+  complaints: string | null;
+  recordedBy: string | null;
+  recordedAt: string;
+}
+
+export interface VitalsInput {
+  patientId: string;
+  caseId?: string | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  temperature?: number | null;
+  bpSystolic?: number | null;
+  bpDiastolic?: number | null;
+  pregnant?: boolean | null;
+  complaints?: string | null;
+}
+
+export interface TreatmentSessionDto {
+  id: string;
+  itemId: string;
+  number: number;
+  plannedDate: string | null;
+  doneAt: string | null;
+  doneBy: string | null;
+}
+
+export interface AnalysisResultDto {
+  id: string;
+  itemId: string;
+  caseId: string | null;
+  patientId: string;
+  serviceId: string;
+  outcome: 'POSITIVE' | 'NEGATIVE' | null;
+  value: number | null;
+  unit: string | null;
+  finding: string | null;
+  comment: string | null;
+  sampleTakenAt: string | null;
+  enteredBy: string | null;
+  enteredAt: string | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  service: { id: string; name: string; resultType: ResultType | null };
+}
+
+/** `cases:get`: everything the case page shows. */
+export interface CaseDetailDto {
+  id: string;
+  caseNumber: string;
+  patientId: string;
+  doctorId: string | null;
+  status: CaseStatus;
+  complaint: string | null;
+  diagnosis: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  patient: PatientDto;
+  doctor: { id: string; fullName: string } | null;
+  appointments: Array<
+    Omit<AppointmentDto, 'patient' | 'doctor' | 'items'> & {
+      items: Array<
+        AppointmentItemDto & {
+          service: { id: string; name: string; kind: ServiceKind; resultType: ResultType | null };
+          doctor: { id: string; fullName: string } | null;
+          sessions: TreatmentSessionDto[];
+        }
+      >;
+    }
+  >;
+  referrals: Array<ReferralDto & { service: { id: string; name: string; kind: ServiceKind } }>;
+  vitals: VitalsDto[];
+  analysisResults: AnalysisResultDto[];
+  latestVitals: VitalsDto | null;
+  otherCases: Array<{
+    id: string;
+    caseNumber: string;
+    status: CaseStatus;
+    openedAt: string;
+    closedAt: string | null;
+    diagnosis: string | null;
+  }>;
+}
+
+export interface CaseUpdateInput {
+  complaint?: string | null;
+  diagnosis?: string | null;
+  close?: boolean;
+  reopen?: boolean;
+}
+
+/** `cases:addReferral`: an analysis (quantity) or a course (perDay × days). */
+export interface ReferralInput {
+  serviceId: string;
+  quantity?: number;
+  perDay?: number | null;
+  days?: number | null;
+  instructions?: string | null;
 }

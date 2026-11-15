@@ -13,6 +13,7 @@ import {
   UserCog,
   Plus,
   RefreshCw,
+  ListOrdered,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuthStore } from '../../store/auth-store';
@@ -143,12 +144,19 @@ export function Sidebar() {
   const location = useLocation();
 
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'CLINIC_ADMIN';
+  // Doctors and nurses work from their queue; registration and money are reception's.
+  const isClinical = user?.role === 'DOCTOR' || user?.role === 'NURSE';
 
-  const mainItems: NavItemConfig[] = [
-    { to: '/', icon: <LayoutDashboard size={18} />, label: t('nav.dashboard'), exact: true },
-  ];
+  const mainItems: NavItemConfig[] = isClinical
+    ? [{ to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.myQueue') }]
+    : [
+        { to: '/', icon: <LayoutDashboard size={18} />, label: t('nav.dashboard'), exact: true },
+        { to: '/queue', icon: <ListOrdered size={18} />, label: t('nav.queue') },
+      ];
 
-  const clinicItems: NavItemConfig[] = [
+  const clinicItems: NavItemConfig[] = isClinical
+    ? [{ to: '/patients', icon: <Users size={18} />, label: t('nav.patients') }]
+    : [
     { to: '/patients', icon: <Users size={18} />, label: t('nav.patients') },
     { to: '/appointments', icon: <Calendar size={18} />, label: t('nav.appointments') },
     { to: '/services', icon: <ClipboardList size={18} />, label: t('nav.services') },
@@ -187,6 +195,7 @@ export function Sidebar() {
       <NavSection>
         <SectionLabel $collapsed={isCollapsed}>{t('nav.main')}</SectionLabel>
         {mainItems.map(renderItem)}
+        {!isClinical && (
         <NavItemBtn
           $collapsed={isCollapsed}
           onClick={() => window.location.hash = '#/appointments/new'}
@@ -195,6 +204,7 @@ export function Sidebar() {
           <Plus size={18} />
           <ItemLabel $collapsed={isCollapsed}>{t('nav.newAppointment')}</ItemLabel>
         </NavItemBtn>
+        )}
       </NavSection>
 
       <NavSection>
@@ -202,10 +212,12 @@ export function Sidebar() {
         {clinicItems.map(renderItem)}
       </NavSection>
 
-      <NavSection>
-        <SectionLabel $collapsed={isCollapsed}>{t('nav.reports')}</SectionLabel>
-        {reportItems.map(renderItem)}
-      </NavSection>
+      {!isClinical && (
+        <NavSection>
+          <SectionLabel $collapsed={isCollapsed}>{t('nav.reports')}</SectionLabel>
+          {reportItems.map(renderItem)}
+        </NavSection>
+      )}
 
       {isAdmin && (
         <NavSection>

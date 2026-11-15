@@ -5,6 +5,13 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  CaseDetailDto,
+  CaseUpdateInput,
+  QueueItemDto,
+  ReferralDto,
+  ReferralInput,
+  VitalsDto,
+  VitalsInput,
   ClinicSettingsDto,
   OpenCaseDto,
   PatientSearch,
@@ -69,6 +76,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     create: (data: DoctorInput) => ipcRenderer.invoke('doctors:create', data),
     update: (id: string, data: DoctorInput) =>
       ipcRenderer.invoke('doctors:update', id, data),
+    createLogin: (doctorId: string, data: { phone: string; password: string }) =>
+      ipcRenderer.invoke('doctors:createLogin', doctorId, data),
   },
 
   // Services
@@ -98,6 +107,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Cases (one patient journey) and clinic workflow settings
   cases: {
     forPatient: (patientId: string) => ipcRenderer.invoke('cases:forPatient', patientId),
+    get: (caseId: string) => ipcRenderer.invoke('cases:get', caseId),
+    update: (caseId: string, data: CaseUpdateInput) =>
+      ipcRenderer.invoke('cases:update', caseId, data),
+    recordVitals: (data: VitalsInput) => ipcRenderer.invoke('cases:recordVitals', data),
+    addReferral: (caseId: string, data: ReferralInput) =>
+      ipcRenderer.invoke('cases:addReferral', caseId, data),
+    cancelReferral: (referralId: string) => ipcRenderer.invoke('cases:cancelReferral', referralId),
+  },
+  queue: {
+    listMine: () => ipcRenderer.invoke('queue:listMine'),
+    listOverview: () => ipcRenderer.invoke('queue:listOverview'),
+    start: (itemId: string) => ipcRenderer.invoke('queue:start', itemId),
+    finish: (itemId: string) => ipcRenderer.invoke('queue:finish', itemId),
   },
   clinic: {
     getSettings: () => ipcRenderer.invoke('clinic:getSettings'),
@@ -237,6 +259,7 @@ declare global {
         getActive: () => Promise<DoctorDto[]>;
         create: (data: DoctorInput) => Promise<DoctorDto>;
         update: (id: string, data: DoctorInput) => Promise<DoctorDto>;
+        createLogin: (doctorId: string, data: { phone: string; password: string }) => Promise<DoctorDto>;
       };
       services: {
         getAll: () => Promise<ServiceDto[]>;
@@ -256,6 +279,17 @@ declare global {
       };
       cases: {
         forPatient: (patientId: string) => Promise<OpenCaseDto[]>;
+        get: (caseId: string) => Promise<CaseDetailDto>;
+        update: (caseId: string, data: CaseUpdateInput) => Promise<unknown>;
+        recordVitals: (data: VitalsInput) => Promise<VitalsDto>;
+        addReferral: (caseId: string, data: ReferralInput) => Promise<ReferralDto>;
+        cancelReferral: (referralId: string) => Promise<ReferralDto>;
+      };
+      queue: {
+        listMine: () => Promise<QueueItemDto[]>;
+        listOverview: () => Promise<QueueItemDto[]>;
+        start: (itemId: string) => Promise<unknown>;
+        finish: (itemId: string) => Promise<unknown>;
       };
       clinic: {
         getSettings: () => Promise<ClinicSettingsDto>;

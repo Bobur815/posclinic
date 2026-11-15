@@ -16,6 +16,8 @@ import { PatientForm } from './pages/Patients/PatientForm';
 import { PatientDetails } from './pages/Patients/PatientDetails';
 import { AppointmentList } from './pages/Appointments/AppointmentList';
 import { RegisterVisitPage } from './pages/Appointments/RegisterVisitPage';
+import { CasePage } from './pages/Care/CasePage';
+import { QueuePage } from './pages/Care/QueuePage';
 import { AppointmentDetails } from './pages/Appointments/AppointmentDetails';
 import { CheckoutPage } from './pages/Appointments/CheckoutPage';
 import { ServiceList } from './pages/Services/ServiceList';
@@ -23,6 +25,12 @@ import { DoctorList } from './pages/Doctors/DoctorList';
 import { DailyReport } from './pages/Reports/DailyReport';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { UserSettingsPage } from './pages/Settings/UserSettingsPage';
+
+/** Home: doctors and nurses work from their queue; everyone else gets the dashboard. */
+function HomeRoute() {
+  const role = useAuthStore((st) => st.user?.role);
+  return role === 'DOCTOR' || role === 'NURSE' ? <Navigate to="/queue" replace /> : <DashboardPage />;
+}
 
 function App() {
   const { t } = useTranslation();
@@ -73,7 +81,9 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
+          <Route index element={<HomeRoute />} />
+          <Route path="queue" element={<QueuePage />} />
+          <Route path="cases/:id" element={<CasePage />} />
           <Route path="patients" element={<PatientList />} />
           <Route path="patients/new" element={<PatientForm />} />
           <Route path="patients/:id" element={<PatientDetails />} />

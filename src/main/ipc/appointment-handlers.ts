@@ -1,4 +1,4 @@
-import { handle, ipcSafe, RefusedError } from './ipc-safe';
+import { handle, ipcSafe, RefusedError, requireReception } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
@@ -57,6 +57,7 @@ export async function withUniqueRetry<T>(
 export function setupAppointmentHandlers(): void {
   handle('appointments:create', async (ctx, data: RegisterInput) => {
     try {
+      requireReception(ctx);
       const appointment = await withUniqueRetry(
         ['appointment_number', 'appointmentNumber', 'case_number', 'caseNumber'],
         () => registerOrder(getPrismaClient(), ctx, data ?? {}, ctx.terminalId || getAppConfig().terminalId),
@@ -203,7 +204,7 @@ export function setupAppointmentHandlers(): void {
   handle(
     'appointments:checkout',
     async (
-      _event,
+      ctx,
       id: string,
       data: {
         paymentMethod: string;
@@ -212,6 +213,7 @@ export function setupAppointmentHandlers(): void {
       },
     ) => {
       try {
+        requireReception(ctx);
         const amount = Number(data?.amount);
         if (!Number.isFinite(amount) || amount <= 0) throw new RefusedError('errors.invalidAmount');
         const prisma = getPrismaClient();
