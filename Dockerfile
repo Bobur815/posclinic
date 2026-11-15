@@ -28,8 +28,9 @@ RUN apk add --no-cache openssl libc6-compat su-exec
 
 COPY --from=builder --chown=node:node /app/package*.json ./
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/dist/server ./dist/server
-COPY --from=builder --chown=node:node /app/dist/web ./dist/web
+# All of dist/: nest build compiles src/shared (phone, licence types) to dist/shared next to
+# dist/server, and the server requires it at runtime.
+COPY --from=builder --chown=node:node /app/dist ./dist
 COPY --from=builder --chown=node:node /app/prisma ./prisma
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
