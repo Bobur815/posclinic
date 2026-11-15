@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -6,6 +6,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { ipcErrorKey } from '../../store/lan-store';
 import type { Gender } from '../../../shared/clinic';
+import { AddressSelector, type AddressValue } from '../../components/address/AddressSelector';
 
 const Page = styled.div`
   max-width: 720px;
@@ -99,6 +100,12 @@ const Textarea = styled.textarea`
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
 `;
 
+const Hint = styled.p`
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
 const Footer = styled.div`
   display: flex;
   justify-content: flex-end;
@@ -152,9 +159,17 @@ export function PatientForm() {
     bloodType: '',
     allergies: '',
     address: '',
-    city: '',
+    regionCode: null as string | null,
+    districtCode: null as string | null,
     notes: '',
   });
+  /** Free-text city of a patient saved before the address selector; shown until replaced. */
+  const [legacyCity, setLegacyCity] = useState('');
+
+  const handleAddress = useCallback(
+    (v: AddressValue) => setForm((prev) => ({ ...prev, ...v })),
+    [],
+  );
 
   useEffect(() => {
     if (isEdit && id) {
@@ -169,9 +184,11 @@ export function PatientForm() {
             bloodType: data.bloodType || '',
             allergies: data.allergies || '',
             address: data.address || '',
-            city: data.city || '',
+            regionCode: data.regionCode,
+            districtCode: data.districtCode,
             notes: data.notes || '',
           });
+          if (!data.regionCode) setLegacyCity(data.city || '');
         }
         setIsFetching(false);
       });
@@ -186,11 +203,15 @@ export function PatientForm() {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // Codes only: the till derives `city` from them. With no region chosen, a legacy free-text
+      // city is left as it was (update omits the address so main does not clear it).
+      const { regionCode, districtCode, ...rest } = form;
+      const payload = regionCode || !legacyCity ? { ...rest, regionCode, districtCode } : rest;
       if (isEdit && id) {
-        await window.electronAPI.patients.update(id, form);
+        await window.electronAPI.patients.update(id, payload);
         toast.success(t('common.success'));
       } else {
-        await window.electronAPI.patients.create(form);
+        await window.electronAPI.patients.create(payload);
         toast.success(t('common.success'));
       }
       navigate(isEdit && id ? `/patients/${id}` : '/patients');
@@ -247,10 +268,18 @@ export function PatientForm() {
                 ))}
               </Select>
             </FormGroup>
-            <FormGroup>
-              <Label>{t('patients.city')}</Label>
-              <Input value={form.city} onChange={handleChange('city')} />
-            </FormGroup>
+            <FormGroup />
+            <FullWidth>
+              <AddressSelector
+                value={{ regionCode: form.regionCode, districtCode: form.districtCode }}
+                onChange={handleAddress}
+              />
+              {legacyCity && !form.regionCode && (
+                <Hint>
+                  {t('address.legacyCity')}: {legacyCity}
+                </Hint>
+              )}
+            </FullWidth>
             <FullWidth>
               <FormGroup>
                 <Label>{t('patients.allergies')}</Label>
@@ -259,7 +288,7 @@ export function PatientForm() {
             </FullWidth>
             <FullWidth>
               <FormGroup>
-                <Label>{t('patients.address')}</Label>
+                <Label>{t('address.street')}</Label>
                 <Input value={form.address} onChange={handleChange('address')} />
               </FormGroup>
             </FullWidth>

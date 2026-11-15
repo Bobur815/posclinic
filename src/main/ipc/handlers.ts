@@ -1,3 +1,4 @@
+import { setupAddressHandlers } from './address-handlers';
 import { setupAuthHandlers } from './auth-handlers';
 import { setupPatientHandlers } from './patient-handlers';
 import { setupDoctorHandlers } from './doctor-handlers';
@@ -8,6 +9,7 @@ import { setupPrintHandlers } from './print-handlers';
 export function setupIpcHandlers(): void {
   setupAuthHandlers();
   setupPatientHandlers();
+  setupAddressHandlers();
   setupDoctorHandlers();
   setupServiceHandlers();
   setupAppointmentHandlers();

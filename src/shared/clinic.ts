@@ -21,7 +21,11 @@ export interface PatientDto {
   bloodType: string | null;
   allergies: string | null;
   address: string | null;
+  /** "District, Region" (Uzbek) when chosen from the selector; legacy free text otherwise. */
   city: string | null;
+  /** SOATO codes (shared/address.ts); null when no address was chosen. */
+  regionCode: string | null;
+  districtCode: string | null;
   notes: string | null;
   active: boolean;
   createdAt: string;
@@ -37,8 +41,13 @@ export interface PatientInput {
   gender?: Gender | '' | null;
   bloodType?: string | null;
   allergies?: string | null;
+  /** Street / house (free text). */
   address?: string | null;
+  /** Legacy free text; ignored when regionCode/districtCode are sent (the till derives it). */
   city?: string | null;
+  /** SOATO codes from the AddressSelector; the district must belong to the region. */
+  regionCode?: string | null;
+  districtCode?: string | null;
   notes?: string | null;
 }
 

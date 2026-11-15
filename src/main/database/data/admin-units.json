@@ -1,0 +1,2009 @@
+{
+  "source": [
+    {
+      "name": "Statistics Agency of Uzbekistan - MHOBT/SOATO departmental classifier (XLSX), annex 1 to State Statistics Committee order No. 59 of 22 July 2020",
+      "url": "https://stat.uz/img/news/soato-20_04_2022_p90343.xlsx",
+      "listedOn": "https://stat.uz/uz/interaktiv-xizmatlar/statistik-klassifikasiyalar",
+      "retrievedAt": "2026-11-15",
+      "version": "file dated 20.04.2022 (latest version linked on stat.uz as of retrieval)",
+      "usedFor": "codes, hierarchy, nameUz, nameUzCyrl, nameRu"
+    },
+    {
+      "name": "Statistics Agency SIAT portal - indicator 2.0x \"Permanent population (total)\" (sdmx_data_246.json), regional/district breakdown keyed by MHOBT code",
+      "url": "https://api.siat.stat.uz/media/uploads/sdmx/sdmx_data_246.json",
+      "retrievedAt": "2026-11-15",
+      "version": "last modified 2026-11-12",
+      "usedFor": "cross-check of current code set (2026); nameEn"
+    },
+    {
+      "name": "SIAT portal - indicators \"Districts\" (307) and \"Cities\" (290) counts by region",
+      "url": "https://api.siat.stat.uz/media/uploads/sdmx/sdmx_data_307.json",
+      "retrievedAt": "2026-11-15",
+      "version": "last modified 2026-06-12",
+      "usedFor": "cross-check of district counts per region"
+    }
+  ],
+  "generatedAt": "2026-11-15T15:27:16+00:00",
+  "units": [
+    {
+      "code": "1703",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Andijon viloyati",
+      "nameUzCyrl": "Андижон вилояти",
+      "nameRu": "Андижанская область",
+      "nameEn": "Andijan region"
+    },
+    {
+      "code": "1703202",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Oltinko‘l tumani",
+      "nameUzCyrl": "Олтинкўл тумани",
+      "nameRu": "Алтынкульский район",
+      "nameEn": "Altynkul district"
+    },
+    {
+      "code": "1703203",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Andijon tumani",
+      "nameUzCyrl": "Андижон тумани",
+      "nameRu": "Андижанский район",
+      "nameEn": "Andijan district"
+    },
+    {
+      "code": "1703206",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Baliqchi tumani",
+      "nameUzCyrl": "Балиқчи тумани",
+      "nameRu": "Балыкчинский район",
+      "nameEn": "Balykchi district"
+    },
+    {
+      "code": "1703209",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Bo‘ston tumani",
+      "nameUzCyrl": "Бўстон тумани",
+      "nameRu": "Бустонский район",
+      "nameEn": "Bustan district"
+    },
+    {
+      "code": "1703210",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Buloqboshi tumani",
+      "nameUzCyrl": "Булоқбоши тумани",
+      "nameRu": "Булакбашинский район",
+      "nameEn": "Bulakbashi district"
+    },
+    {
+      "code": "1703211",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Jalaquduq tumani",
+      "nameUzCyrl": "Жалақудуқ тумани",
+      "nameRu": "Жалакудукский район",
+      "nameEn": "Jalaquduk district"
+    },
+    {
+      "code": "1703214",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Izboskan tumani",
+      "nameUzCyrl": "Избоскан тумани",
+      "nameRu": "Избасканский район",
+      "nameEn": "Izbaskan district"
+    },
+    {
+      "code": "1703217",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Ulug‘nor tumani",
+      "nameUzCyrl": "Улуғнор тумани",
+      "nameRu": "Улугнорский район",
+      "nameEn": "Ulugnor district"
+    },
+    {
+      "code": "1703220",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Qo‘rg‘ontepa tumani",
+      "nameUzCyrl": "Қўрғонтепа тумани",
+      "nameRu": "Кургантепинский район",
+      "nameEn": "Kurgantepa district"
+    },
+    {
+      "code": "1703224",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Asaka tumani",
+      "nameUzCyrl": "Асака тумани",
+      "nameRu": "Асакинский район",
+      "nameEn": "Asaka district"
+    },
+    {
+      "code": "1703227",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Marxamat tumani",
+      "nameUzCyrl": "Мархамат тумани",
+      "nameRu": "Мархаматский район",
+      "nameEn": "Markhamat district"
+    },
+    {
+      "code": "1703230",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Shaxrixon tumani",
+      "nameUzCyrl": "Шахрихон тумани",
+      "nameRu": "Шахриханский район",
+      "nameEn": "Shakhrikhan district"
+    },
+    {
+      "code": "1703232",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Paxtaobod tumani",
+      "nameUzCyrl": "Пахтаобод тумани",
+      "nameRu": "Пахтаабадский район",
+      "nameEn": "Pakhtaabad district"
+    },
+    {
+      "code": "1703236",
+      "parentCode": "1703",
+      "type": "DISTRICT",
+      "nameUz": "Xo‘jaobod tumani",
+      "nameUzCyrl": "Хўжаобод тумани",
+      "nameRu": "Ходжаабадский район",
+      "nameEn": "Khojaabad district"
+    },
+    {
+      "code": "1703401",
+      "parentCode": "1703",
+      "type": "CITY",
+      "nameUz": "Andijon",
+      "nameUzCyrl": "Андижон",
+      "nameRu": "Андижан",
+      "nameEn": "Andijan city"
+    },
+    {
+      "code": "1703408",
+      "parentCode": "1703",
+      "type": "CITY",
+      "nameUz": "Xonobod",
+      "nameUzCyrl": "Хонобод",
+      "nameRu": "Ханабад",
+      "nameEn": "Khanabad city"
+    },
+    {
+      "code": "1706",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Buxoro viloyati",
+      "nameUzCyrl": "Бухоро вилояти",
+      "nameRu": "Бухарская область",
+      "nameEn": "Bukhara region"
+    },
+    {
+      "code": "1706204",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Olot tumani",
+      "nameUzCyrl": "Олот тумани",
+      "nameRu": "Алатский район",
+      "nameEn": "Alat district"
+    },
+    {
+      "code": "1706207",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Buxoro tumani",
+      "nameUzCyrl": "Бухоро тумани",
+      "nameRu": "Бухарский район",
+      "nameEn": "Bukhara district"
+    },
+    {
+      "code": "1706212",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Vobkent tumani",
+      "nameUzCyrl": "Вобкент тумани",
+      "nameRu": "Вабкентский район",
+      "nameEn": "Vobkent district"
+    },
+    {
+      "code": "1706215",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "G‘ijduvon tumani",
+      "nameUzCyrl": "Ғиждувон тумани",
+      "nameRu": "Гиждуванский район",
+      "nameEn": "Gijduvan district"
+    },
+    {
+      "code": "1706219",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Kogon tumani",
+      "nameUzCyrl": "Когон тумани",
+      "nameRu": "Каганский район",
+      "nameEn": "Kagan district"
+    },
+    {
+      "code": "1706230",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Qorako‘l tumani",
+      "nameUzCyrl": "Қоракўл тумани",
+      "nameRu": "Каракульский район",
+      "nameEn": "Karakul district"
+    },
+    {
+      "code": "1706232",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Qorovulbozor tumani",
+      "nameUzCyrl": "Қоровулбозор тумани",
+      "nameRu": "Караулбазарский район",
+      "nameEn": "Qorovulbozor district"
+    },
+    {
+      "code": "1706240",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Peshku tumani",
+      "nameUzCyrl": "Пешку тумани",
+      "nameRu": "Пешкунский район",
+      "nameEn": "Peshkun district"
+    },
+    {
+      "code": "1706242",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Romitan tumani",
+      "nameUzCyrl": "Ромитан тумани",
+      "nameRu": "Ромитанский район",
+      "nameEn": "Romitan district"
+    },
+    {
+      "code": "1706246",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Jondor tumani",
+      "nameUzCyrl": "Жондор тумани",
+      "nameRu": "Жондорский район",
+      "nameEn": "Jondor district"
+    },
+    {
+      "code": "1706258",
+      "parentCode": "1706",
+      "type": "DISTRICT",
+      "nameUz": "Shofirkon tumani",
+      "nameUzCyrl": "Шофиркон тумани",
+      "nameRu": "Шафирканский район",
+      "nameEn": "Shafirkan district"
+    },
+    {
+      "code": "1706401",
+      "parentCode": "1706",
+      "type": "CITY",
+      "nameUz": "Buxoro",
+      "nameUzCyrl": "Бухоро",
+      "nameRu": "Бухара",
+      "nameEn": "Bukhara city"
+    },
+    {
+      "code": "1706403",
+      "parentCode": "1706",
+      "type": "CITY",
+      "nameUz": "Kogon",
+      "nameUzCyrl": "Когон",
+      "nameRu": "Каган",
+      "nameEn": "Kagan city"
+    },
+    {
+      "code": "1708",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Jizzax viloyati",
+      "nameUzCyrl": "Жиззах вилояти",
+      "nameRu": "Джизакская область",
+      "nameEn": "Jizzakh region"
+    },
+    {
+      "code": "1708201",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Arnasoy tumani",
+      "nameUzCyrl": "Арнасой тумани",
+      "nameRu": "Арнасайский район",
+      "nameEn": "Arnasay district"
+    },
+    {
+      "code": "1708204",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Baxmal tumani",
+      "nameUzCyrl": "Бахмал тумани",
+      "nameRu": "Бахмальский район",
+      "nameEn": "Bakhmal district"
+    },
+    {
+      "code": "1708209",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "G‘allaorol tumani",
+      "nameUzCyrl": "Ғаллаорол тумани",
+      "nameRu": "Галляаральский район",
+      "nameEn": "Gallaaral district"
+    },
+    {
+      "code": "1708212",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Sharof Rashidov tumani",
+      "nameUzCyrl": "Шароф Рашидов тумани",
+      "nameRu": "Шароф Рашидовский район",
+      "nameEn": "Sharof Rashidov district"
+    },
+    {
+      "code": "1708215",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Do‘stlik tumani",
+      "nameUzCyrl": "Дўстлик тумани",
+      "nameRu": "Дустликский район",
+      "nameEn": "Dustlik district"
+    },
+    {
+      "code": "1708218",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Zomin tumani",
+      "nameUzCyrl": "Зомин тумани",
+      "nameRu": "Зааминский район",
+      "nameEn": "Zomin district"
+    },
+    {
+      "code": "1708220",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Zarbdor tumani",
+      "nameUzCyrl": "Зарбдор тумани",
+      "nameRu": "Зарбдарский район",
+      "nameEn": "Zarbdar district"
+    },
+    {
+      "code": "1708223",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Mirzacho‘l tumani",
+      "nameUzCyrl": "Мирзачўл тумани",
+      "nameRu": "Мирзачульский район",
+      "nameEn": "Mirzachul district"
+    },
+    {
+      "code": "1708225",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Zafarobod tumani",
+      "nameUzCyrl": "Зафаробод тумани",
+      "nameRu": "Зафарабадский район",
+      "nameEn": "Zafarabad district"
+    },
+    {
+      "code": "1708228",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Paxtakor tumani",
+      "nameUzCyrl": "Пахтакор тумани",
+      "nameRu": "Пахтакорский район",
+      "nameEn": "Pakhtakor district"
+    },
+    {
+      "code": "1708235",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Forish tumani",
+      "nameUzCyrl": "Фориш тумани",
+      "nameRu": "Фаришский район",
+      "nameEn": "Farish district"
+    },
+    {
+      "code": "1708237",
+      "parentCode": "1708",
+      "type": "DISTRICT",
+      "nameUz": "Yangiobod tumani",
+      "nameUzCyrl": "Янгиобод тумани",
+      "nameRu": "Янгиободский район",
+      "nameEn": "Yangiabad district"
+    },
+    {
+      "code": "1708401",
+      "parentCode": "1708",
+      "type": "CITY",
+      "nameUz": "Jizzax",
+      "nameUzCyrl": "Жиззах",
+      "nameRu": "Джизак",
+      "nameEn": "Jizzakh city"
+    },
+    {
+      "code": "1710",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Qashqadaryo viloyati",
+      "nameUzCyrl": "Қашқадарё вилояти",
+      "nameRu": "Кашкадарьинская область",
+      "nameEn": "Kashkadarya region"
+    },
+    {
+      "code": "1710207",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "G‘uzor tumani",
+      "nameUzCyrl": "Ғузор тумани",
+      "nameRu": "Гузарский район",
+      "nameEn": "Gissar district"
+    },
+    {
+      "code": "1710212",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Dehqonobod tumani",
+      "nameUzCyrl": "Деҳқонобод тумани",
+      "nameRu": "Дехканабадский район",
+      "nameEn": "Dehkanabad district"
+    },
+    {
+      "code": "1710220",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Qamashi tumani",
+      "nameUzCyrl": "Қамаши тумани",
+      "nameRu": "Камашинский район",
+      "nameEn": "Kamashi district"
+    },
+    {
+      "code": "1710224",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Qarshi tumani",
+      "nameUzCyrl": "Қарши тумани",
+      "nameRu": "Каршинский район",
+      "nameEn": "Karshi district"
+    },
+    {
+      "code": "1710229",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Koson tumani",
+      "nameUzCyrl": "Косон тумани",
+      "nameRu": "Касанский район",
+      "nameEn": "Kasan district"
+    },
+    {
+      "code": "1710232",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Kitob tumani",
+      "nameUzCyrl": "Китоб тумани",
+      "nameRu": "Китабский район",
+      "nameEn": "Kitab district"
+    },
+    {
+      "code": "1710233",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Mirishkor tumani",
+      "nameUzCyrl": "Миришкор тумани",
+      "nameRu": "Миришкорский район",
+      "nameEn": "Mirishkor district"
+    },
+    {
+      "code": "1710234",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Muborak tumani",
+      "nameUzCyrl": "Муборак тумани",
+      "nameRu": "Мубарекский район",
+      "nameEn": "Mubarek district"
+    },
+    {
+      "code": "1710235",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Nishon tumani",
+      "nameUzCyrl": "Нишон тумани",
+      "nameRu": "Нишанский район",
+      "nameEn": "Nishon district"
+    },
+    {
+      "code": "1710237",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Kasbi tumani",
+      "nameUzCyrl": "Касби тумани",
+      "nameRu": "Касбинский район",
+      "nameEn": "Kasbi district"
+    },
+    {
+      "code": "1710240",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Ko‘kdala tumani",
+      "nameUzCyrl": "Кўкдала тумани",
+      "nameRu": "Кукдалинский район",
+      "nameEn": "Kukdala district"
+    },
+    {
+      "code": "1710242",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Chiroqchi tumani",
+      "nameUzCyrl": "Чироқчи тумани",
+      "nameRu": "Чиракчинский район",
+      "nameEn": "Chirakchi district"
+    },
+    {
+      "code": "1710245",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Shahrisabz tumani",
+      "nameUzCyrl": "Шаҳрисабз тумани",
+      "nameRu": "Шахрисабзский район",
+      "nameEn": "Shakhrisabz district"
+    },
+    {
+      "code": "1710250",
+      "parentCode": "1710",
+      "type": "DISTRICT",
+      "nameUz": "Yakkabog‘ tumani",
+      "nameUzCyrl": "Яккабоғ тумани",
+      "nameRu": "Яккабагский район",
+      "nameEn": "Yakkabag district"
+    },
+    {
+      "code": "1710401",
+      "parentCode": "1710",
+      "type": "CITY",
+      "nameUz": "Qarshi",
+      "nameUzCyrl": "Қарши",
+      "nameRu": "Карши",
+      "nameEn": "Karshi city"
+    },
+    {
+      "code": "1710405",
+      "parentCode": "1710",
+      "type": "CITY",
+      "nameUz": "Shahrisabz",
+      "nameUzCyrl": "Шаҳрисабз",
+      "nameRu": "Шахрисабз",
+      "nameEn": "Shakhrisabz city"
+    },
+    {
+      "code": "1712",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Navoiy viloyati",
+      "nameUzCyrl": "Навоий вилояти",
+      "nameRu": "Навоийская область",
+      "nameEn": "Navoi region"
+    },
+    {
+      "code": "1712211",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Konimex tumani",
+      "nameUzCyrl": "Конимех тумани",
+      "nameRu": "Канимехский район",
+      "nameEn": "Kanimekh district"
+    },
+    {
+      "code": "1712216",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Qiziltepa tumani",
+      "nameUzCyrl": "Қизилтепа тумани",
+      "nameRu": "Кызылтепинский район",
+      "nameEn": "Kyzyltepa district"
+    },
+    {
+      "code": "1712230",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Navbahor tumani",
+      "nameUzCyrl": "Навбаҳор тумани",
+      "nameRu": "Навбахорский район",
+      "nameEn": "Navbahor district"
+    },
+    {
+      "code": "1712234",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Karmana tumani",
+      "nameUzCyrl": "Кармана тумани",
+      "nameRu": "Карманинский район",
+      "nameEn": "Karmana district"
+    },
+    {
+      "code": "1712238",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Nurota tumani",
+      "nameUzCyrl": "Нурота тумани",
+      "nameRu": "Нуратинский район",
+      "nameEn": "Nurota district"
+    },
+    {
+      "code": "1712244",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Tomdi tumani",
+      "nameUzCyrl": "Томди тумани",
+      "nameRu": "Тамдынский район",
+      "nameEn": "Tomdy district"
+    },
+    {
+      "code": "1712248",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Uchquduq tumani",
+      "nameUzCyrl": "Учқудуқ тумани",
+      "nameRu": "Учкудукский район",
+      "nameEn": "Uchkuduk district"
+    },
+    {
+      "code": "1712251",
+      "parentCode": "1712",
+      "type": "DISTRICT",
+      "nameUz": "Xatirchi tumani",
+      "nameUzCyrl": "Хатирчи тумани",
+      "nameRu": "Хатырчинский район",
+      "nameEn": "Khatyrchi district"
+    },
+    {
+      "code": "1712401",
+      "parentCode": "1712",
+      "type": "CITY",
+      "nameUz": "Navoiy",
+      "nameUzCyrl": "Навоий",
+      "nameRu": "Навои",
+      "nameEn": "Navoi city"
+    },
+    {
+      "code": "1712408",
+      "parentCode": "1712",
+      "type": "CITY",
+      "nameUz": "Zarafshon",
+      "nameUzCyrl": "Зарафшон",
+      "nameRu": "Зарафшан",
+      "nameEn": "Zarafshan city"
+    },
+    {
+      "code": "1712412",
+      "parentCode": "1712",
+      "type": "CITY",
+      "nameUz": "G‘ozg‘on",
+      "nameUzCyrl": "Ғозғон",
+      "nameRu": "Газган",
+      "nameEn": "Gazgan city"
+    },
+    {
+      "code": "1714",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Namangan viloyati",
+      "nameUzCyrl": "Наманган вилояти",
+      "nameRu": "Наманганская область",
+      "nameEn": "Namangan region"
+    },
+    {
+      "code": "1714204",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Mingbuloq tumani",
+      "nameUzCyrl": "Мингбулоқ тумани",
+      "nameRu": "Мингбулакский район",
+      "nameEn": "Mingbulak district"
+    },
+    {
+      "code": "1714207",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Kosonsoy tumani",
+      "nameUzCyrl": "Косонсой тумани",
+      "nameRu": "Касансайский район",
+      "nameEn": "Kasansay district"
+    },
+    {
+      "code": "1714212",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Namangan tumani",
+      "nameUzCyrl": "Наманган тумани",
+      "nameRu": "Наманганский район",
+      "nameEn": "Namangan district"
+    },
+    {
+      "code": "1714216",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Norin tumani",
+      "nameUzCyrl": "Норин тумани",
+      "nameRu": "Нарынский район",
+      "nameEn": "Naryn district"
+    },
+    {
+      "code": "1714219",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Pop tumani",
+      "nameUzCyrl": "Поп тумани",
+      "nameRu": "Папский район",
+      "nameEn": "Pop district"
+    },
+    {
+      "code": "1714224",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "To‘raqo‘rg‘on tumani",
+      "nameUzCyrl": "Тўрақўрғон тумани",
+      "nameRu": "Туракурганский район",
+      "nameEn": "Turakurgan district"
+    },
+    {
+      "code": "1714229",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Uychi tumani",
+      "nameUzCyrl": "Уйчи тумани",
+      "nameRu": "Уйчинский район",
+      "nameEn": "Uychi district"
+    },
+    {
+      "code": "1714234",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Uchqo‘rg‘on tumani",
+      "nameUzCyrl": "Учқўрғон тумани",
+      "nameRu": "Учкурганский район",
+      "nameEn": "Uchkurgan district"
+    },
+    {
+      "code": "1714236",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Chortoq tumani",
+      "nameUzCyrl": "Чортоқ тумани",
+      "nameRu": "Чартакский район",
+      "nameEn": "Chartak district"
+    },
+    {
+      "code": "1714237",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Chust tumani",
+      "nameUzCyrl": "Чуст тумани",
+      "nameRu": "Чустский район",
+      "nameEn": "Chust district"
+    },
+    {
+      "code": "1714242",
+      "parentCode": "1714",
+      "type": "DISTRICT",
+      "nameUz": "Yangiqo‘rg‘on tumani",
+      "nameUzCyrl": "Янгиқўрғон тумани",
+      "nameRu": "Янгикурганский район",
+      "nameEn": "Yangikurgan district"
+    },
+    {
+      "code": "1714401",
+      "parentCode": "1714",
+      "type": "CITY",
+      "nameUz": "Namangan",
+      "nameUzCyrl": "Наманган",
+      "nameRu": "Наманган",
+      "nameEn": "Namangan city"
+    },
+    {
+      "code": "1718",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Samarqand viloyati",
+      "nameUzCyrl": "Самарқанд вилояти",
+      "nameRu": "Самаркандская область",
+      "nameEn": "Samarkand region"
+    },
+    {
+      "code": "1718203",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Oqdaryo tumani",
+      "nameUzCyrl": "Оқдарё тумани",
+      "nameRu": "Акдарьинский район",
+      "nameEn": "Akdarya district"
+    },
+    {
+      "code": "1718206",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Bulung‘ur tumani",
+      "nameUzCyrl": "Булунғур тумани",
+      "nameRu": "Булунгурский район",
+      "nameEn": "Bulungur district"
+    },
+    {
+      "code": "1718209",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Jomboy tumani",
+      "nameUzCyrl": "Жомбой тумани",
+      "nameRu": "Джамбайский район",
+      "nameEn": "Jomboy district"
+    },
+    {
+      "code": "1718212",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Ishtixon tumani",
+      "nameUzCyrl": "Иштихон тумани",
+      "nameRu": "Иштыханский район",
+      "nameEn": "Ishtykhan district"
+    },
+    {
+      "code": "1718215",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Kattaqo‘rg‘on tumani",
+      "nameUzCyrl": "Каттақўрғон тумани",
+      "nameRu": "Каттакурганский район",
+      "nameEn": "Kattakurgan district"
+    },
+    {
+      "code": "1718216",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Qo‘shrabot tumani",
+      "nameUzCyrl": "Қўшработ тумани",
+      "nameRu": "Кошрабадский район",
+      "nameEn": "Koshrabad district"
+    },
+    {
+      "code": "1718218",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Narpay tumani",
+      "nameUzCyrl": "Нарпай тумани",
+      "nameRu": "Нарпайский район",
+      "nameEn": "Narpai district"
+    },
+    {
+      "code": "1718224",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Payariq tumani",
+      "nameUzCyrl": "Паяриқ тумани",
+      "nameRu": "Пайарыкский район",
+      "nameEn": "Payaryk district"
+    },
+    {
+      "code": "1718227",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Pastdarg‘om tumani",
+      "nameUzCyrl": "Пастдарғом тумани",
+      "nameRu": "Пастдаргомский район",
+      "nameEn": "Pastdargom district"
+    },
+    {
+      "code": "1718230",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Paxtachi tumani",
+      "nameUzCyrl": "Пахтачи тумани",
+      "nameRu": "Пахтачийский район",
+      "nameEn": "Pakhtachi district"
+    },
+    {
+      "code": "1718233",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Samarqand tumani",
+      "nameUzCyrl": "Самарқанд тумани",
+      "nameRu": "Самаркандский район",
+      "nameEn": "Samarkand district"
+    },
+    {
+      "code": "1718235",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Nurobod tumani",
+      "nameUzCyrl": "Нуробод тумани",
+      "nameRu": "Нурабадский район",
+      "nameEn": "Nurabad district"
+    },
+    {
+      "code": "1718236",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Urgut tumani",
+      "nameUzCyrl": "Ургут тумани",
+      "nameRu": "Ургутский район",
+      "nameEn": "Urgut district"
+    },
+    {
+      "code": "1718238",
+      "parentCode": "1718",
+      "type": "DISTRICT",
+      "nameUz": "Tayloq tumani",
+      "nameUzCyrl": "Тайлоқ тумани",
+      "nameRu": "Тайлякский район",
+      "nameEn": "Tailak district"
+    },
+    {
+      "code": "1718401",
+      "parentCode": "1718",
+      "type": "CITY",
+      "nameUz": "Samarqand",
+      "nameUzCyrl": "Самарқанд",
+      "nameRu": "Самарканд",
+      "nameEn": "Samarkand city"
+    },
+    {
+      "code": "1718406",
+      "parentCode": "1718",
+      "type": "CITY",
+      "nameUz": "Kattaqo‘rg‘on",
+      "nameUzCyrl": "Каттақўрғон",
+      "nameRu": "Каттакурган",
+      "nameEn": "Kattaqo'rg'on city"
+    },
+    {
+      "code": "1722",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Surxondaryo viloyati",
+      "nameUzCyrl": "Сурхондарё вилояти",
+      "nameRu": "Сурхандарьинская область",
+      "nameEn": "Surkhandarya region"
+    },
+    {
+      "code": "1722201",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Oltinsoy tumani",
+      "nameUzCyrl": "Олтинсой тумани",
+      "nameRu": "Алтынсайский район",
+      "nameEn": "Altynsay district"
+    },
+    {
+      "code": "1722202",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Angor tumani",
+      "nameUzCyrl": "Ангор тумани",
+      "nameRu": "Ангорский район",
+      "nameEn": "Angor district"
+    },
+    {
+      "code": "1722203",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Bandixon tumani",
+      "nameUzCyrl": "Бандихон тумани",
+      "nameRu": "Бандихонский район",
+      "nameEn": "Bandykhan district"
+    },
+    {
+      "code": "1722204",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Boysun tumani",
+      "nameUzCyrl": "Бойсун тумани",
+      "nameRu": "Байсунский район",
+      "nameEn": "Baysun district"
+    },
+    {
+      "code": "1722207",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Muzrabot tumani",
+      "nameUzCyrl": "Музработ тумани",
+      "nameRu": "Музрабадский район",
+      "nameEn": "Muzrabad district"
+    },
+    {
+      "code": "1722210",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Denov tumani",
+      "nameUzCyrl": "Денов тумани",
+      "nameRu": "Денауский район",
+      "nameEn": "Denau district"
+    },
+    {
+      "code": "1722212",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Jarqo‘rg‘on tumani",
+      "nameUzCyrl": "Жарқўрғон тумани",
+      "nameRu": "Джаркурганский район",
+      "nameEn": "Jarkurgan district"
+    },
+    {
+      "code": "1722214",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Qumqo‘rg‘on tumani",
+      "nameUzCyrl": "Қумқўрғон тумани",
+      "nameRu": "Кумкурганский район",
+      "nameEn": "Kumkurgan district"
+    },
+    {
+      "code": "1722215",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Qiziriq tumani",
+      "nameUzCyrl": "Қизириқ тумани",
+      "nameRu": "Кизирикский район",
+      "nameEn": "Kizirik district"
+    },
+    {
+      "code": "1722217",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Sariosiyo tumani",
+      "nameUzCyrl": "Сариосиё тумани",
+      "nameRu": "Сариасийский район",
+      "nameEn": "Sariosia district"
+    },
+    {
+      "code": "1722220",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Termiz tumani",
+      "nameUzCyrl": "Термиз тумани",
+      "nameRu": "Термезский район",
+      "nameEn": "Termiz district"
+    },
+    {
+      "code": "1722221",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Uzun tumani",
+      "nameUzCyrl": "Узун тумани",
+      "nameRu": "Узунский район",
+      "nameEn": "Uzun district"
+    },
+    {
+      "code": "1722223",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Sherobod tumani",
+      "nameUzCyrl": "Шеробод тумани",
+      "nameRu": "Шерабадский район",
+      "nameEn": "Sherabad district"
+    },
+    {
+      "code": "1722226",
+      "parentCode": "1722",
+      "type": "DISTRICT",
+      "nameUz": "Sho‘rchi tumani",
+      "nameUzCyrl": "Шўрчи тумани",
+      "nameRu": "Шурчинский район",
+      "nameEn": "Shurchi district"
+    },
+    {
+      "code": "1722401",
+      "parentCode": "1722",
+      "type": "CITY",
+      "nameUz": "Termiz",
+      "nameUzCyrl": "Термиз",
+      "nameRu": "Термез",
+      "nameEn": "Termiz city"
+    },
+    {
+      "code": "1724",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Sirdaryo viloyati",
+      "nameUzCyrl": "Сирдарё вилояти",
+      "nameRu": "Сырдарьинская область",
+      "nameEn": "Syrdarya region"
+    },
+    {
+      "code": "1724206",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Oqoltin tumani",
+      "nameUzCyrl": "Оқолтин тумани",
+      "nameRu": "Акалтынский район",
+      "nameEn": "Akaltyn district"
+    },
+    {
+      "code": "1724212",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Boyovut tumani",
+      "nameUzCyrl": "Боёвут тумани",
+      "nameRu": "Баяутский район",
+      "nameEn": "Bayaut district"
+    },
+    {
+      "code": "1724216",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Sayxunobod tumani",
+      "nameUzCyrl": "Сайхунобод тумани",
+      "nameRu": "Сайхунабадский район",
+      "nameEn": "Saykhunabad district"
+    },
+    {
+      "code": "1724220",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Guliston tumani",
+      "nameUzCyrl": "Гулистон тумани",
+      "nameRu": "Гулистанский район",
+      "nameEn": "Gulistan district"
+    },
+    {
+      "code": "1724226",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Sardoba tumani",
+      "nameUzCyrl": "Сардоба тумани",
+      "nameRu": "Сардобский район",
+      "nameEn": "Sardoba district"
+    },
+    {
+      "code": "1724228",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Mirzaobod tumani",
+      "nameUzCyrl": "Мирзаобод тумани",
+      "nameRu": "Мирзаабадский район",
+      "nameEn": "Mirzaabad district"
+    },
+    {
+      "code": "1724231",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Sirdaryo tumani",
+      "nameUzCyrl": "Сирдарё тумани",
+      "nameRu": "Сырдарьинский район",
+      "nameEn": "Syrdarya district"
+    },
+    {
+      "code": "1724235",
+      "parentCode": "1724",
+      "type": "DISTRICT",
+      "nameUz": "Xovos tumani",
+      "nameUzCyrl": "Ховос тумани",
+      "nameRu": "Хавасский район",
+      "nameEn": "Khovos district"
+    },
+    {
+      "code": "1724401",
+      "parentCode": "1724",
+      "type": "CITY",
+      "nameUz": "Guliston",
+      "nameUzCyrl": "Гулистон",
+      "nameRu": "Гулистан",
+      "nameEn": "Gulistan city"
+    },
+    {
+      "code": "1724410",
+      "parentCode": "1724",
+      "type": "CITY",
+      "nameUz": "Shirin",
+      "nameUzCyrl": "Ширин",
+      "nameRu": "Ширин",
+      "nameEn": "Shirin city"
+    },
+    {
+      "code": "1724413",
+      "parentCode": "1724",
+      "type": "CITY",
+      "nameUz": "Yangiyer",
+      "nameUzCyrl": "Янгиер",
+      "nameRu": "Янгиер",
+      "nameEn": "Yangier city"
+    },
+    {
+      "code": "1726",
+      "parentCode": null,
+      "type": "CITY",
+      "nameUz": "Toshkent shahri",
+      "nameUzCyrl": "Тошкент шаҳри",
+      "nameRu": "город Ташкент",
+      "nameEn": "Tashkent city"
+    },
+    {
+      "code": "1726262",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Uchtepa tumani",
+      "nameUzCyrl": "Учтепа тумани",
+      "nameRu": "Учтепинский район",
+      "nameEn": "Uchtepa district"
+    },
+    {
+      "code": "1726264",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Bektemir tumani",
+      "nameUzCyrl": "Бектемир тумани",
+      "nameRu": "Бектемирский район",
+      "nameEn": "Bektemir district"
+    },
+    {
+      "code": "1726266",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Yunusobod tumani",
+      "nameUzCyrl": "Юнусобод тумани",
+      "nameRu": "Юнусабадский район",
+      "nameEn": "Yunusabad district"
+    },
+    {
+      "code": "1726269",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Mirzo Ulug‘bek tumani",
+      "nameUzCyrl": "Мирзо Улуғбек тумани",
+      "nameRu": "Мирзо-Улугбекский район",
+      "nameEn": "Mirzo Ulugbek district"
+    },
+    {
+      "code": "1726273",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Mirobod tumani",
+      "nameUzCyrl": "Миробод тумани",
+      "nameRu": "Мирабадский район",
+      "nameEn": "Mirabad district"
+    },
+    {
+      "code": "1726277",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Shayxontoxur tumani",
+      "nameUzCyrl": "Шайхонтохур тумани",
+      "nameRu": "Шайхантахурский район",
+      "nameEn": "Shaykhantakhur district"
+    },
+    {
+      "code": "1726280",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Olmazor tumani",
+      "nameUzCyrl": "Олмазор тумани",
+      "nameRu": "Алмазарский район",
+      "nameEn": "Almazar district"
+    },
+    {
+      "code": "1726283",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Sirg‘ali tumani",
+      "nameUzCyrl": "Сирғали тумани",
+      "nameRu": "Сергелийский район",
+      "nameEn": "Sergeli district"
+    },
+    {
+      "code": "1726287",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Yakkasaroy tumani",
+      "nameUzCyrl": "Яккасарой тумани",
+      "nameRu": "Яккасарайский район",
+      "nameEn": "Yakkasaray district"
+    },
+    {
+      "code": "1726290",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Yashnobod tumani",
+      "nameUzCyrl": "Яшнобод тумани",
+      "nameRu": "Яшнободский район",
+      "nameEn": "Yashnabad district"
+    },
+    {
+      "code": "1726292",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Yangihayot tumani",
+      "nameUzCyrl": "Янгиҳаёт тумани",
+      "nameRu": "Янгихаётский район",
+      "nameEn": "Yangikhayot district"
+    },
+    {
+      "code": "1726294",
+      "parentCode": "1726",
+      "type": "DISTRICT",
+      "nameUz": "Chilonzor tumani",
+      "nameUzCyrl": "Чилонзор тумани",
+      "nameRu": "Чиланзарский район",
+      "nameEn": "Chilanzar district"
+    },
+    {
+      "code": "1727",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Toshkent viloyati",
+      "nameUzCyrl": "Тошкент вилояти",
+      "nameRu": "Ташкентская область",
+      "nameEn": "Tashkent region"
+    },
+    {
+      "code": "1727206",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Oqqo‘rg‘on tumani",
+      "nameUzCyrl": "Оққўрғон тумани",
+      "nameRu": "Аккурганский район",
+      "nameEn": "Akkurgan district"
+    },
+    {
+      "code": "1727212",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Ohangaron tumani",
+      "nameUzCyrl": "Оҳангарон тумани",
+      "nameRu": "Ахангаранский район",
+      "nameEn": "Akhangaran district"
+    },
+    {
+      "code": "1727220",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Bekobod tumani",
+      "nameUzCyrl": "Бекобод тумани",
+      "nameRu": "Бекабадский район",
+      "nameEn": "Bekabad district"
+    },
+    {
+      "code": "1727224",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Bo‘stonliq tumani",
+      "nameUzCyrl": "Бўстонлиқ тумани",
+      "nameRu": "Бостанлыкский район",
+      "nameEn": "Bostanlyk district"
+    },
+    {
+      "code": "1727228",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Bo‘ka tumani",
+      "nameUzCyrl": "Бўка тумани",
+      "nameRu": "Букинский район",
+      "nameEn": "Buka district"
+    },
+    {
+      "code": "1727233",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Quyichirchiq tumani",
+      "nameUzCyrl": "Қуйичирчиқ тумани",
+      "nameRu": "Куйичирчикский район",
+      "nameEn": "Kuyichirchik district"
+    },
+    {
+      "code": "1727237",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Zangiota tumani",
+      "nameUzCyrl": "Зангиота тумани",
+      "nameRu": "Зангиатинский район",
+      "nameEn": "Zangiata district"
+    },
+    {
+      "code": "1727239",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Yuqorichirchiq tumani",
+      "nameUzCyrl": "Юқоричирчиқ тумани",
+      "nameRu": "Юкоричирчикский район",
+      "nameEn": "Yukorichirchik district"
+    },
+    {
+      "code": "1727248",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Qibray tumani",
+      "nameUzCyrl": "Қибрай тумани",
+      "nameRu": "Кибрайский район",
+      "nameEn": "Kibray district"
+    },
+    {
+      "code": "1727249",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Parkent tumani",
+      "nameUzCyrl": "Паркент тумани",
+      "nameRu": "Паркентский район",
+      "nameEn": "Parkent district"
+    },
+    {
+      "code": "1727250",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Pskent tumani",
+      "nameUzCyrl": "Пскент тумани",
+      "nameRu": "Пскентский район",
+      "nameEn": "Piskent district"
+    },
+    {
+      "code": "1727253",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "O‘rtachirchiq tumani",
+      "nameUzCyrl": "Ўртачирчиқ тумани",
+      "nameRu": "Уртачирчикский район",
+      "nameEn": "Urtachirchik district"
+    },
+    {
+      "code": "1727256",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Chinoz tumani",
+      "nameUzCyrl": "Чиноз тумани",
+      "nameRu": "Чиназский район",
+      "nameEn": "Chinaz district"
+    },
+    {
+      "code": "1727259",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Yangiyo‘l tumani",
+      "nameUzCyrl": "Янгийўл тумани",
+      "nameRu": "Янгиюльский район",
+      "nameEn": "Yangiyul district"
+    },
+    {
+      "code": "1727265",
+      "parentCode": "1727",
+      "type": "DISTRICT",
+      "nameUz": "Toshkent tumani",
+      "nameUzCyrl": "Тошкент тумани",
+      "nameRu": "Ташкентский район",
+      "nameEn": "Tashkent district"
+    },
+    {
+      "code": "1727401",
+      "parentCode": "1727",
+      "type": "CITY",
+      "nameUz": "Nurafshon",
+      "nameUzCyrl": "Нурафшон",
+      "nameRu": "Нурафшон",
+      "nameEn": "Nurafshan city"
+    },
+    {
+      "code": "1727404",
+      "parentCode": "1727",
+      "type": "CITY",
+      "nameUz": "Olmaliq",
+      "nameUzCyrl": "Олмалиқ",
+      "nameRu": "Алмалык",
+      "nameEn": "Almalyk city"
+    },
+    {
+      "code": "1727407",
+      "parentCode": "1727",
+      "type": "CITY",
+      "nameUz": "Angren",
+      "nameUzCyrl": "Ангрен",
+      "nameRu": "Ангрен",
+      "nameEn": "Angren city"
+    },
+    {
+      "code": "1727413",
+      "parentCode": "1727",
+      "type": "CITY",
+      "nameUz": "Bekobod",
+      "nameUzCyrl": "Бекобод",
+      "nameRu": "Бекабад",
+      "nameEn": "Bekabad city"
+    },
+    {
+      "code": "1727415",
+      "parentCode": "1727",
+      "type": "CITY",
+      "nameUz": "Ohangaron",
+      "nameUzCyrl": "Оҳангарон",
+      "nameRu": "Ахангаран",
+      "nameEn": "Akhangaran city"
+    },
+    {
+      "code": "1727419",
+      "parentCode": "1727",
+      "type": "CITY",
+      "nameUz": "Chirchiq",
+      "nameUzCyrl": "Чирчиқ",
+      "nameRu": "Чирчик",
+      "nameEn": "Chirchik city"
+    },
+    {
+      "code": "1727424",
+      "parentCode": "1727",
+      "type": "CITY",
+      "nameUz": "Yangiyo‘l",
+      "nameUzCyrl": "Янгийўл",
+      "nameRu": "Янгиюль",
+      "nameEn": "Yangiyul city"
+    },
+    {
+      "code": "1730",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Farg‘ona viloyati",
+      "nameUzCyrl": "Фарғона вилояти",
+      "nameRu": "Ферганская область",
+      "nameEn": "Fergana region"
+    },
+    {
+      "code": "1730203",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Oltiariq tumani",
+      "nameUzCyrl": "Олтиариқ тумани",
+      "nameRu": "Алтыарыкский район",
+      "nameEn": "Altyaryk district"
+    },
+    {
+      "code": "1730206",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Qo‘shtepa tumani",
+      "nameUzCyrl": "Қўштепа тумани",
+      "nameRu": "Куштепинский район",
+      "nameEn": "Kushtepa district"
+    },
+    {
+      "code": "1730209",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Bog‘dod tumani",
+      "nameUzCyrl": "Боғдод тумани",
+      "nameRu": "Багдадский район",
+      "nameEn": "Baghdad district"
+    },
+    {
+      "code": "1730212",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Buvayda tumani",
+      "nameUzCyrl": "Бувайда тумани",
+      "nameRu": "Бувайдинский район",
+      "nameEn": "Buvayda district"
+    },
+    {
+      "code": "1730215",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Beshariq tumani",
+      "nameUzCyrl": "Бешариқ тумани",
+      "nameRu": "Бешарыкский район",
+      "nameEn": "Besharik district"
+    },
+    {
+      "code": "1730218",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Quva tumani",
+      "nameUzCyrl": "Қува тумани",
+      "nameRu": "Кувинский район",
+      "nameEn": "Kuva district"
+    },
+    {
+      "code": "1730221",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Uchko‘prik tumani",
+      "nameUzCyrl": "Учкўприк тумани",
+      "nameRu": "Учкуприкский район",
+      "nameEn": "Uchkuprik district"
+    },
+    {
+      "code": "1730224",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Rishton tumani",
+      "nameUzCyrl": "Риштон тумани",
+      "nameRu": "Риштанский район",
+      "nameEn": "Rishtan district"
+    },
+    {
+      "code": "1730226",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "So‘x tumani",
+      "nameUzCyrl": "Сўх тумани",
+      "nameRu": "Сохский район",
+      "nameEn": "Sokh district"
+    },
+    {
+      "code": "1730227",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Toshloq tumani",
+      "nameUzCyrl": "Тошлоқ тумани",
+      "nameRu": "Ташлакский район",
+      "nameEn": "Tashlak district"
+    },
+    {
+      "code": "1730230",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "O‘zbekiston tumani",
+      "nameUzCyrl": "Ўзбекистон тумани",
+      "nameRu": "Узбекистанский район",
+      "nameEn": "Uzbekistan district"
+    },
+    {
+      "code": "1730233",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Farg‘ona tumani",
+      "nameUzCyrl": "Фарғона тумани",
+      "nameRu": "Ферганский район",
+      "nameEn": "Fergana district"
+    },
+    {
+      "code": "1730236",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Dang‘ara tumani",
+      "nameUzCyrl": "Данғара тумани",
+      "nameRu": "Дангаринский район",
+      "nameEn": "Dangara district"
+    },
+    {
+      "code": "1730238",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Furqat tumani",
+      "nameUzCyrl": "Фурқат тумани",
+      "nameRu": "Фуркатский район",
+      "nameEn": "Furkat district"
+    },
+    {
+      "code": "1730242",
+      "parentCode": "1730",
+      "type": "DISTRICT",
+      "nameUz": "Yozyovon tumani",
+      "nameUzCyrl": "Ёзёвон тумани",
+      "nameRu": "Язъяванский район",
+      "nameEn": "Yazyavan district"
+    },
+    {
+      "code": "1730401",
+      "parentCode": "1730",
+      "type": "CITY",
+      "nameUz": "Farg‘ona",
+      "nameUzCyrl": "Фарғона",
+      "nameRu": "Фергана",
+      "nameEn": "Fergana city"
+    },
+    {
+      "code": "1730405",
+      "parentCode": "1730",
+      "type": "CITY",
+      "nameUz": "Qo‘qon",
+      "nameUzCyrl": "Қўқон",
+      "nameRu": "Коканд",
+      "nameEn": "Kokand city"
+    },
+    {
+      "code": "1730408",
+      "parentCode": "1730",
+      "type": "CITY",
+      "nameUz": "Quvasoy",
+      "nameUzCyrl": "Қувасой",
+      "nameRu": "Кувасай",
+      "nameEn": "Kuvasay city"
+    },
+    {
+      "code": "1730412",
+      "parentCode": "1730",
+      "type": "CITY",
+      "nameUz": "Marg‘ilon",
+      "nameUzCyrl": "Марғилон",
+      "nameRu": "Маргилан",
+      "nameEn": "Margilan city"
+    },
+    {
+      "code": "1733",
+      "parentCode": null,
+      "type": "REGION",
+      "nameUz": "Xorazm viloyati",
+      "nameUzCyrl": "Хоразм вилояти",
+      "nameRu": "Хорезмская область",
+      "nameEn": "Khorezm region"
+    },
+    {
+      "code": "1733204",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Bog‘ot tumani",
+      "nameUzCyrl": "Боғот тумани",
+      "nameRu": "Багатский район",
+      "nameEn": "Bagat district"
+    },
+    {
+      "code": "1733208",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Gurlan tumani",
+      "nameUzCyrl": "Гурлан тумани",
+      "nameRu": "Гурленский район",
+      "nameEn": "Gurlan district"
+    },
+    {
+      "code": "1733212",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Qo‘shko‘pir tumani",
+      "nameUzCyrl": "Қўшкўпир тумани",
+      "nameRu": "Кошкупырский район",
+      "nameEn": "Kushkupyr district"
+    },
+    {
+      "code": "1733217",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Urganch tumani",
+      "nameUzCyrl": "Урганч тумани",
+      "nameRu": "Ургенчский район",
+      "nameEn": "Urgench district"
+    },
+    {
+      "code": "1733220",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Xazorasp tumani",
+      "nameUzCyrl": "Хазорасп тумани",
+      "nameRu": "Хазараспский район",
+      "nameEn": "Khazarasp district"
+    },
+    {
+      "code": "1733221",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Tuproqqal’a tumani",
+      "nameUzCyrl": "Тупроққалъа тумани",
+      "nameRu": "Тупроккалинский район",
+      "nameEn": "Tuprakkala district"
+    },
+    {
+      "code": "1733223",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Xonqa tumani",
+      "nameUzCyrl": "Хонқа тумани",
+      "nameRu": "Ханкинский район",
+      "nameEn": "Khanka district"
+    },
+    {
+      "code": "1733226",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Xiva tumani",
+      "nameUzCyrl": "Хива тумани",
+      "nameRu": "Хивинский район",
+      "nameEn": "Khiva district"
+    },
+    {
+      "code": "1733230",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Shovot tumani",
+      "nameUzCyrl": "Шовот тумани",
+      "nameRu": "Шаватский район",
+      "nameEn": "Shavat district"
+    },
+    {
+      "code": "1733233",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Yangiariq tumani",
+      "nameUzCyrl": "Янгиариқ тумани",
+      "nameRu": "Янгиарыкский район",
+      "nameEn": "Yangiaryk district"
+    },
+    {
+      "code": "1733236",
+      "parentCode": "1733",
+      "type": "DISTRICT",
+      "nameUz": "Yangibozor tumani",
+      "nameUzCyrl": "Янгибозор тумани",
+      "nameRu": "Янгибазарский район",
+      "nameEn": "Yangibazar district"
+    },
+    {
+      "code": "1733401",
+      "parentCode": "1733",
+      "type": "CITY",
+      "nameUz": "Urganch",
+      "nameUzCyrl": "Урганч",
+      "nameRu": "Ургенч",
+      "nameEn": "Urgench city"
+    },
+    {
+      "code": "1733406",
+      "parentCode": "1733",
+      "type": "CITY",
+      "nameUz": "Xiva",
+      "nameUzCyrl": "Хива",
+      "nameRu": "Хива",
+      "nameEn": "Khiva city"
+    },
+    {
+      "code": "1735",
+      "parentCode": null,
+      "type": "REPUBLIC",
+      "nameUz": "Qoraqalpog‘iston Respublikasi",
+      "nameUzCyrl": "Қорақалпоғистон Республикаси",
+      "nameRu": "Республика Каракалпакстан",
+      "nameEn": "Republic of Karakalpakstan"
+    },
+    {
+      "code": "1735204",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Amudaryo tumani",
+      "nameUzCyrl": "Амударё тумани",
+      "nameRu": "Амударьинский район",
+      "nameEn": "Amudarya district"
+    },
+    {
+      "code": "1735207",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Beruniy tumani",
+      "nameUzCyrl": "Беруний тумани",
+      "nameRu": "Берунийский район",
+      "nameEn": "Beruniy district"
+    },
+    {
+      "code": "1735209",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Bo‘zatov tumani",
+      "nameUzCyrl": "Бўзатов тумани",
+      "nameRu": "Бозатауский район",
+      "nameEn": "Bozatau district"
+    },
+    {
+      "code": "1735211",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Qorao‘zak tumani",
+      "nameUzCyrl": "Қораўзак тумани",
+      "nameRu": "Караузякский район",
+      "nameEn": "Karauzak district"
+    },
+    {
+      "code": "1735212",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Kegeyli tumani",
+      "nameUzCyrl": "Кегейли тумани",
+      "nameRu": "Кегейлийский район",
+      "nameEn": "Kegeyli district"
+    },
+    {
+      "code": "1735215",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Qo‘ng‘irot tumani",
+      "nameUzCyrl": "Қўнғирот тумани",
+      "nameRu": "Кунградский район",
+      "nameEn": "Kungrad district"
+    },
+    {
+      "code": "1735218",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Qanliko‘l tumani",
+      "nameUzCyrl": "Қанликўл тумани",
+      "nameRu": "Канлыкульский район",
+      "nameEn": "Kanlykul district"
+    },
+    {
+      "code": "1735222",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Mo‘ynoq tumani",
+      "nameUzCyrl": "Мўйноқ тумани",
+      "nameRu": "Муйнакский район",
+      "nameEn": "Muynak district"
+    },
+    {
+      "code": "1735225",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Nukus tumani",
+      "nameUzCyrl": "Нукус тумани",
+      "nameRu": "Нукусский район",
+      "nameEn": "Nukus district"
+    },
+    {
+      "code": "1735228",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Taxiatosh tumani",
+      "nameUzCyrl": "Тахиатош тумани",
+      "nameRu": "Тахиаташский район",
+      "nameEn": "Takhiatash district"
+    },
+    {
+      "code": "1735230",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Taxtako‘pir tumani",
+      "nameUzCyrl": "Тахтакўпир тумани",
+      "nameRu": "Тахтакупырский район",
+      "nameEn": "Takhtakupyr district"
+    },
+    {
+      "code": "1735233",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "To‘rtko‘l tumani",
+      "nameUzCyrl": "Тўрткўл тумани",
+      "nameRu": "Турткульский район",
+      "nameEn": "Turtkul district"
+    },
+    {
+      "code": "1735236",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Xo‘jayli tumani",
+      "nameUzCyrl": "Хўжайли тумани",
+      "nameRu": "Ходжейлийский район",
+      "nameEn": "Khojeyli district"
+    },
+    {
+      "code": "1735240",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Chimboy tumani",
+      "nameUzCyrl": "Чимбой тумани",
+      "nameRu": "Чимбайский район",
+      "nameEn": "Chimbay district"
+    },
+    {
+      "code": "1735243",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Shumanay tumani",
+      "nameUzCyrl": "Шуманай тумани",
+      "nameRu": "Шуманайский район",
+      "nameEn": "Shumanai district"
+    },
+    {
+      "code": "1735250",
+      "parentCode": "1735",
+      "type": "DISTRICT",
+      "nameUz": "Ellikkala tumani",
+      "nameUzCyrl": "Элликкала тумани",
+      "nameRu": "Элликкалинский район",
+      "nameEn": "Ellikkala district"
+    },
+    {
+      "code": "1735401",
+      "parentCode": "1735",
+      "type": "CITY",
+      "nameUz": "Nukus",
+      "nameUzCyrl": "Нукус",
+      "nameRu": "Нукус",
+      "nameEn": "Nukus city"
+    }
+  ]
+}

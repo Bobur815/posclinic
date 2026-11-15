@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
+import { AddressText } from '../../components/address/AddressText';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -17,6 +18,8 @@ interface PatientData {
   allergies: string | null;
   address: string | null;
   city: string | null;
+  regionCode: string | null;
+  districtCode: string | null;
   notes: string | null;
   appointments: Array<{
     id: string;
@@ -201,12 +204,18 @@ export function PatientDetails() {
             <InfoValue>{patient.allergies || '—'}</InfoValue>
           </InfoRow>
           <InfoRow>
-            <InfoLabel>{t('patients.address')}</InfoLabel>
+            <InfoLabel>{t('address.street')}</InfoLabel>
             <InfoValue>{patient.address || '—'}</InfoValue>
           </InfoRow>
           <InfoRow>
-            <InfoLabel>{t('patients.city')}</InfoLabel>
-            <InfoValue>{patient.city || '—'}</InfoValue>
+            <InfoLabel>{t('address.regionDistrict')}</InfoLabel>
+            <InfoValue>
+              <AddressText
+                regionCode={patient.regionCode}
+                districtCode={patient.districtCode}
+                fallback={patient.city}
+              />
+            </InfoValue>
           </InfoRow>
           <InfoRow>
             <InfoLabel>{t('patients.notes')}</InfoLabel>

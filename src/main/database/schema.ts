@@ -66,6 +66,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     await migrateUsersTableIfNeeded(prisma);
     await addSyncTablesIfNeeded(prisma);
     await addLanTablesIfNeeded(prisma);
+    await addAddressTablesIfNeeded(prisma);
     return;
   }
 
@@ -190,6 +191,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
 
   await addSyncTablesIfNeeded(prisma);
   await addLanTablesIfNeeded(prisma);
+  await addAddressTablesIfNeeded(prisma);
 }
 
 /**
@@ -236,4 +238,39 @@ async function addLanTablesIfNeeded(prisma: SchemaClient): Promise<void> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `;
+}
+
+/**
+ * v2.4.0, Uzbekistan addresses (SOATO): the `admin_units` reference table and two optional
+ * codes on patients. Additive and idempotent: runs on fresh and existing databases alike; the
+ * data itself is imported by admin-units.ts.
+ */
+async function addAddressTablesIfNeeded(prisma: SchemaClient): Promise<void> {
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS admin_units (
+      code TEXT PRIMARY KEY,
+      parent_code TEXT REFERENCES admin_units(code),
+      type TEXT NOT NULL,
+      level INTEGER NOT NULL,
+      name_uz TEXT NOT NULL,
+      name_uz_cyrl TEXT,
+      name_ru TEXT,
+      name_en TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await prisma.$executeRaw`CREATE INDEX IF NOT EXISTS idx_admin_units_parent ON admin_units(parent_code, active)`;
+  await prisma.$executeRaw`CREATE INDEX IF NOT EXISTS idx_admin_units_level ON admin_units(level, active)`;
+
+  const cols = await prisma.$queryRaw<{ name: string }[]>`PRAGMA table_info(patients)`;
+  const has = new Set(cols.map((c) => c.name));
+  if (!has.has('region_code')) {
+    await prisma.$executeRaw`ALTER TABLE patients ADD COLUMN region_code TEXT REFERENCES admin_units(code)`;
+  }
+  if (!has.has('district_code')) {
+    await prisma.$executeRaw`ALTER TABLE patients ADD COLUMN district_code TEXT REFERENCES admin_units(code)`;
+  }
+  await prisma.$executeRaw`CREATE INDEX IF NOT EXISTS idx_patients_region ON patients(region_code)`;
+  await prisma.$executeRaw`CREATE INDEX IF NOT EXISTS idx_patients_district ON patients(district_code)`;
 }

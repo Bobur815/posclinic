@@ -1,3 +1,4 @@
+import { resolveAddress } from './address-handlers';
 import { handle, ipcSafe, RefusedError } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
@@ -115,6 +116,7 @@ export function setupPatientHandlers(): void {
     try {
       const phone = patientPhone(data?.phone);
       const prisma = getPrismaClient();
+      const addr = await resolveAddress(prisma, data?.regionCode, data?.districtCode);
       const patient = await withUniqueRetry(['patient_code', 'patientCode'], () =>
         prisma.$transaction(async (tx: Tx) =>
           tx.patient.create({
@@ -128,7 +130,9 @@ export function setupPatientHandlers(): void {
               bloodType: optional(data.bloodType) ?? null,
               allergies: optional(data.allergies) ?? null,
               address: optional(data.address) ?? null,
-              city: optional(data.city) ?? null,
+              regionCode: addr?.regionCode ?? null,
+              districtCode: addr?.districtCode ?? null,
+              city: addr ? addr.city : (optional(data.city) ?? null),
               notes: optional(data.notes) ?? null,
             },
           }),
@@ -146,6 +150,7 @@ export function setupPatientHandlers(): void {
     try {
       const prisma = getPrismaClient();
       const fullName = typeof data.fullName === 'string' ? data.fullName.trim() : undefined;
+      const addr = await resolveAddress(prisma, data.regionCode, data.districtCode);
       const patient = await prisma.patient
         .update({
           where: { id },
@@ -157,7 +162,9 @@ export function setupPatientHandlers(): void {
             bloodType: optional(data.bloodType),
             allergies: optional(data.allergies),
             address: optional(data.address),
-            city: optional(data.city),
+            ...(addr
+              ? { regionCode: addr.regionCode, districtCode: addr.districtCode, city: addr.city }
+              : { city: optional(data.city) }),
             notes: optional(data.notes),
           },
         })

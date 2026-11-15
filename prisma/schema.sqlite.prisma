@@ -69,8 +69,16 @@ model Patient {
   gender      String?
   bloodType   String?   @map("blood_type")
   allergies   String?
+  /// Street / house, free text (the administrative part is regionCode + districtCode).
   address     String?
+  /// Display text kept for the server/web (which have no address dataset): "District, Region".
   city        String?
+  /// SOATO code of the region / republic / Tashkent City (admin_units, level 1).
+  regionCode   String?    @map("region_code")
+  region       AdminUnit? @relation("PatientRegion", fields: [regionCode], references: [code])
+  /// SOATO code of the district / city inside regionCode (admin_units, level 2).
+  districtCode String?    @map("district_code")
+  district     AdminUnit? @relation("PatientDistrict", fields: [districtCode], references: [code])
   notes       String?
   active      Boolean   @default(true)
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -78,7 +86,38 @@ model Patient {
 
   appointments Appointment[]
 
+  @@index([regionCode])
+  @@index([districtCode])
   @@map("patients")
+}
+
+// ==================== ADDRESSES (Uzbekistan, SOATO) ====================
+
+/// Uzbekistan administrative units from the official SOATO classifier, bundled with the till
+/// (src/main/database/data/admin-units.json) and imported idempotently on start
+/// (src/main/database/admin-units.ts). Level 1: REGION | REPUBLIC | CITY (Tashkent);
+/// level 2: DISTRICT | CITY, parentCode = its level-1 unit. Never deleted: a unit dropped from
+/// the dataset becomes inactive, so patients that reference it keep their address.
+model AdminUnit {
+  code       String      @id
+  parentCode String?     @map("parent_code")
+  parent     AdminUnit?  @relation("AdminUnitTree", fields: [parentCode], references: [code])
+  children   AdminUnit[] @relation("AdminUnitTree")
+  type       String
+  level      Int
+  nameUz     String      @map("name_uz")
+  nameUzCyrl String?     @map("name_uz_cyrl")
+  nameRu     String?     @map("name_ru")
+  nameEn     String?     @map("name_en")
+  active     Boolean     @default(true)
+  updatedAt  DateTime    @default(now()) @map("updated_at")
+
+  regionPatients   Patient[] @relation("PatientRegion")
+  districtPatients Patient[] @relation("PatientDistrict")
+
+  @@index([parentCode, active])
+  @@index([level, active])
+  @@map("admin_units")
 }
 
 // ==================== DOCTORS ====================

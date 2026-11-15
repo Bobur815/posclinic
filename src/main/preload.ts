@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { AdminUnitDto } from '../shared/address';
 import type { ActivateResult, LicenseStatusDto } from '../shared/license';
 import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
@@ -41,6 +42,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Patients
+  // Uzbekistan addresses (SOATO), from the till's own database: works offline.
+  addresses: {
+    regions: () => ipcRenderer.invoke('addresses:regions'),
+    children: (parentCode: string) => ipcRenderer.invoke('addresses:children', parentCode),
+  },
+
   patients: {
     getAll: (filters?: { active?: boolean }) =>
       ipcRenderer.invoke('patients:getAll', filters),
@@ -198,6 +205,10 @@ declare global {
         getProfile: () => Promise<{ id: string; fullName: string; phone: string; email: string | null; role: string; clinicId: string | null } | null>;
         restoreSession: (token: string) => Promise<{ id: string; fullName: string; phone: string; email: string | null; role: string; clinicId: string | null } | null>;
         changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+      };
+      addresses: {
+        regions: () => Promise<AdminUnitDto[]>;
+        children: (parentCode: string) => Promise<AdminUnitDto[]>;
       };
       patients: {
         getAll: (filters?: { active?: boolean }) => Promise<PatientDto[]>;

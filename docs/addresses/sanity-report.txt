@@ -1,0 +1,31 @@
+PASS exactly 14 level-1 units 14
+PASS level-1 codes are 4 digits 
+PASS level-2 codes are 7 digits 
+PASS no duplicate codes 220
+PASS every parentCode exists at level 1 
+PASS code prefix == parentCode 
+PASS no empty nameUz/nameUzCyrl/nameRu 
+PASS nameUz has no Cyrillic 
+PASS nameUzCyrl/nameRu have no Latin letters 
+PASS types valid 
+PASS level-1 types: 12 REGION, 1 REPUBLIC, 1 CITY 
+nameEn null count: 0
+
+level-1 | DISTRICT | CITY | total | SIAT "Districts" 2026
+1703 Andijon viloyati                  14   2  16  14
+1706 Buxoro viloyati                   11   2  13  11
+1708 Jizzax viloyati                   12   1  13  12
+1710 Qashqadaryo viloyati              14   2  16  14
+1712 Navoiy viloyati                    8   3  11  8
+1714 Namangan viloyati                 11   1  12  13
+1718 Samarqand viloyati                14   2  16  14
+1722 Surxondaryo viloyati              14   1  15  14
+1724 Sirdaryo viloyati                  8   3  11  8
+1726 Toshkent shahri                   12   0  12  12
+1727 Toshkent viloyati                 15   7  22  15
+1730 Farg‘ona viloyati                 15   4  19  15
+1733 Xorazm viloyati                   11   2  13  11
+1735 Qoraqalpog‘iston Respublikasi     16   1  17  16
+TOTAL level-2: 206 {'DISTRICT': 175, 'CITY': 31} | SIAT total districts 2026: 177
+
+ALL CHECKS PASSED

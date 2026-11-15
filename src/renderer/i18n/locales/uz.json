@@ -425,7 +425,8 @@
     "invalidQuantity": "Xizmat soni noto'g'ri",
     "invalidDate": "Sana noto'g'ri",
     "serviceUnavailable": "Tanlangan xizmat topilmadi yoki faol emas. Ro'yxatni yangilang",
-    "visitCancelled": "Bekor qilingan qabul uchun to'lov qabul qilinmaydi"
+    "visitCancelled": "Bekor qilingan qabul uchun to'lov qabul qilinmaydi",
+    "invalidAddress": "Manzil noto‘g‘ri: tuman tanlangan viloyatga tegishli emas"
   },
   "license": {
     "title": "Obuna",
@@ -672,5 +673,21 @@
       "dekabr"
     ],
     "date": "{{wd}}, {{d}}-{{m}}"
+  },
+  "address": {
+    "region": "Viloyat",
+    "district": "Tuman / shahar",
+    "regionDistrict": "Viloyat, tuman",
+    "street": "Ko‘cha, uy",
+    "city": "shahar",
+    "chooseRegion": "Viloyatni tanlang",
+    "chooseDistrict": "Tuman yoki shaharni tanlang",
+    "chooseRegionFirst": "Avval viloyatni tanlang",
+    "noDistricts": "Tumanlar yo‘q",
+    "loading": "Yuklanmoqda…",
+    "loadError": "Manzillarni yuklab bo‘lmadi.",
+    "retry": "Qayta urinish",
+    "noData": "Manzillar ro‘yxati bo‘sh",
+    "legacyCity": "Avval kiritilgan"
   }
 }

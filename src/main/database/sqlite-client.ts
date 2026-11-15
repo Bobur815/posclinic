@@ -1,6 +1,8 @@
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
+import { type AdminUnitDataset, importAdminUnits } from './admin-units';
+import adminUnitsDataset from './data/admin-units.json';
 import { normalizePatientPhones } from './data-upgrades';
 import { createSchemaIfNeeded } from './schema';
 
@@ -20,6 +22,15 @@ async function upgradeDatabase(db: any): Promise<void> {
     }
   } catch (error) {
     console.error('[db] patient phone normalisation failed (left as is):', error);
+  }
+  try {
+    const r = await importAdminUnits(db, adminUnitsDataset as AdminUnitDataset);
+    if (!r.skipped) {
+      console.log(`[db] address units imported: ${r.upserted}, deactivated: ${r.deactivated}`);
+    }
+  } catch (error) {
+    // The address selector shows its error state; patients still open and save without it.
+    console.error('[db] address units import failed (left as is):', error);
   }
 }
 
