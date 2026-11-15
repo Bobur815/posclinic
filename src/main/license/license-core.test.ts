@@ -163,6 +163,11 @@ describe('refusal', () => {
       await refusal('appointments:create', [{}], s, facts({ visitsThisMonth: async () => 299 })),
       null,
     );
+    // An order inside an open case is not a new visit.
+    assert.equal(
+      await refusal('appointments:create', [{ caseId: 'c1' }], s, facts({ visitsThisMonth: async () => 300 })),
+      null,
+    );
   });
 
   it('needs multiDoctor for a second active doctor, including re-activation', async () => {

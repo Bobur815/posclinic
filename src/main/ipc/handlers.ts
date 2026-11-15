@@ -1,5 +1,6 @@
 import { setupAddressHandlers } from './address-handlers';
 import { setupAuthHandlers } from './auth-handlers';
+import { setupClinicHandlers } from './clinic-handlers';
 import { setupPatientHandlers } from './patient-handlers';
 import { setupDoctorHandlers } from './doctor-handlers';
 import { setupServiceHandlers } from './service-handlers';
@@ -13,5 +14,6 @@ export function setupIpcHandlers(): void {
   setupDoctorHandlers();
   setupServiceHandlers();
   setupAppointmentHandlers();
+  setupClinicHandlers();
   setupPrintHandlers();
 }

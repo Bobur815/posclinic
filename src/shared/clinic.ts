@@ -119,17 +119,29 @@ export interface AppointmentItemDto {
   serviceName: string;
   quantity: number;
   unitPrice: number;
+  /** Money off this line (a full course paid upfront); `total` is after it. */
+  discount: number;
   total: number;
+  /** Consultation lines: whose queue it is in. */
+  doctorId: string | null;
+  referralId: string | null;
+  status: ItemStatus;
+  performedBy: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
 }
 
 export interface AppointmentDto {
   id: string;
   appointmentNumber: string;
   patientId: string;
-  doctorId: string;
+  /** Doctor of the consultation in this order; null for analysis / procedure orders. */
+  doctorId: string | null;
+  caseId: string | null;
   appointmentDate: string;
   status: AppointmentStatus;
   totalAmount: number;
+  discountAmount: number;
   paidAmount: number;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod | null;
@@ -140,7 +152,7 @@ export interface AppointmentDto {
   createdAt: string;
   updatedAt: string;
   patient: PatientDto;
-  doctor: DoctorDto;
+  doctor: DoctorDto | null;
   items: AppointmentItemDto[];
 }
 
@@ -149,17 +161,124 @@ export interface PatientWithVisitsDto extends PatientDto {
   appointments: Array<Omit<AppointmentDto, 'patient'>>;
 }
 
+/** One line of a registration at reception (`appointments:create` / `appointments:quote`). */
+export interface RegisterLineInput {
+  serviceId: string;
+  /** Units / sessions. */
+  quantity: number;
+  /** Consultations only (required there). */
+  doctorId?: string | null;
+  /** The doctor's referral this line registers. */
+  referralId?: string | null;
+  /** The whole remaining course at once: the only case a discount is allowed. */
+  fullCourse?: boolean;
+  /** 0–100; above the clinic limit needs an admin (`approval`). */
+  discountPercent?: number;
+}
+
+/**
+ * A registration: one paid order. Names, prices, follow-up and discounts are set by the main till
+ * from its own data (src/main/clinic/pricing.ts), never by the caller. No `caseId` opens a new
+ * case (a new visit for the plan limit).
+ */
 export interface AppointmentCreateInput {
   patientId: string;
-  doctorId: string;
-  /** ISO date-time. */
-  appointmentDate: string;
+  caseId?: string | null;
+  /** ISO date-time; now when omitted. */
+  appointmentDate?: string;
   notes?: string;
-  /**
-   * Which services and how many. Names, prices and totals are set by the main till from its own
-   * catalog (appointment-handlers.ts), never by the caller.
-   */
-  items: Array<{ serviceId: string; quantity: number }>;
+  items: RegisterLineInput[];
+  /** An admin's phone + password when a receptionist gives more than the allowed discount. */
+  approval?: { phone: string; password: string } | null;
+  /** Legacy: one doctor for the whole visit. */
+  doctorId?: string;
+}
+
+export interface QuoteLineDto {
+  serviceId: string;
+  serviceName: string;
+  kind: ServiceKind;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  total: number;
+  doctorId: string | null;
+  referralId: string | null;
+  perDay: number | null;
+}
+
+/** `appointments:quote`: what `appointments:create` would charge; nothing is written. */
+export interface QuoteDto {
+  quote: true;
+  lines: QuoteLineDto[];
+  totalAmount: number;
+  discountAmount: number;
+  followUpIsFree: boolean;
+  maxDiscountPercent: number;
+  adminApproved: boolean;
+}
+
+export type CaseStatus =
+  | 'OPEN'
+  | 'WAITING_DOCTOR'
+  | 'WAITING_ANALYSIS'
+  | 'RESULT_READY'
+  | 'ON_TREATMENT'
+  | 'CLOSED';
+export type ItemStatus = 'WAITING' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
+export type ReferralStatus = 'PENDING' | 'PARTIAL' | 'REGISTERED' | 'CANCELLED';
+
+export interface ReferralDto {
+  id: string;
+  caseId: string;
+  patientId: string;
+  doctorId: string | null;
+  serviceId: string;
+  quantity: number;
+  perDay: number | null;
+  days: number | null;
+  instructions: string | null;
+  registeredQty: number;
+  status: ReferralStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `cases:forPatient`: an open case with what is still to register. */
+export interface OpenCaseDto {
+  id: string;
+  caseNumber: string;
+  patientId: string;
+  doctorId: string | null;
+  status: CaseStatus;
+  complaint: string | null;
+  diagnosis: string | null;
+  openedAt: string;
+  doctor: { id: string; fullName: string } | null;
+  /** A follow-up consultation registered before this is free; null when not free. */
+  followUpFreeUntil: string | null;
+  referrals: Array<
+    ReferralDto & {
+      remaining: number;
+      service: { id: string; name: string; kind: ServiceKind; price: number; active: boolean };
+      doctor: { id: string; fullName: string } | null;
+    }
+  >;
+}
+
+/** `patients:search`: text and / or filters (codes, `YYYY-MM-DD` visit dates). */
+export interface PatientSearch {
+  q?: string;
+  regionCode?: string | null;
+  districtCode?: string | null;
+  visitedFrom?: string;
+  visitedTo?: string;
+}
+
+export interface ClinicSettingsDto {
+  followUpFreeDays: number;
+  maxDiscountPercent: number;
+  printTicketAfterPayment: boolean;
 }
 
 /** `appointments:getAll`. A date range is a report (licence: `reports` beyond one day). */

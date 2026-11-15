@@ -15,7 +15,7 @@ import { PatientList } from './pages/Patients/PatientList';
 import { PatientForm } from './pages/Patients/PatientForm';
 import { PatientDetails } from './pages/Patients/PatientDetails';
 import { AppointmentList } from './pages/Appointments/AppointmentList';
-import { NewAppointmentPage } from './pages/Appointments/NewAppointmentPage';
+import { RegisterVisitPage } from './pages/Appointments/RegisterVisitPage';
 import { AppointmentDetails } from './pages/Appointments/AppointmentDetails';
 import { CheckoutPage } from './pages/Appointments/CheckoutPage';
 import { ServiceList } from './pages/Services/ServiceList';
@@ -79,7 +79,7 @@ function App() {
           <Route path="patients/:id" element={<PatientDetails />} />
           <Route path="patients/:id/edit" element={<PatientForm />} />
           <Route path="appointments" element={<AppointmentList />} />
-          <Route path="appointments/new" element={<NewAppointmentPage />} />
+          <Route path="appointments/new" element={<RegisterVisitPage />} />
           <Route path="appointments/:id" element={<AppointmentDetails />} />
           <Route path="appointments/:id/checkout" element={<CheckoutPage />} />
           <Route path="services" element={<ServiceList />} />

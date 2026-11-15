@@ -5,6 +5,10 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  ClinicSettingsDto,
+  OpenCaseDto,
+  PatientSearch,
+  QuoteDto,
   AppointmentCreateInput,
   AppointmentDto,
   AppointmentFilters,
@@ -51,7 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   patients: {
     getAll: (filters?: { active?: boolean }) =>
       ipcRenderer.invoke('patients:getAll', filters),
-    search: (query: string) => ipcRenderer.invoke('patients:search', query),
+    search: (query: string | PatientSearch) => ipcRenderer.invoke('patients:search', query),
     getById: (id: string) => ipcRenderer.invoke('patients:getById', id),
     create: (data: PatientInput) => ipcRenderer.invoke('patients:create', data),
     update: (id: string, data: PatientInput) =>
@@ -80,6 +84,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Appointments
   appointments: {
     create: (data: AppointmentCreateInput) => ipcRenderer.invoke('appointments:create', data),
+    quote: (data: AppointmentCreateInput) => ipcRenderer.invoke('appointments:quote', data),
     getAll: (filters?: AppointmentFilters) =>
       ipcRenderer.invoke('appointments:getAll', filters),
     getById: (id: string) => ipcRenderer.invoke('appointments:getById', id),
@@ -88,6 +93,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getTodaySummary: () => ipcRenderer.invoke('appointments:getTodaySummary'),
     checkout: (id: string, data: CheckoutInput) =>
       ipcRenderer.invoke('appointments:checkout', id, data),
+  },
+
+  // Cases (one patient journey) and clinic workflow settings
+  cases: {
+    forPatient: (patientId: string) => ipcRenderer.invoke('cases:forPatient', patientId),
+  },
+  clinic: {
+    getSettings: () => ipcRenderer.invoke('clinic:getSettings'),
+    setSettings: (patch: Partial<ClinicSettingsDto>) =>
+      ipcRenderer.invoke('clinic:setSettings', patch),
   },
 
   // Print
@@ -212,7 +227,7 @@ declare global {
       };
       patients: {
         getAll: (filters?: { active?: boolean }) => Promise<PatientDto[]>;
-        search: (query: string) => Promise<PatientDto[]>;
+        search: (query: string | PatientSearch) => Promise<PatientDto[]>;
         getById: (id: string) => Promise<PatientWithVisitsDto | null>;
         create: (data: PatientInput) => Promise<PatientDto>;
         update: (id: string, data: PatientInput) => Promise<PatientDto>;
@@ -232,11 +247,19 @@ declare global {
       };
       appointments: {
         create: (data: AppointmentCreateInput) => Promise<AppointmentDto>;
+        quote: (data: AppointmentCreateInput) => Promise<QuoteDto>;
         getAll: (filters?: AppointmentFilters) => Promise<AppointmentDto[]>;
         getById: (id: string) => Promise<AppointmentDto | null>;
         update: (id: string, data: AppointmentUpdateInput) => Promise<AppointmentDto>;
         getTodaySummary: () => Promise<TodaySummaryDto>;
         checkout: (id: string, data: CheckoutInput) => Promise<AppointmentDto>;
+      };
+      cases: {
+        forPatient: (patientId: string) => Promise<OpenCaseDto[]>;
+      };
+      clinic: {
+        getSettings: () => Promise<ClinicSettingsDto>;
+        setSettings: (patch: Partial<ClinicSettingsDto>) => Promise<ClinicSettingsDto>;
       };
       print: {
         serviceReceipt: (appointmentId: string) => Promise<{ success: boolean; error?: string }>;

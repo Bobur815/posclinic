@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
@@ -146,6 +146,7 @@ export function PatientForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const isEdit = Boolean(id);
 
@@ -211,8 +212,13 @@ export function PatientForm() {
         await window.electronAPI.patients.update(id, payload);
         toast.success(t('common.success'));
       } else {
-        await window.electronAPI.patients.create(payload);
+        const created = await window.electronAPI.patients.create(payload);
         toast.success(t('common.success'));
+        // Opened from registration: carry on registering services for the new patient.
+        if (searchParams.get('return') === 'register') {
+          navigate(`/appointments/new?patientId=${encodeURIComponent(created.id)}`);
+          return;
+        }
       }
       navigate(isEdit && id ? `/patients/${id}` : '/patients');
     } catch (err) {

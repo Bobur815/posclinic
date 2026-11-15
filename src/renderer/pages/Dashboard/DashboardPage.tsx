@@ -18,7 +18,7 @@ interface TodaySummary {
     status: string;
     paymentStatus: string;
     patient: { fullName: string };
-    doctor: { fullName: string };
+    doctor: { fullName: string } | null;
     totalAmount: number;
   }>;
 }
@@ -279,7 +279,7 @@ export function DashboardPage() {
                 >
                   <Td>{appt.appointmentNumber}</Td>
                   <Td>{appt.patient.fullName}</Td>
-                  <Td>{appt.doctor.fullName}</Td>
+                  <Td>{appt.doctor?.fullName ?? '—'}</Td>
                   <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
                   <Td>
                     <StatusBadge $status={appt.status}>

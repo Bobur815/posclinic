@@ -198,17 +198,17 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 - [x] Services page: type, follow-up flag, result type/unit/range. Seed update (in place, codes unchanged; + PAR-ENEMA procedure). `service-kind.test.ts`.
 
 ### P2: Reception: new registration flow (replaces NewAppointmentPage)
-- [ ] Step 1, Patient:
+- [x] Step 1, Patient:
   - search by name, phone or code;
   - filters: region → district (AddressSelector), last visit;
   - "New patient" inline.
-- [ ] Step 2, Services:
+- [x] Step 2, Services:
   - the patient's open case and **pending referrals** first (one click adds them);
   - catalog by type; a doctor is picked only for consultations;
   - free follow-up applied automatically (≤ 14 days);
   - course: "full course (discount)" or "today only".
-- [ ] Step 3, Payment: checkout inline; optional ticket/receipt print.
-- [ ] Reception queue overview: who is waiting for which doctor or nurse, live across tills.
+- [x] Step 3, Payment: the existing checkout page; optional ticket/receipt print (Settings → Clinic). Paying no longer completes the visit.
+- [ ] Reception queue overview: who is waiting for which doctor or nurse, live across tills. **Moved to P3** (it reads the same queue).
 
 ### P3: Doctor workspace (doctor's PC, satellite)
 - [ ] Doctor login linked to the doctor record. The home page is **My queue** (paid, waiting, today), live.

@@ -21,7 +21,7 @@ interface AppointmentData {
   prescription: string | null;
   notes: string | null;
   patient: { id: string; fullName: string; phone: string; patientCode: string };
-  doctor: { fullName: string; specialty: string | null };
+  doctor: { fullName: string; specialty: string | null } | null;
   items: Array<{
     id: string;
     serviceName: string;
@@ -292,8 +292,8 @@ export function AppointmentDetails() {
           </InfoItem>
           <InfoItem>
             <InfoLabel>{t('appointments.doctor')}</InfoLabel>
-            <InfoValue>{appointment.doctor.fullName}</InfoValue>
-            {appointment.doctor.specialty && (
+            <InfoValue>{appointment.doctor?.fullName ?? '—'}</InfoValue>
+            {appointment.doctor?.specialty && (
               <InfoValue style={{ fontSize: '12px', opacity: 0.7 }}>{appointment.doctor.specialty}</InfoValue>
             )}
           </InfoItem>

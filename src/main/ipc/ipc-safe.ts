@@ -136,6 +136,19 @@ export function emitEvents(events: AppEvent[]): void {
  */
 const UNGATED = /^(auth|license|setup|update|lan|config|sync|app):/;
 const WRITES = /^(patients|appointments|doctors|services|users):(create|update|checkout)$/;
+/** Clinical-record writes (v2.5): every channel of these namespaces that is not a read. */
+const CLINICAL = /^(cases|queue|results|sessions):(?!(get|for|list|quote)[A-Z]?)/;
+
+/** Which entities a write channel changed (pages reload on these); empty for a read. */
+export function writtenEntities(channel: string): DataChangedEvent['entity'][] {
+  const w = WRITES.exec(channel);
+  if (w) {
+    const entity = w[1] as DataChangedEvent['entity'];
+    // A registration opens / moves a case; payment releases lines to the queues.
+    return entity === 'appointments' ? ['appointments', 'cases'] : [entity];
+  }
+  return CLINICAL.test(channel) ? ['cases', 'appointments'] : [];
+}
 
 /** Runs a handler on THIS till's database: licence gate, handler, then "what changed". */
 export async function invokeHandler(
@@ -150,10 +163,10 @@ export async function invokeHandler(
     if (refused) throw new LicenseRefusedError(refused);
   }
   const result = await fn(ctx, ...args);
-  const write = WRITES.exec(channel);
-  if (write) {
+  const changed = writtenEntities(channel);
+  if (changed.length > 0) {
     hooks.onWrite(channel);
-    hooks.emit([{ type: 'data:changed', entity: write[1] as DataChangedEvent['entity'] }]);
+    hooks.emit(changed.map((entity) => ({ type: 'data:changed' as const, entity })));
   }
   return result;
 }

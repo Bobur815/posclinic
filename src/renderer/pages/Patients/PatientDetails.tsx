@@ -27,7 +27,7 @@ interface PatientData {
     appointmentDate: string;
     status: string;
     totalAmount: number;
-    doctor: { fullName: string };
+    doctor: { fullName: string } | null;
   }>;
 }
 

@@ -13,7 +13,7 @@ interface AppointmentData {
   paidAmount: number;
   paymentStatus: string;
   patient: { fullName: string; phone: string };
-  doctor: { fullName: string };
+  doctor: { fullName: string } | null;
   items: Array<{
     id: string;
     serviceName: string;
@@ -271,6 +271,12 @@ export function CheckoutPage() {
         amount: enteredAmount,
       });
       setIsDone(true);
+      // Optional queue ticket / receipt (Settings → Clinic). A printer problem never undoes
+      // the payment; the receipt can still be printed from the done screen.
+      const settings = await window.electronAPI.clinic.getSettings().catch(() => null);
+      if (settings?.printTicketAfterPayment) {
+        window.electronAPI.print.serviceReceipt(id).catch(() => undefined);
+      }
     } catch (error) {
       // Licence refusals are already toasted by LicenseBanner; show every other reason here.
       const key = ipcErrorKey(error, 'common.error');

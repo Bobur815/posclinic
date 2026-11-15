@@ -444,7 +444,14 @@
     "serviceUnavailable": "Tanlangan xizmat topilmadi yoki faol emas. Ro'yxatni yangilang",
     "visitCancelled": "Bekor qilingan qabul uchun to'lov qabul qilinmaydi",
     "invalidAddress": "Manzil noto‘g‘ri: tuman tanlangan viloyatga tegishli emas",
-    "invalidServiceKind": "Xizmat turi noto‘g‘ri"
+    "invalidServiceKind": "Xizmat turi noto‘g‘ri",
+    "doctorRequired": "Konsultatsiya uchun shifokorni tanlang",
+    "caseUnavailable": "Bu murojaat yopilgan yoki boshqa bemorniki",
+    "referralUnavailable": "Yo‘llanma allaqachon ro‘yxatga olingan",
+    "discountNotAllowed": "Chegirma faqat oldindan to‘liq to‘langan kurs uchun",
+    "discountNeedsAdmin": "Bu chegirma uchun administrator ruxsati kerak",
+    "invalidDiscount": "Chegirma 0–100 % bo‘lishi kerak",
+    "invalidSetting": "Sozlama qiymati noto‘g‘ri"
   },
   "license": {
     "title": "Obuna",
@@ -707,5 +714,54 @@
     "retry": "Qayta urinish",
     "noData": "Manzillar ro‘yxati bo‘sh",
     "legacyCity": "Avval kiritilgan"
+  },
+  "register": {
+    "title": "Ro‘yxatga olish",
+    "stepPatient": "Bemor",
+    "stepServices": "Xizmatlar",
+    "stepPayment": "To‘lov",
+    "searchPlaceholder": "F.I.Sh., telefon yoki bemor kodi",
+    "filters": "Filtrlar",
+    "visitedFrom": "Tashrif: dan",
+    "visitedTo": "Tashrif: gacha",
+    "searchHint": "Bemorni ism, telefon yoki kod bo‘yicha qidiring yoki filtrdan foydalaning",
+    "noPatients": "Bemor topilmadi",
+    "changePatient": "Boshqa bemor",
+    "case": "Murojaat",
+    "newCase": "Yangi murojaat",
+    "followUpFreeUntil": "Takroriy konsultatsiya {{date}} gacha bepul",
+    "referrals": "Shifokor yo‘llanmalari",
+    "remaining": "Qoldi: {{n}} / {{total}}",
+    "perDay": "kuniga {{perDay}} marta, {{days}} kun",
+    "today": "Bugun: {{n}}",
+    "fullCourse": "To‘liq kurs: {{n}}",
+    "order": "Buyurtma",
+    "discount": "Chegirma",
+    "fromReferral": "yo‘llanma bo‘yicha",
+    "noDoctor": "Shifokorsiz",
+    "paidUpfront": "Oldindan to‘liq to‘lov",
+    "free": "Bepul",
+    "askAdmin": "Administrator ruxsati",
+    "registerFree": "Ro‘yxatga olish (bepul)",
+    "toPayment": "To‘lovga o‘tish",
+    "adminApproval": "Administrator ruxsati",
+    "adminApprovalHint": "Katta chegirma uchun administrator telefon va parolini kiritadi.",
+    "approve": "Ruxsat berish"
+  },
+  "cases": {
+    "status": {
+      "OPEN": "Ochiq",
+      "WAITING_DOCTOR": "Shifokorni kutmoqda",
+      "WAITING_ANALYSIS": "Tahlilni kutmoqda",
+      "RESULT_READY": "Natija tayyor",
+      "ON_TREATMENT": "Davolanmoqda",
+      "CLOSED": "Yopilgan"
+    }
+  },
+  "clinicSettings": {
+    "title": "Klinika ish tartibi",
+    "followUpFreeDays": "Takroriy konsultatsiya bepul (kun)",
+    "maxDiscountPercent": "Qabulxona chegirmasi chegarasi (%)",
+    "printTicketAfterPayment": "To‘lovdan keyin talon / chek chop etish"
   }
 }

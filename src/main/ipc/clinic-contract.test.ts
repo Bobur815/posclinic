@@ -205,7 +205,7 @@ describe('appointments (NewAppointmentPage, CheckoutPage, Dashboard, PatientDeta
     assert.equal(typeof visit.totalAmount, 'number');
     assert.equal(visit.paidAmount, 0);
     assert.equal(visit.patient.fullName, 'Aliyev Vali');
-    assert.equal(visit.doctor.fullName, 'Dr Karimov');
+    assert.equal(visit.doctor?.fullName, 'Dr Karimov');
   });
 
   it('a partial payment counts in today’s revenue; cancelled visits are not pending', async () => {
@@ -279,7 +279,7 @@ describe('appointments (NewAppointmentPage, CheckoutPage, Dashboard, PatientDeta
     const p = await call<PatientWithVisitsDto>('patients:getById', patientId);
     const visits = await t.db.appointment.count({ where: { patientId } });
     assert.equal(p.appointments.length, visits);
-    assert.ok(p.appointments.every((a) => a.doctor.fullName === 'Dr Karimov'));
+    assert.ok(p.appointments.every((a) => a.doctor?.fullName === 'Dr Karimov'));
   });
 });
 

@@ -2,7 +2,7 @@ import { handle, ipcSafe, RefusedError } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
-import { randomUUID } from 'crypto';
+import { type RegisterInput, registerOrder } from '../clinic/register-order';
 
 type Db = ReturnType<typeof getPrismaClient>;
 type Tx = Parameters<Parameters<Db['$transaction']>[0]>[0];
@@ -55,76 +55,12 @@ export async function withUniqueRetry<T>(
 }
 
 export function setupAppointmentHandlers(): void {
-  handle('appointments:create', async (ctx, data: Record<string, unknown>) => {
+  handle('appointments:create', async (ctx, data: RegisterInput) => {
     try {
-      const prisma = getPrismaClient();
-
-      // The caller names services and quantities only. Names and prices come from THIS till's
-      // catalog: a page (or a satellite over the LAN) never sets what a visit costs.
-      const requested = Array.isArray(data.items)
-        ? (data.items as Array<{ serviceId?: unknown; quantity?: unknown }>)
-        : [];
-      if (requested.length === 0 || requested.length > 50) {
-        throw new RefusedError('errors.noServices');
-      }
-      const lines = requested.map((item) => ({
-        serviceId: String(item.serviceId ?? ''),
-        quantity: Number(item.quantity ?? 1),
-      }));
-      if (
-        lines.some(
-          (l) =>
-            !l.serviceId || !Number.isInteger(l.quantity) || l.quantity < 1 || l.quantity > 999,
-        )
-      ) {
-        throw new RefusedError('errors.invalidQuantity');
-      }
-      const appointmentDate = new Date(String(data.appointmentDate ?? ''));
-      if (Number.isNaN(appointmentDate.getTime())) throw new RefusedError('errors.invalidDate');
-
-      const appointment = await withUniqueRetry(['appointment_number', 'appointmentNumber'], () =>
-        prisma.$transaction(async (tx: Tx) => {
-          const services = await tx.service.findMany({
-            where: { id: { in: [...new Set(lines.map((l) => l.serviceId))] }, active: true },
-            select: { id: true, name: true, price: true },
-          });
-          const byId = new Map(
-            services.map((s: { id: string; name: string; price: unknown }) => [s.id, s]),
-          );
-          const items = lines.map((l) => {
-            const service = byId.get(l.serviceId) as
-              | { id: string; name: string; price: unknown }
-              | undefined;
-            if (!service) throw new RefusedError('errors.serviceUnavailable');
-            const unitPrice = Number(service.price);
-            return {
-              id: randomUUID(),
-              serviceId: service.id,
-              serviceName: service.name,
-              quantity: l.quantity,
-              unitPrice,
-              total: Math.round(unitPrice * l.quantity * 100) / 100,
-            };
-          });
-          const totalAmount = Math.round(items.reduce((sum, i) => sum + i.total, 0) * 100) / 100;
-
-          return tx.appointment.create({
-            data: {
-              id: randomUUID(),
-              appointmentNumber: await nextAppointmentNumber(tx),
-              patientId: data.patientId as string,
-              doctorId: data.doctorId as string,
-              appointmentDate,
-              notes: (data.notes as string) || null,
-              totalAmount,
-              terminalId: ctx.terminalId || getAppConfig().terminalId,
-              items: { create: items },
-            },
-            include: { items: true, patient: true, doctor: true },
-          });
-        }),
+      const appointment = await withUniqueRetry(
+        ['appointment_number', 'appointmentNumber', 'case_number', 'caseNumber'],
+        () => registerOrder(getPrismaClient(), ctx, data ?? {}, ctx.terminalId || getAppConfig().terminalId),
       );
-
       return ipcSafe(appointment);
     } catch (error) {
       log.error('[appointments:create]', error);
@@ -300,7 +236,8 @@ export function setupAppointmentHandlers(): void {
           return tx.appointment.update({
             where: { id },
             data: {
-              status: paymentStatus === 'PAID' ? 'COMPLETED' : undefined,
+              // Paying puts the lines in the doctor's / nurse's queue; the visit is completed
+              // when its lines are done (queue handlers), not by the payment.
               paymentStatus,
               paymentMethod: data.paymentMethod,
               paidAmount,

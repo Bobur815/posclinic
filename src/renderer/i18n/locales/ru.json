@@ -444,7 +444,14 @@
     "serviceUnavailable": "Выбранная услуга не найдена или неактивна. Обновите список",
     "visitCancelled": "Оплата отменённого приёма невозможна",
     "invalidAddress": "Неверный адрес: район не относится к выбранной области",
-    "invalidServiceKind": "Неверный тип услуги"
+    "invalidServiceKind": "Неверный тип услуги",
+    "doctorRequired": "Выберите врача для консультации",
+    "caseUnavailable": "Это обращение закрыто или принадлежит другому пациенту",
+    "referralUnavailable": "Направление уже зарегистрировано",
+    "discountNotAllowed": "Скидка только на курс с полной предоплатой",
+    "discountNeedsAdmin": "Для этой скидки нужно разрешение администратора",
+    "invalidDiscount": "Скидка должна быть 0–100 %",
+    "invalidSetting": "Неверное значение настройки"
   },
   "license": {
     "title": "Подписка",
@@ -707,5 +714,54 @@
     "retry": "Повторить",
     "noData": "Список адресов пуст",
     "legacyCity": "Ранее указано"
+  },
+  "register": {
+    "title": "Регистрация",
+    "stepPatient": "Пациент",
+    "stepServices": "Услуги",
+    "stepPayment": "Оплата",
+    "searchPlaceholder": "ФИО, телефон или код пациента",
+    "filters": "Фильтры",
+    "visitedFrom": "Визит: с",
+    "visitedTo": "Визит: по",
+    "searchHint": "Найдите пациента по имени, телефону или коду, или используйте фильтры",
+    "noPatients": "Пациент не найден",
+    "changePatient": "Другой пациент",
+    "case": "Обращение",
+    "newCase": "Новое обращение",
+    "followUpFreeUntil": "Повторная консультация бесплатно до {{date}}",
+    "referrals": "Направления врача",
+    "remaining": "Осталось: {{n}} / {{total}}",
+    "perDay": "{{perDay}} раза в день, {{days}} дн.",
+    "today": "Сегодня: {{n}}",
+    "fullCourse": "Весь курс: {{n}}",
+    "order": "Заказ",
+    "discount": "Скидка",
+    "fromReferral": "по направлению",
+    "noDoctor": "Без врача",
+    "paidUpfront": "Полная предоплата",
+    "free": "Бесплатно",
+    "askAdmin": "Разрешение администратора",
+    "registerFree": "Зарегистрировать (бесплатно)",
+    "toPayment": "К оплате",
+    "adminApproval": "Разрешение администратора",
+    "adminApprovalHint": "Для большой скидки администратор вводит свой телефон и пароль.",
+    "approve": "Разрешить"
+  },
+  "cases": {
+    "status": {
+      "OPEN": "Открыто",
+      "WAITING_DOCTOR": "Ждёт врача",
+      "WAITING_ANALYSIS": "Ждёт анализа",
+      "RESULT_READY": "Результат готов",
+      "ON_TREATMENT": "На лечении",
+      "CLOSED": "Закрыто"
+    }
+  },
+  "clinicSettings": {
+    "title": "Порядок работы клиники",
+    "followUpFreeDays": "Повторная консультация бесплатно (дней)",
+    "maxDiscountPercent": "Предел скидки регистратуры (%)",
+    "printTicketAfterPayment": "Печатать талон / чек после оплаты"
   }
 }

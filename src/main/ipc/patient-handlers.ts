@@ -4,6 +4,7 @@ import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
 import { randomUUID } from 'crypto';
 import { normalizePhone } from '../../shared/phone';
+import type { PatientSearch } from '../../shared/clinic';
 import { isUniqueConflict, withUniqueRetry } from './appointment-handlers';
 
 type Tx = Parameters<Parameters<ReturnType<typeof getPrismaClient>['$transaction']>[0]>[0];
@@ -64,23 +65,55 @@ export function setupPatientHandlers(): void {
     }
   });
 
-  handle('patients:search', async (_event, query: string) => {
+  /**
+   * Name / phone / patient code, optionally narrowed by region, district and a visit date range
+   * (`PatientSearch` in shared/clinic.ts). A plain string is the old call: text only.
+   */
+  handle('patients:search', async (_event, query: string | PatientSearch) => {
     try {
       const prisma = getPrismaClient();
-      const q = String(query ?? '').trim();
-      if (!q) return [];
+      const f: PatientSearch =
+        typeof query === 'object' && query ? query : { q: String(query ?? '') };
+      const q = String(f.q ?? '').trim();
+      const day = (v: unknown, end: boolean) => {
+        if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
+        return new Date(`${v}T${end ? '23:59:59.999' : '00:00:00'}`);
+      };
+      const from = day(f.visitedFrom, false);
+      const to = day(f.visitedTo, true);
+      const filters: Record<string, unknown>[] = [];
+      if (typeof f.regionCode === 'string' && f.regionCode)
+        filters.push({ regionCode: f.regionCode });
+      if (typeof f.districtCode === 'string' && f.districtCode) {
+        filters.push({ districtCode: f.districtCode });
+      }
+      if (from || to) {
+        filters.push({
+          appointments: {
+            some: {
+              appointmentDate: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) },
+            },
+          },
+        });
+      }
+      if (!q && filters.length === 0) return [];
       // A typed phone matches its stored canonical form too (`90 123` → `+99890123`).
       const digits = q.replace(/[\s()+-]/g, '');
       const phones = /^\d+$/.test(digits) ? [digits] : [];
       const patients = await prisma.patient.findMany({
         where: {
           active: true,
-          OR: [
-            { fullName: { contains: q } },
-            { phone: { contains: q } },
-            { patientCode: { contains: q } },
-            ...phones.map((d) => ({ phone: { contains: d } })),
-          ],
+          ...(filters.length ? { AND: filters } : {}),
+          ...(q
+            ? {
+                OR: [
+                  { fullName: { contains: q } },
+                  { phone: { contains: q } },
+                  { patientCode: { contains: q } },
+                  ...phones.map((d) => ({ phone: { contains: d } })),
+                ],
+              }
+            : {}),
         },
         orderBy: { createdAt: 'desc' },
         take: 50,

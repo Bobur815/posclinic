@@ -27,7 +27,9 @@ export function setupLicenseHandlers(): void {
       const start = new Date();
       start.setDate(1);
       start.setHours(0, 0, 0, 0);
-      return getPrismaClient().appointment.count({ where: { createdAt: { gte: start } } });
+      // A visit for the plan limit is one patient journey (a case), however many paid orders
+      // it has (owner decision 2026-11-15).
+      return getPrismaClient().clinicalCase.count({ where: { createdAt: { gte: start } } });
     },
     appointmentBalance: async (id) => {
       const a = await getPrismaClient().appointment.findUnique({

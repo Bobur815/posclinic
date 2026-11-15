@@ -60,7 +60,7 @@ export const DEFAULT_LAN_PORT = 5180;
 /** Window events the main till sends (and forwards to its satellites over SSE). */
 export interface DataChangedEvent {
   type: 'data:changed';
-  entity: 'patients' | 'appointments' | 'doctors' | 'services' | 'users';
+  entity: 'patients' | 'appointments' | 'doctors' | 'services' | 'users' | 'cases';
 }
 export type AppEvent = DataChangedEvent;
 

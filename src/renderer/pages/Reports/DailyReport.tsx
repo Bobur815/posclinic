@@ -14,7 +14,7 @@ interface AppointmentRow {
   totalAmount: number;
   paidAmount: number;
   patient: { fullName: string };
-  doctor: { fullName: string };
+  doctor: { fullName: string } | null;
 }
 
 interface DailySummary {
@@ -277,7 +277,7 @@ export function DailyReport() {
                 <Tr key={appt.id}>
                   <Td style={{ color: '#0891b2', fontWeight: 500 }}>{appt.appointmentNumber}</Td>
                   <Td>{appt.patient.fullName}</Td>
-                  <Td>{appt.doctor.fullName}</Td>
+                  <Td>{appt.doctor?.fullName ?? '—'}</Td>
                   <Td>{format(new Date(appt.appointmentDate), 'HH:mm')}</Td>
                   <Td>
                     <Badge $color={getStatusColor(appt.status)}>

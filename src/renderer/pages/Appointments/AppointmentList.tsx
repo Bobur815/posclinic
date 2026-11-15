@@ -14,7 +14,7 @@ interface Appointment {
   paymentStatus: string;
   totalAmount: number;
   patient: { fullName: string; phone: string };
-  doctor: { fullName: string };
+  doctor: { fullName: string } | null;
 }
 
 const Page = styled.div``;
@@ -268,7 +268,7 @@ export function AppointmentList() {
                 <Tr key={appt.id} onClick={() => navigate(`/appointments/${appt.id}`)}>
                   <Td>{appt.appointmentNumber}</Td>
                   <Td>{appt.patient.fullName}</Td>
-                  <Td>{appt.doctor.fullName}</Td>
+                  <Td>{appt.doctor?.fullName ?? '—'}</Td>
                   <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
                   <Td>
                     <Badge $color={getStatusColor(appt.status)}>
