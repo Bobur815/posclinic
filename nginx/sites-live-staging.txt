@@ -1,3 +1,4 @@
 # Hosts whose REAL config (with TLS) is installed; any other host in nginx/sites-staging/ gets an
 # ACME stub. Add a host here only after its certificate exists on the VPS:
 #   sudo certbot certonly --webroot -w /var/www/certbot --cert-name dev.clinic.posgro.uz -d dev.clinic.posgro.uz
+dev.clinic.posgro.uz
