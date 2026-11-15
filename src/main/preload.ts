@@ -3,6 +3,21 @@ import type { ActivateResult, LicenseStatusDto } from '../shared/license';
 import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
+import type {
+  AppointmentCreateInput,
+  AppointmentDto,
+  AppointmentFilters,
+  AppointmentUpdateInput,
+  CheckoutInput,
+  DoctorDto,
+  DoctorInput,
+  PatientDto,
+  PatientInput,
+  PatientWithVisitsDto,
+  ServiceDto,
+  ServiceInput,
+  TodaySummaryDto,
+} from '../shared/clinic';
 
 interface SetupAdminInput {
   fullName: string;
@@ -31,8 +46,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('patients:getAll', filters),
     search: (query: string) => ipcRenderer.invoke('patients:search', query),
     getById: (id: string) => ipcRenderer.invoke('patients:getById', id),
-    create: (data: unknown) => ipcRenderer.invoke('patients:create', data),
-    update: (id: string, data: unknown) =>
+    create: (data: PatientInput) => ipcRenderer.invoke('patients:create', data),
+    update: (id: string, data: PatientInput) =>
       ipcRenderer.invoke('patients:update', id, data),
   },
 
@@ -40,8 +55,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   doctors: {
     getAll: () => ipcRenderer.invoke('doctors:getAll'),
     getActive: () => ipcRenderer.invoke('doctors:getActive'),
-    create: (data: unknown) => ipcRenderer.invoke('doctors:create', data),
-    update: (id: string, data: unknown) =>
+    create: (data: DoctorInput) => ipcRenderer.invoke('doctors:create', data),
+    update: (id: string, data: DoctorInput) =>
       ipcRenderer.invoke('doctors:update', id, data),
   },
 
@@ -50,21 +65,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAll: () => ipcRenderer.invoke('services:getAll'),
     getActive: () => ipcRenderer.invoke('services:getActive'),
     search: (query: string) => ipcRenderer.invoke('services:search', query),
-    create: (data: unknown) => ipcRenderer.invoke('services:create', data),
-    update: (id: string, data: unknown) =>
+    create: (data: ServiceInput) => ipcRenderer.invoke('services:create', data),
+    update: (id: string, data: ServiceInput) =>
       ipcRenderer.invoke('services:update', id, data),
   },
 
   // Appointments
   appointments: {
-    create: (data: unknown) => ipcRenderer.invoke('appointments:create', data),
-    getAll: (filters?: unknown) =>
+    create: (data: AppointmentCreateInput) => ipcRenderer.invoke('appointments:create', data),
+    getAll: (filters?: AppointmentFilters) =>
       ipcRenderer.invoke('appointments:getAll', filters),
     getById: (id: string) => ipcRenderer.invoke('appointments:getById', id),
-    update: (id: string, data: unknown) =>
+    update: (id: string, data: AppointmentUpdateInput) =>
       ipcRenderer.invoke('appointments:update', id, data),
     getTodaySummary: () => ipcRenderer.invoke('appointments:getTodaySummary'),
-    checkout: (id: string, data: unknown) =>
+    checkout: (id: string, data: CheckoutInput) =>
       ipcRenderer.invoke('appointments:checkout', id, data),
   },
 
@@ -185,32 +200,32 @@ declare global {
         changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
       };
       patients: {
-        getAll: (filters?: { active?: boolean }) => Promise<unknown[]>;
-        search: (query: string) => Promise<unknown[]>;
-        getById: (id: string) => Promise<unknown>;
-        create: (data: unknown) => Promise<unknown>;
-        update: (id: string, data: unknown) => Promise<unknown>;
+        getAll: (filters?: { active?: boolean }) => Promise<PatientDto[]>;
+        search: (query: string) => Promise<PatientDto[]>;
+        getById: (id: string) => Promise<PatientWithVisitsDto | null>;
+        create: (data: PatientInput) => Promise<PatientDto>;
+        update: (id: string, data: PatientInput) => Promise<PatientDto>;
       };
       doctors: {
-        getAll: () => Promise<unknown[]>;
-        getActive: () => Promise<unknown[]>;
-        create: (data: unknown) => Promise<unknown>;
-        update: (id: string, data: unknown) => Promise<unknown>;
+        getAll: () => Promise<DoctorDto[]>;
+        getActive: () => Promise<DoctorDto[]>;
+        create: (data: DoctorInput) => Promise<DoctorDto>;
+        update: (id: string, data: DoctorInput) => Promise<DoctorDto>;
       };
       services: {
-        getAll: () => Promise<unknown[]>;
-        getActive: () => Promise<unknown[]>;
-        search: (query: string) => Promise<unknown[]>;
-        create: (data: unknown) => Promise<unknown>;
-        update: (id: string, data: unknown) => Promise<unknown>;
+        getAll: () => Promise<ServiceDto[]>;
+        getActive: () => Promise<ServiceDto[]>;
+        search: (query: string) => Promise<ServiceDto[]>;
+        create: (data: ServiceInput) => Promise<ServiceDto>;
+        update: (id: string, data: ServiceInput) => Promise<ServiceDto>;
       };
       appointments: {
-        create: (data: unknown) => Promise<unknown>;
-        getAll: (filters?: unknown) => Promise<unknown[]>;
-        getById: (id: string) => Promise<unknown>;
-        update: (id: string, data: unknown) => Promise<unknown>;
-        getTodaySummary: () => Promise<unknown>;
-        checkout: (id: string, data: unknown) => Promise<unknown>;
+        create: (data: AppointmentCreateInput) => Promise<AppointmentDto>;
+        getAll: (filters?: AppointmentFilters) => Promise<AppointmentDto[]>;
+        getById: (id: string) => Promise<AppointmentDto | null>;
+        update: (id: string, data: AppointmentUpdateInput) => Promise<AppointmentDto>;
+        getTodaySummary: () => Promise<TodaySummaryDto>;
+        checkout: (id: string, data: CheckoutInput) => Promise<AppointmentDto>;
       };
       print: {
         serviceReceipt: (appointmentId: string) => Promise<{ success: boolean; error?: string }>;

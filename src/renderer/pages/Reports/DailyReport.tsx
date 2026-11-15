@@ -170,7 +170,10 @@ export function DailyReport() {
 
         const completed = rows.filter((r) => r.status === 'COMPLETED').length;
         const cancelled = rows.filter((r) => r.status === 'CANCELLED').length;
-        const revenue = rows.reduce((sum, r) => sum + Number(r.totalAmount), 0);
+        // A cancelled visit is not revenue.
+        const revenue = rows
+          .filter((r) => r.status !== 'CANCELLED')
+          .reduce((sum, r) => sum + Number(r.totalAmount), 0);
         const paidAmount = rows.reduce((sum, r) => sum + Number(r.paidAmount), 0);
         setSummary({ total: rows.length, completed, cancelled, revenue, paidAmount });
       } catch (err) {
@@ -221,7 +224,7 @@ export function DailyReport() {
         <StatCard>
           <IconBox $color="#22c55e"><CheckCircle size={20} /></IconBox>
           <StatInfo>
-            <StatLabel>{t('dashboard.completed')}</StatLabel>
+            <StatLabel>{t('appointments.todaySummary.completed')}</StatLabel>
             <StatValue>{summary.completed}</StatValue>
           </StatInfo>
         </StatCard>

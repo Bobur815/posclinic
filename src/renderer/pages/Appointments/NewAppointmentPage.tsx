@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { ArrowLeft, Search, Plus, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 import { useToast } from '../../context/ToastContext';
+import { ipcErrorKey } from '../../store/lan-store';
 
 interface Patient {
   id: string;
@@ -288,8 +290,9 @@ export function NewAppointmentPage() {
   // Step 2: Doctor + Date
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState(
-    new Date().toISOString().slice(0, 16)
+  // datetime-local wants the LOCAL time; toISOString() would be UTC (5 hours early in Tashkent).
+  const [appointmentDate, setAppointmentDate] = useState(() =>
+    format(new Date(), "yyyy-MM-dd'T'HH:mm")
   );
   const [notes, setNotes] = useState('');
 
@@ -356,13 +359,14 @@ export function NewAppointmentPage() {
   const getTotal = () => items.reduce((sum, i) => sum + i.total, 0);
 
   const handleCreate = async () => {
-    if (!selectedPatient || !selectedDoctorId || items.length === 0) return;
+    if (!selectedPatient || !selectedDoctorId || !appointmentDate || items.length === 0) return;
     setIsLoading(true);
     try {
       const result = await window.electronAPI.appointments.create({
         patientId: selectedPatient.id,
         doctorId: selectedDoctorId,
-        appointmentDate,
+        // The local time typed, as an instant (`new Date('…T09:00')` reads it as local).
+        appointmentDate: new Date(appointmentDate).toISOString(),
         notes,
         items: items.map((i) => ({
           serviceId: i.serviceId,
@@ -376,8 +380,9 @@ export function NewAppointmentPage() {
       toast.success(t('common.success'));
       navigate(`/appointments/${appt.id}/checkout`);
     } catch (err) {
-      console.error(err);
-      toast.error(t('common.error'));
+      // The monthly visit limit is toasted by LicenseBanner.
+      const key = ipcErrorKey(err, 'common.error');
+      if (!key.startsWith('license.')) toast.error(t(key));
     } finally {
       setIsLoading(false);
     }

@@ -283,7 +283,7 @@ export function AppointmentList() {
                     <ActionBtn onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${appt.id}`); }}>
                       <Eye size={15} />
                     </ActionBtn>
-                    {appt.paymentStatus !== 'PAID' && (
+                    {appt.paymentStatus !== 'PAID' && appt.status !== 'CANCELLED' && (
                       <ActionBtn onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${appt.id}/checkout`); }}>
                         <CreditCard size={15} />
                       </ActionBtn>

@@ -417,7 +417,10 @@
     "forbidden": "Bu amal faqat klinika administratoriga ruxsat etilgan",
     "notFound": "Topilmadi",
     "invalidAmount": "To'lov summasini kiriting",
-    "alreadyPaid": "Bu qabul allaqachon to'liq to'langan"
+    "alreadyPaid": "Bu qabul allaqachon to'liq to'langan",
+    "invalidPhone": "Telefon raqamini +998 XX XXX XX XX ko'rinishida kiriting",
+    "phoneTaken": "Bu telefon raqamli bemor allaqachon bor",
+    "codeTaken": "Bu kodli xizmat allaqachon bor"
   },
   "license": {
     "title": "Obuna",

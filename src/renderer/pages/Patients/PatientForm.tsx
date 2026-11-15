@@ -4,6 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { ipcErrorKey } from '../../store/lan-store';
+import type { Gender } from '../../../shared/clinic';
 
 const Page = styled.div`
   max-width: 720px;
@@ -146,7 +148,7 @@ export function PatientForm() {
     fullName: '',
     phone: '',
     birthDate: '',
-    gender: '',
+    gender: '' as Gender | '',
     bloodType: '',
     allergies: '',
     address: '',
@@ -158,17 +160,17 @@ export function PatientForm() {
     if (isEdit && id) {
       window.electronAPI.patients.getById(id).then((data) => {
         if (data) {
-          const p = data as Record<string, unknown>;
           setForm({
-            fullName: (p.fullName as string) || '',
-            phone: (p.phone as string) || '',
-            birthDate: p.birthDate ? new Date(p.birthDate as string).toISOString().slice(0, 10) : '',
-            gender: (p.gender as string) || '',
-            bloodType: (p.bloodType as string) || '',
-            allergies: (p.allergies as string) || '',
-            address: (p.address as string) || '',
-            city: (p.city as string) || '',
-            notes: (p.notes as string) || '',
+            fullName: data.fullName || '',
+            phone: data.phone || '',
+            // `YYYY-MM-DD` is stored as UTC midnight: its ISO date is the day typed.
+            birthDate: data.birthDate ? data.birthDate.slice(0, 10) : '',
+            gender: (data.gender as Gender | null) || '',
+            bloodType: data.bloodType || '',
+            allergies: data.allergies || '',
+            address: data.address || '',
+            city: data.city || '',
+            notes: data.notes || '',
           });
         }
         setIsFetching(false);
@@ -191,10 +193,11 @@ export function PatientForm() {
         await window.electronAPI.patients.create(form);
         toast.success(t('common.success'));
       }
-      navigate('/patients');
+      navigate(isEdit && id ? `/patients/${id}` : '/patients');
     } catch (err) {
-      console.error(err);
-      toast.error(t('common.error'));
+      // errors.invalidPhone / errors.phoneTaken; licence refusals are toasted by LicenseBanner.
+      const key = ipcErrorKey(err, 'common.error');
+      if (!key.startsWith('license.')) toast.error(t(key));
     } finally {
       setIsLoading(false);
     }
@@ -204,7 +207,7 @@ export function PatientForm() {
 
   return (
     <Page>
-      <BackBtn onClick={() => navigate('/patients')}>
+      <BackBtn onClick={() => navigate(isEdit && id ? `/patients/${id}` : '/patients')}>
         <ArrowLeft size={14} />
         {t('common.back')}
       </BackBtn>

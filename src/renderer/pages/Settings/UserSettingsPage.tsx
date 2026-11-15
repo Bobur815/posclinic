@@ -142,7 +142,11 @@ export function UserSettingsPage() {
     }
     setIsSaving(true);
     try {
-      await window.electronAPI.auth.changePassword(currentPassword, newPassword);
+      // false (not a throw) when the current password is wrong.
+      if (!(await window.electronAPI.auth.changePassword(currentPassword, newPassword))) {
+        toast.error(t('users.wrongPassword'));
+        return;
+      }
       toast.success(t('common.success'));
       setCurrentPassword('');
       setNewPassword('');

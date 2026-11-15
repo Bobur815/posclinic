@@ -10,9 +10,31 @@ import type { AppEvent, DataChangedEvent } from '../../shared/lan';
  * whether the caller is one of its own windows or a satellite (lan/server.ts).
  */
 
-/** Strips non-cloneable values (Prisma Decimal, Date → string) before crossing IPC. */
+/** A Prisma `Decimal` (decimal.js): its own `toJSON` would make it a string. */
+function isDecimal(v: unknown): v is { toNumber(): number } {
+  if (typeof v !== 'object' || v === null) return false;
+  // decimal.js's own shape (its class name is minified in the Prisma runtime).
+  const d = v as { toNumber?: unknown; d?: unknown; e?: unknown; s?: unknown };
+  return (
+    typeof d.toNumber === 'function' &&
+    (Array.isArray(d.d) || d.d === null) &&
+    typeof d.e === 'number' &&
+    typeof d.s === 'number'
+  );
+}
+
+/**
+ * Strips non-cloneable values before crossing IPC: Date → ISO string, Prisma Decimal → number
+ * (money is a number in the renderer; `JSON.stringify` alone would give `"150000"`).
+ */
 export function ipcSafe<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
+  return JSON.parse(
+    JSON.stringify(value, function (this: Record<string, unknown>, key, v) {
+      // The replacer sees `v` after toJSON(); the holder still has the Decimal itself.
+      const raw = this[key];
+      return isDecimal(raw) ? raw.toNumber() : v;
+    }),
+  );
 }
 
 /** Who is signed in at the calling window (a satellite's window: its session on the main till). */

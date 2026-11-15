@@ -163,7 +163,7 @@ export function PatientDetails() {
 
       <Header>
         <Title>{patient.fullName}</Title>
-        <EditBtn onClick={() => navigate(`/patients/${patient.id}`)}>
+        <EditBtn onClick={() => navigate(`/patients/${patient.id}/edit`)}>
           <Edit2 size={15} />
           {t('common.edit')}
         </EditBtn>

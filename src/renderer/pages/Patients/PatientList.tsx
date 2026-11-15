@@ -213,7 +213,7 @@ export function PatientList() {
                     <ActionBtn onClick={() => navigate(`/patients/${patient.id}`)} title={t('common.actions')}>
                       <Eye size={15} />
                     </ActionBtn>
-                    <ActionBtn onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}`); }} title={t('common.edit')}>
+                    <ActionBtn onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}/edit`); }} title={t('common.edit')}>
                       <Edit2 size={15} />
                     </ActionBtn>
                   </Td>

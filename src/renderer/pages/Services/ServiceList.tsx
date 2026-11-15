@@ -4,15 +4,8 @@ import styled from 'styled-components';
 import { Plus, Search, Edit2, X, Save } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
-
-interface Service {
-  id: string;
-  code: string;
-  name: string;
-  price: number;
-  duration: number | null;
-  active: boolean;
-}
+import { ipcErrorKey } from '../../store/lan-store';
+import type { ServiceDto as Service } from '../../../shared/clinic';
 
 interface ServiceForm {
   code: string;
@@ -290,19 +283,12 @@ export function ServiceList() {
 
   useEffect(() => { loadServices(); }, [loadServices]);
 
-  const handleSearch = async (q: string) => {
-    setSearchQuery(q);
-    if (!q.trim()) {
-      loadServices();
-      return;
-    }
-    try {
-      const data = await window.electronAPI.services.search(q);
-      setServices(data as Service[]);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // Filtered here, not with services:search: that one lists active services only (the visit
+  // picker), and an admin must find an inactive service to switch it back on.
+  const q = searchQuery.trim().toLowerCase();
+  const filtered = q
+    ? services.filter((s) => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q))
+    : services;
 
   const openAdd = () => {
     setEditingService(null);
@@ -323,14 +309,16 @@ export function ServiceList() {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.price) return;
+    const price = Number(form.price);
+    if (!form.code.trim() || !form.name.trim() || !Number.isFinite(price) || price < 0) return;
     setIsSaving(true);
     try {
       const payload = {
         code: form.code.trim(),
         name: form.name.trim(),
-        price: parseFloat(form.price),
-        duration: form.duration ? parseInt(form.duration) : null,
+        price,
+        // duration is NOT NULL in the DB: an empty field is the default 30 minutes.
+        duration: parseInt(form.duration, 10) || 30,
         active: form.active,
       };
       if (editingService) {
@@ -341,8 +329,10 @@ export function ServiceList() {
       toast.success(t('common.success'));
       setShowModal(false);
       loadServices();
-    } catch {
-      toast.error(t('common.error'));
+    } catch (err) {
+      // errors.codeTaken / errors.forbidden; licence refusals are toasted by LicenseBanner.
+      const key = ipcErrorKey(err, 'common.error');
+      if (!key.startsWith('license.')) toast.error(t(key));
     } finally {
       setIsSaving(false);
     }
@@ -391,7 +381,7 @@ export function ServiceList() {
             </FormGrid>
             <ModalFooter>
               <CancelBtn onClick={() => setShowModal(false)}>{t('common.cancel')}</CancelBtn>
-              <SaveBtn onClick={handleSave} disabled={isSaving || !form.name.trim() || !form.price}>
+              <SaveBtn onClick={handleSave} disabled={isSaving || !form.code.trim() || !form.name.trim() || !form.price}>
                 <Save size={14} />
                 {isSaving ? t('common.processing') : t('common.save')}
               </SaveBtn>
@@ -408,7 +398,7 @@ export function ServiceList() {
             <SearchInput
               placeholder={t('services.searchPlaceholder')}
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </SearchWrapper>
           {canEdit && (
@@ -423,7 +413,7 @@ export function ServiceList() {
       <TableWrapper>
         {isLoading ? (
           <EmptyState>{t('common.loading')}</EmptyState>
-        ) : services.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState>{t('services.noServices')}</EmptyState>
         ) : (
           <Table>
@@ -438,7 +428,7 @@ export function ServiceList() {
               </tr>
             </thead>
             <tbody>
-              {services.map((svc) => (
+              {filtered.map((svc) => (
                 <Tr key={svc.id}>
                   <Td style={{ color: '#0891b2', fontWeight: 500 }}>{svc.code}</Td>
                   <Td>{svc.name}</Td>

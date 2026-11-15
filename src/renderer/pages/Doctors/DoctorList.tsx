@@ -3,14 +3,8 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Plus, Edit2, X, Save, Search } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
-
-interface Doctor {
-  id: string;
-  fullName: string;
-  specialty: string | null;
-  phone: string | null;
-  active: boolean;
-}
+import { ipcErrorKey } from '../../store/lan-store';
+import type { DoctorDto as Doctor } from '../../../shared/clinic';
 
 interface DoctorForm {
   fullName: string;
@@ -323,8 +317,10 @@ export function DoctorList() {
       toast.success(t('common.success'));
       setShowModal(false);
       loadDoctors();
-    } catch {
-      toast.error(t('common.error'));
+    } catch (err) {
+      // Licence refusals (a second doctor without multiDoctor) are toasted by LicenseBanner.
+      const key = ipcErrorKey(err, 'common.error');
+      if (!key.startsWith('license.')) toast.error(t(key));
     } finally {
       setIsSaving(false);
     }
@@ -359,13 +355,16 @@ export function DoctorList() {
               <Label>{t('patients.phone')}</Label>
               <Input type="tel" value={form.phone} onChange={handleChange('phone')} />
             </FormGroup>
-            <FormGroup>
-              <Label>{t('common.status')}</Label>
-              <Select value={String(form.active)} onChange={handleChange('active')}>
-                <option value="true">{t('common.active')}</option>
-                <option value="false">{t('common.inactive')}</option>
-              </Select>
-            </FormGroup>
+            {/* doctors:create always makes an active doctor; the status is edited afterwards. */}
+            {editingDoctor && (
+              <FormGroup>
+                <Label>{t('common.status')}</Label>
+                <Select value={String(form.active)} onChange={handleChange('active')}>
+                  <option value="true">{t('common.active')}</option>
+                  <option value="false">{t('common.inactive')}</option>
+                </Select>
+              </FormGroup>
+            )}
 
             <ModalFooter>
               <CancelBtn onClick={() => setShowModal(false)}>{t('common.cancel')}</CancelBtn>

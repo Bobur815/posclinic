@@ -1,6 +1,12 @@
-import { handle, ipcSafe, requireAdmin } from './ipc-safe';
+import { handle, ipcSafe, RefusedError, requireAdmin } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { log } from '../logger';
+import { isUniqueConflict } from './appointment-handlers';
+
+function codeTaken(error: unknown): never {
+  if (isUniqueConflict(error, ['code'])) throw new RefusedError('errors.codeTaken');
+  throw error;
+}
 
 export function setupServiceHandlers(): void {
   handle('services:getAll', async () => {
@@ -33,14 +39,13 @@ export function setupServiceHandlers(): void {
   handle('services:search', async (_event, query: string) => {
     try {
       const prisma = getPrismaClient();
-      const q = `%${query}%`;
-      const services = await prisma.$queryRaw<unknown[]>`
-        SELECT * FROM services
-        WHERE (name LIKE ${q} OR code LIKE ${q})
-        AND active = 1
-        ORDER BY name ASC
-        LIMIT 30
-      `;
+      const q = String(query ?? '').trim();
+      if (!q) return [];
+      const services = await prisma.service.findMany({
+        where: { active: true, OR: [{ name: { contains: q } }, { code: { contains: q } }] },
+        orderBy: { name: 'asc' },
+        take: 30,
+      });
       return ipcSafe(services);
     } catch (error) {
       log.error('[services:search]', error);
@@ -61,8 +66,9 @@ export function setupServiceHandlers(): void {
           description: (data.description as string) || null,
           price: data.price as number,
           duration: (data.duration as number) || 30,
+          active: data.active !== false,
         },
-      });
+      }).catch(codeTaken);
       return ipcSafe(service);
     } catch (error) {
       log.error('[services:create]', error);
@@ -84,7 +90,7 @@ export function setupServiceHandlers(): void {
           duration: data.duration as number | undefined,
           active: data.active as boolean | undefined,
         },
-      });
+      }).catch(codeTaken);
       return ipcSafe(service);
     } catch (error) {
       log.error('[services:update]', error);

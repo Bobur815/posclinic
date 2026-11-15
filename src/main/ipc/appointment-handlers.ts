@@ -198,19 +198,21 @@ export function setupAppointmentHandlers(): void {
       const end = new Date();
       end.setHours(23, 59, 59, 999);
 
-      const [total, completed, paid, appointments] = await Promise.all([
+      const today = { appointmentDate: { gte: start, lte: end } };
+      const [total, completed, pending, paid, appointments] = await Promise.all([
+        prisma.appointment.count({ where: today }),
+        prisma.appointment.count({ where: { ...today, status: 'COMPLETED' } }),
+        // Still owed: not cancelled and not fully paid.
         prisma.appointment.count({
-          where: { appointmentDate: { gte: start, lte: end } },
+          where: { ...today, status: { not: 'CANCELLED' }, paymentStatus: { not: 'PAID' } },
         }),
-        prisma.appointment.count({
-          where: { appointmentDate: { gte: start, lte: end }, status: 'COMPLETED' },
-        }),
+        // Money taken today, partial payments included.
         prisma.appointment.findMany({
-          where: { appointmentDate: { gte: start, lte: end }, paymentStatus: 'PAID' },
+          where: { ...today, paidAmount: { gt: 0 } },
           select: { paidAmount: true },
         }),
         prisma.appointment.findMany({
-          where: { appointmentDate: { gte: start, lte: end } },
+          where: today,
           include: { patient: true, doctor: true },
           orderBy: { createdAt: 'desc' },
           take: 10,
@@ -226,7 +228,7 @@ export function setupAppointmentHandlers(): void {
         total,
         completed,
         revenue,
-        pending: total - completed,
+        pending,
         recentAppointments: appointments,
       });
     } catch (error) {
