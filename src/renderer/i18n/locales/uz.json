@@ -624,5 +624,53 @@
       "alreadySatellite": "Bu kompyuter allaqachon qo'shimcha kassa",
       "notSatellite": "Bu kompyuter qo'shimcha kassa emas"
     }
+  },
+  "login": {
+    "title": "Xush kelibsiz",
+    "subtitle": "Kassaga kirish",
+    "other": "Boshqa xodim",
+    "pwdPh": "Parolingizni kiriting",
+    "rememberNote": "faqat telefon raqam",
+    "loading": "Tekshirilmoqda…",
+    "lockedBtn": "Bloklangan",
+    "hint1": "Parolni unutdingizmi?",
+    "hint2": "Klinika administratoriga murojaat qiling",
+    "errPhone": "Telefon raqamni toʻliq kiriting",
+    "errPwd": "Parolni kiriting",
+    "roleMain": "Asosiy kassa",
+    "roleSat": "Qoʻshimcha kassa",
+    "online": "onlayn",
+    "connecting": "ulanmoqda",
+    "offline": "oflayn",
+    "toDark": "Tungi rejimga oʻtish",
+    "toLight": "Kunduzgi rejimga oʻtish",
+    "langGroup": "Til",
+    "mainAddress": "Asosiy kassa manzili",
+    "reconnecting": "Avtomatik qayta ulanilmoqda…",
+    "mainRefused": "Asosiy kassa bu kassani qabul qilmayapti",
+    "days": [
+      "Yakshanba",
+      "Dushanba",
+      "Seshanba",
+      "Chorshanba",
+      "Payshanba",
+      "Juma",
+      "Shanba"
+    ],
+    "months": [
+      "yanvar",
+      "fevral",
+      "mart",
+      "aprel",
+      "may",
+      "iyun",
+      "iyul",
+      "avgust",
+      "sentabr",
+      "oktabr",
+      "noyabr",
+      "dekabr"
+    ],
+    "date": "{{wd}}, {{d}}-{{m}}"
   }
 }
