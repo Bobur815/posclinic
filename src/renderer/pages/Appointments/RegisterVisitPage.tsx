@@ -18,6 +18,7 @@ import { AddressText } from '../../components/address/AddressText';
 import { useToast } from '../../context/ToastContext';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { ipcErrorKey } from '../../store/lan-store';
+import { PhoneInput } from '../../components/form/PhoneInput';
 
 /**
  * Reception: register services for a patient (v2.5). Step 1 finds the patient (name, phone,
@@ -676,7 +677,7 @@ function ApprovalDialog({
         <SectionTitle>{t('register.adminApproval')}</SectionTitle>
         <Muted>{t('register.adminApprovalHint')}</Muted>
         <Label>{t('auth.phone')}</Label>
-        <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoFocus />
+        <PhoneInput value={phone} onChange={setPhone} autoFocus />
         <Label>{t('auth.password')}</Label>
         <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         <Footer>

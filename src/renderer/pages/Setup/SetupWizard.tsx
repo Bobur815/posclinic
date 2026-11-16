@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { ipcErrorKey } from '../../store/lan-store';
+import { PhoneInput } from '../../components/form/PhoneInput';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -580,14 +581,11 @@ export function SetupWizard() {
 
             <FormGroup>
               <Label>{t('setup.link.phone')}</Label>
-              <Input
-                type="tel"
-                inputMode="tel"
-                placeholder={t('auth.phonePlaceholder')}
+              <PhoneInput
                 value={ownerPhone}
-                onChange={(e) => {
+                onChange={(v) => {
                   setError('');
-                  setOwnerPhone(e.target.value);
+                  setOwnerPhone(v);
                 }}
                 required
                 autoFocus
@@ -650,14 +648,11 @@ export function SetupWizard() {
 
             <FormGroup>
               <Label>{t('setup.admin.phone')}</Label>
-              <Input
-                type="tel"
-                inputMode="tel"
-                placeholder={t('auth.phonePlaceholder')}
+              <PhoneInput
                 value={phone}
-                onChange={(e) => {
+                onChange={(v) => {
                   setError('');
-                  setPhone(e.target.value);
+                  setPhone(v);
                 }}
                 required
               />

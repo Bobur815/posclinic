@@ -16,6 +16,35 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   return m ? `+998${m[1]}` : null;
 }
 
+// ── The "+998" phone field (till and web PhoneInput) ──────────────────────────────────────
+
+/** The 9 local digits in any typed or stored form ("+998 90…", "99890…", "90 123…"), at most 9. */
+export function phoneLocalDigits(value: string | null | undefined): string {
+  let d = (value ?? '').replace(/\D/g, '');
+  if (d.length > 9 && d.startsWith('998')) d = d.slice(3);
+  return d.slice(0, 9);
+}
+
+/** "90 123 45 67" (as much as is typed). */
+export function formatPhoneLocal(value: string | null | undefined): string {
+  const d = phoneLocalDigits(value);
+  return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' ');
+}
+
+/**
+ * What a phone field hands its form: `+998` + the digits typed, or '' when empty. Partial
+ * numbers stay partial (`+99890`), so the server's `normalizePhone` still refuses them.
+ */
+export function phoneFieldValue(value: string | null | undefined): string {
+  const d = phoneLocalDigits(value);
+  return d ? `+998${d}` : '';
+}
+
+/** All 9 digits are there. */
+export function isCompletePhone(value: string | null | undefined): boolean {
+  return phoneLocalDigits(value).length === 9;
+}
+
 /** `+998 90 123 45 67` for display; returns the input unchanged if it isn't canonical. */
 export function formatPhone(phone: string): string {
   const m = /^\+998(\d{2})(\d{3})(\d{2})(\d{2})$/.exec(phone);

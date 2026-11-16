@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { formatPhoneLocal } from '@shared/phone';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useNavigate } from 'react-router-dom';
 import styled, { css, keyframes } from 'styled-components';
@@ -24,12 +25,8 @@ function readRemembered(): string {
 }
 
 /** Digits only, without the 998 prefix, at most 9; shown as "90 123 45 67". */
-function formatLocal(value: string): string {
-  let d = value.replace(/\D/g, '');
-  if (d.length > 9 && d.startsWith('998')) d = d.slice(3);
-  d = d.slice(0, 9);
-  return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' ');
-}
+/** "90 123 45 67" (shared with the till and the PhoneInput fields: @shared/phone). */
+const formatLocal = formatPhoneLocal;
 
 type LocalError = 'phone' | 'pwd' | null;
 

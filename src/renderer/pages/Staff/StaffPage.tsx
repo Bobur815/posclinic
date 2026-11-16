@@ -22,6 +22,7 @@ import {
   StatusBadge,
   Title,
 } from '../Care/care-ui';
+import { PhoneInput } from '../../components/form/PhoneInput';
 
 /**
  * Staff logins (clinic admins): receptionists, nurses / lab and admins sign in on any till with
@@ -177,12 +178,7 @@ export function StaffPage() {
             </Label>
             <Label>
               {t('auth.phone')}
-              <Input
-                type="tel"
-                placeholder="+998 90 123 45 67"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              />
+              <PhoneInput value={form.phone} onChange={(phone) => setForm({ ...form, phone })} />
             </Label>
             <Label>
               {t('staff.role')}

@@ -7,6 +7,7 @@ import type { StaffDto } from '../../../shared/clinic';
 import { useToast } from '../../context/ToastContext';
 import { ipcErrorKey } from '../../store/lan-store';
 import type { DoctorDto as Doctor } from '../../../shared/clinic';
+import { PhoneInput } from '../../components/form/PhoneInput';
 
 interface DoctorForm {
   fullName: string;
@@ -401,7 +402,10 @@ export function DoctorList() {
             </FormGroup>
             <FormGroup>
               <Label>{t('patients.phone')}</Label>
-              <Input type="tel" value={form.phone} onChange={handleChange('phone')} />
+              <PhoneInput
+                value={form.phone}
+                onChange={(phone) => setForm((prev) => ({ ...prev, phone }))}
+              />
             </FormGroup>
             {/* doctors:create always makes an active doctor; the status is edited afterwards. */}
             {editingDoctor && (
@@ -434,12 +438,7 @@ export function DoctorList() {
             </ModalHeader>
             <FormGroup>
               <Label>{t('auth.phone')}<Required>*</Required></Label>
-              <Input
-                type="tel"
-                value={login.phone}
-                onChange={(e) => setLogin({ ...login, phone: e.target.value })}
-                placeholder="+998 90 123 45 67"
-              />
+              <PhoneInput value={login.phone} onChange={(phone) => setLogin({ ...login, phone })} />
             </FormGroup>
             <FormGroup>
               <Label>{t('auth.password')}<Required>*</Required></Label>

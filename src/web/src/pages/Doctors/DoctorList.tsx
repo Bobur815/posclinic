@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Stethoscope, Plus, Pencil, RefreshCw, Search } from 'lucide-react';
 import { normalizePhone } from '@shared/phone';
+import { PhoneInput } from '../../components/ui/PhoneInput';
 import { useToast } from '@context/ToastContext';
 import { doctorsApi, type Doctor, type DoctorInput } from '../../api/client';
 import { useAsync } from '../../hooks/useAsync';
@@ -190,7 +191,7 @@ function DoctorForm({ doctor, onClose, onSaved }: { doctor: Doctor | null; onClo
             <Input value={specialty} onChange={(e) => setSpecialty(e.target.value)} maxLength={200} />
           </Field>
           <Field label={t('doctors.phone')} error={phoneBad ? t('errors.invalid_phone') : null}>
-            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" />
+            <PhoneInput value={phone} onChange={setPhone} invalid={!!phoneBad} />
           </Field>
           <Field label={t('doctors.licenseNo')}>
             <Input value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} maxLength={100} />

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import styled, { css } from 'styled-components';
 import { LogoMark } from '../../components/brand/Logo';
 import { tillTokens } from '../../components/brand/till-tokens';
+import { PhoneInput } from '../../components/form/PhoneInput';
+import { formatPhoneLocal } from '../../../shared/phone';
 import {
   Bar,
   BrandWord,
@@ -52,13 +54,8 @@ function loadSavedPhone(): string {
   }
 }
 
-/** Digits without the 998 prefix, at most 9, shown as "90 123 45 67". */
-function formatLocal(value: string): string {
-  let d = value.replace(/\D/g, '');
-  if (d.length > 9 && d.startsWith('998')) d = d.slice(3);
-  d = d.slice(0, 9);
-  return [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' ');
-}
+/** Digits without the 998 prefix, at most 9, shown as "90 123 45 67" (shared/phone.ts). */
+const formatLocal = formatPhoneLocal;
 
 export function LoginPage() {
   const { t, i18n } = useTranslation();
@@ -313,30 +310,22 @@ export function LoginPage() {
                       </LinkBtn>
                     )}
                   </LabelRow>
-                  <FieldBox $invalid={phoneInvalid} $disabled={locked}>
-                    <IconPhone />
-                    <Chip aria-hidden="true">+998</Chip>
-                    <input
-                      ref={phoneRef}
-                      id={`${ids}-phone`}
-                      name="phone"
-                      type="tel"
-                      inputMode="numeric"
-                      autoComplete="tel-national"
-                      maxLength={12}
-                      placeholder="90 123 45 67"
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(formatLocal(e.target.value));
-                        setRemembered(false);
-                        clearErr();
-                      }}
-                      disabled={locked}
-                      aria-invalid={phoneInvalid}
-                      aria-describedby={errDesc}
-                      autoFocus={!phone}
-                    />
-                  </FieldBox>
+                  <PhoneInput
+                    variant="till"
+                    ref={phoneRef}
+                    id={`${ids}-phone`}
+                    name="phone"
+                    value={phone}
+                    onChange={(v) => {
+                      setPhone(formatLocal(v));
+                      setRemembered(false);
+                      clearErr();
+                    }}
+                    disabled={locked}
+                    invalid={phoneInvalid}
+                    aria-describedby={errDesc}
+                    autoFocus={!phone}
+                  />
                 </Group>
 
                 <Group>
@@ -469,11 +458,6 @@ export function LoginPage() {
 
 // ── Icons (Lucide paths, as in the design) ──────────────────────────────────────────────────
 
-const IconPhone = () => (
-  <Svg>
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
-  </Svg>
-);
 const IconEye = () => (
   <Svg>
     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
@@ -633,10 +617,6 @@ const FieldBox = styled.div<{ $invalid?: boolean; $disabled?: boolean; $hasBtn?:
   }
   input::placeholder { color: var(--pc-text-muted); font-weight: 400; opacity: 1; }
   input:disabled { cursor: not-allowed; color: var(--pc-text-muted); }
-`;
-const Chip = styled.span`
-  flex: none; padding: 4px 9px; border-radius: var(--pc-radius-sm);
-  background: var(--pc-chip-bg); color: var(--pc-chip-text); font-size: 15px; font-weight: 700;
 `;
 const Check = styled.label`
   display: inline-flex; align-items: center; gap: 12px; min-height: var(--pc-touch);

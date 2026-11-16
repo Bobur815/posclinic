@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserCog, Plus, Pencil, RefreshCw, KeyRound, Search } from 'lucide-react';
 import { normalizePhone } from '@shared/phone';
+import { PhoneInput } from '../../components/ui/PhoneInput';
 import { useToast } from '@context/ToastContext';
 import { usersApi, type StaffRole, type StaffUser } from '../../api/client';
 import { useAuthStore } from '../../store/auth-store';
@@ -216,7 +217,7 @@ function UserForm({
             hint={t('staff.phoneHint')}
             error={phoneTouched && !phoneNorm ? t('errors.invalid_phone') : null}
           >
-            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" required />
+            <PhoneInput value={phone} onChange={setPhone} invalid={phoneTouched && !phoneNorm} required />
           </Field>
           <Field label={`${t('staff.email')} (${t('common.optional')})`} error={emailBad ? t('errors.invalid_email') : null}>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />

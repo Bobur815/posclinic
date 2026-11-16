@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import { ipcErrorKey } from '../../store/lan-store';
 import type { Gender } from '../../../shared/clinic';
 import { AddressSelector, type AddressValue } from '../../components/address/AddressSelector';
+import { PhoneInput } from '../../components/form/PhoneInput';
 
 const Page = styled.div`
   max-width: 720px;
@@ -279,7 +280,11 @@ export function PatientForm() {
             </FormGroup>
             <FormGroup>
               <Label>{t('patients.phone')}<Required>*</Required></Label>
-              <Input type="tel" value={form.phone} onChange={handleChange('phone')} required />
+              <PhoneInput
+                value={form.phone}
+                onChange={(phone) => setForm((prev) => ({ ...prev, phone }))}
+                required
+              />
             </FormGroup>
             <FormGroup>
               <Label>{t('patients.birthDate')}</Label>
