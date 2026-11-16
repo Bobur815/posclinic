@@ -65,7 +65,9 @@ export const RESEND_ENTITIES = [
   'vitals',
   'results',
 ] as const;
-const RESEND_KEY = 'sync_resend_v25_clinical';
+// _2: the first run (2026-11-16 10:19) raced the server fix by 30 s and was dropped again; the
+// sync engine now keeps a cursor when the server does not process an entity, so this is the last.
+const RESEND_KEY = 'sync_resend_v25_clinical_2';
 
 export async function resendClinicalSyncOnce(db: Db): Promise<string[]> {
   const done = await db.setting.findUnique({ where: { key: RESEND_KEY } });

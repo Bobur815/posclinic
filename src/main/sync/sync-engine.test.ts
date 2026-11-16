@@ -360,4 +360,26 @@ describe('runSync against a real till database', () => {
     assert.ok(!('itemId' in sessions[0]));
     assert.equal(server.sent('vitals')[0]?.weightKg, 70.5);
   });
+
+  it('keeps the cursor of an entity the server did not process, and sends it once it does', async () => {
+    await db.patientVitals.create({ data: { id: 'v-old-server', patientId: 'p1', weightKg: 60 } });
+    // An older server: it does not know `vitals` and leaves it out of `accepted`.
+    class OldServer extends FakeServer {
+      override async push(body: Record<string, unknown[]>): Promise<PushAnswer> {
+        const answer = await super.push(body);
+        if ('vitals' in body) return { ...answer, accepted: {} };
+        return answer;
+      }
+    }
+    const old = new OldServer();
+    const warnings: string[] = [];
+    const r = await runSync(sdb(), old, { warn: (m) => warnings.push(m) });
+    assert.deepEqual(r.skipped, ['vitals']);
+    assert.ok(warnings.some((w) => w.includes('did not take vitals')));
+
+    // The server learns `vitals`: the same rows go up, nothing was lost.
+    const fixed = new FakeServer();
+    await runSync(sdb(), fixed);
+    assert.ok(fixed.sent('vitals').some((v) => v.id === 'v-old-server'));
+  });
 });

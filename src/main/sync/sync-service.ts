@@ -131,7 +131,7 @@ class CloudSync {
         warn: (m) => log.warn(m),
       });
       if (r.pushed || r.pulled || r.rejected) {
-        log.info(`[sync] pushed=${r.pushed} pulled=${r.pulled} rejected=${r.rejected}`);
+        log.info(`[sync] pushed=${r.pushed} pulled=${r.pulled} rejected=${r.rejected}${r.skipped?.length ? ` waiting=${r.skipped.join(',')}` : ''}`);
       }
       // Catalog edits from the web bypass the handlers: tell open pages here and on satellites.
       if (r.pulled > 0) {

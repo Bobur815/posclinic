@@ -96,6 +96,8 @@ export interface SyncResult {
   pushed: number;
   pulled: number;
   rejected: number;
+  /** Entities the server did not process (unknown to it): their cursor stays, sent again later. */
+  skipped?: string[];
 }
 
 // ── cursors ───────────────────────────────────────────────────────────────────────────────
@@ -295,6 +297,14 @@ export async function runSync(
       });
       if (rows.length === 0) break;
       const answer = await transport.push({ [entity]: rows.map((r) => toWire(entity, r)) });
+      // The server lists every entity it processed in `accepted` (0 included). One it does not
+      // know (an older server, or a body field its validation dropped) is absent: keep the
+      // cursor, so the rows are sent again once the server takes them, never silently skipped.
+      if (!answer.accepted || !(entity in answer.accepted)) {
+        log.warn(`[sync] server did not take ${entity} yet; will send again later`);
+        result.skipped = [...(result.skipped ?? []), entity];
+        break;
+      }
       for (const r of answer.rejected) {
         // A refused row cannot be retried into success (e.g. a phone used by another user):
         // log it and move on, or it would block every later row forever.
