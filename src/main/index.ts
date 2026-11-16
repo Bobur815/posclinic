@@ -231,6 +231,19 @@ async function bootstrap() {
   }
 }
 
+/**
+ * Development only: several tills on one PC (a main till and satellites, each signed in as a
+ * different role). `--profile=<name>` (or POSCLINIC_PROFILE) gives the copy its own data folder,
+ * `posclinic-<name>`: database, login, saved login, licence link and single-instance lock.
+ * Ignored by an installed (packaged) till. How to: docs/dev-several-tills.md.
+ */
+const devProfile =
+  process.argv.find((a) => a.startsWith('--profile='))?.slice('--profile='.length) ??
+  process.env.POSCLINIC_PROFILE;
+if (!app.isPackaged && devProfile && /^[a-z0-9-]{1,32}$/i.test(devProfile)) {
+  app.setPath('userData', path.join(app.getPath('appData'), `posclinic-${devProfile}`));
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();

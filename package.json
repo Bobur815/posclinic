@@ -5,6 +5,7 @@
   "main": "dist-electron/main/index.js",
   "scripts": {
     "dev:pos": "cross-env APP_MODE=pos electron-vite dev",
+    "dev:pos:extra": "cross-env NODE_ENV=development electron .",
     "dev:server": "nest start --watch",
     "build:pos": "cross-env APP_MODE=pos electron-vite build && electron-builder --config electron-builder.config.js",
     "build:server": "nest build",
