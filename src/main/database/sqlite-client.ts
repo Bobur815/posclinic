@@ -3,7 +3,7 @@ import { app } from 'electron';
 import fs from 'fs';
 import { type AdminUnitDataset, importAdminUnits } from './admin-units';
 import adminUnitsDataset from './data/admin-units.json';
-import { normalizePatientPhones } from './data-upgrades';
+import { normalizePatientPhones, resendClinicalSyncOnce } from './data-upgrades';
 import { createSchemaIfNeeded } from './schema';
 
 /**
@@ -31,6 +31,12 @@ async function upgradeDatabase(db: any): Promise<void> {
   } catch (error) {
     // The address selector shows its error state; patients still open and save without it.
     console.error('[db] address units import failed (left as is):', error);
+  }
+  try {
+    const reset = await resendClinicalSyncOnce(db);
+    if (reset.length) console.log(`[db] cloud sync: ${reset.length} entities will be sent again (one-time)`);
+  } catch (error) {
+    console.error('[db] sync resend reset failed (left as is):', error);
   }
 }
 

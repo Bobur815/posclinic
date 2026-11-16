@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { ArrowLeft, Plus, Search, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -189,20 +189,36 @@ export function RegisterVisitPage() {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...p } : l)));
   const remove = (key: string) => setLines((prev) => prev.filter((l) => l.key !== key));
 
+  /**
+   * A discount only for a course paid in full upfront: a procedure of 2+ sessions that, from a
+   * referral, covers all it has left (main's rule, pricing.ts). The screen offers "paid upfront"
+   * only then, and sends no discount otherwise (e.g. after the quantity was lowered).
+   */
+  const discountAllowed = useCallback(
+    (l: Line) => {
+      const s = serviceById.get(l.serviceId);
+      if (s?.kind !== 'PROCEDURE' || l.quantity < 2) return false;
+      if (!l.referralId) return true;
+      const r = cases.flatMap((c) => c.referrals).find((x) => x.id === l.referralId);
+      return !!r && l.quantity === r.remaining;
+    },
+    [serviceById, cases],
+  );
+
   const payload = useMemo(
     () =>
       patient
         ? {
             patientId: patient.id,
             caseId: caseId || null,
-            items: lines.map(({ key: _k, ...l }) => ({
-              ...l,
-              discountPercent: l.fullCourse ? (l.discountPercent ?? 0) : 0,
-            })),
+            items: lines.map(({ key: _k, ...l }) => {
+              const full = l.fullCourse === true && discountAllowed({ key: _k, ...l });
+              return { ...l, fullCourse: full, discountPercent: full ? (l.discountPercent ?? 0) : 0 };
+            }),
             approval,
           }
         : null,
-    [patient, caseId, lines, approval],
+    [patient, caseId, lines, approval, discountAllowed],
   );
 
   // Live quote: the price main will charge (follow-up, discounts), or why it would refuse.
@@ -540,7 +556,7 @@ export function RegisterVisitPage() {
                   {lines.map((l) => {
                     const s = serviceById.get(l.serviceId);
                     const ql = quoted(l.key);
-                    const course = s?.kind === 'PROCEDURE' && l.quantity >= 2;
+                    const course = discountAllowed(l);
                     return (
                       <tr key={l.key}>
                         <Td>

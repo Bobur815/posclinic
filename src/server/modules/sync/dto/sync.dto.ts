@@ -5,8 +5,21 @@ import { IsArray, IsISO8601, IsOptional } from 'class-validator';
 /**
  * Rows are validated one by one in `sync-apply.ts` (a bad row is rejected, not the batch), so
  * only the array shape is checked here. Row shapes: `.claude/rules/server-api.md`.
+ *
+ * EVERY entity of `SYNC_ENTITIES` must be declared here: the global ValidationPipe runs with
+ * `whitelist: true` and silently drops any undeclared array (sync.dto.test.ts checks this).
  */
 export class SyncPushDto {
+  @ApiPropertyOptional({ type: [Object], description: 'Custom order types (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  serviceTypes?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Custom staff types (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  staffTypes?: Record<string, unknown>[];
+
   @ApiPropertyOptional({ type: [Object], description: 'Patient rows (≤ 200)' })
   @IsOptional()
   @IsArray()
@@ -30,10 +43,33 @@ export class SyncPushDto {
   @IsArray()
   users?: Record<string, unknown>[];
 
-  @ApiPropertyOptional({ type: [Object], description: 'Appointment rows with items (≤ 200)' })
+  @ApiPropertyOptional({ type: [Object], description: 'Case rows (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  cases?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Referral rows (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  referrals?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({
+    type: [Object],
+    description: 'Appointment rows with items and course sessions (≤ 200)',
+  })
   @IsOptional()
   @IsArray()
   appointments?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Vitals rows (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  vitals?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Analysis result rows (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  results?: Record<string, unknown>[];
 }
 
 export class SyncPullQueryDto {

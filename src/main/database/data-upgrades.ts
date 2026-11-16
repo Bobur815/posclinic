@@ -44,3 +44,38 @@ export async function normalizePatientPhones(db: Db): Promise<PhoneUpgradeResult
   }
   return result;
 }
+
+/**
+ * One-time (v2.5): send the clinical records and their orders to the server again. Before the
+ * server's push DTO listed them, its validation silently dropped cases, referrals, vitals,
+ * results and the custom types, while the till moved its cursors past them (so orders pointing at
+ * a case were then refused with `missing_case`). Clearing those cursors makes the next sync send
+ * everything again; the server keeps the newer version of each row, so it is harmless.
+ * Returns the entities reset, or [] when already done.
+ */
+export const RESEND_ENTITIES = [
+  'serviceTypes',
+  'staffTypes',
+  'users',
+  'services',
+  'patients',
+  'cases',
+  'referrals',
+  'appointments',
+  'vitals',
+  'results',
+] as const;
+const RESEND_KEY = 'sync_resend_v25_clinical';
+
+export async function resendClinicalSyncOnce(db: Db): Promise<string[]> {
+  const done = await db.setting.findUnique({ where: { key: RESEND_KEY } });
+  if (done) return [];
+  await db.$transaction([
+    db.syncState.updateMany({
+      where: { entity: { in: [...RESEND_ENTITIES] } },
+      data: { pushCursor: null },
+    }),
+    db.setting.create({ data: { key: RESEND_KEY, value: JSON.stringify(new Date().toISOString()) } }),
+  ]);
+  return [...RESEND_ENTITIES];
+}
