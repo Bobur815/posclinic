@@ -16,6 +16,8 @@ import type {
 } from '../../../shared/clinic';
 import { AddressSelector, type AddressValue } from '../../components/address/AddressSelector';
 import { AddressText } from '../../components/address/AddressText';
+import { useCustomTypes, useServiceTypeLabel } from '../../hooks/useCustomTypes';
+import { CatalogCard } from './CatalogCard';
 import { useToast } from '../../context/ToastContext';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { ipcErrorKey } from '../../store/lan-store';
@@ -33,7 +35,7 @@ interface Line extends RegisterLineInput {
   key: string;
 }
 
-const KIND_ORDER: ServiceKind[] = ['CONSULTATION', 'ANALYSIS', 'PROCEDURE'];
+const KIND_ORDER: ServiceKind[] = ['CONSULTATION', 'ANALYSIS', 'PROCEDURE', 'DIRECT_SALE'];
 let lineSeq = 0;
 const newKey = () => `l${++lineSeq}`;
 
@@ -128,6 +130,10 @@ export function RegisterVisitPage() {
   const [approval, setApproval] = useState<{ phone: string; password: string } | null>(null);
   const [askApproval, setAskApproval] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Custom order types (Settings → Types): the cards show a service's type, not only its kind.
+  const { serviceTypes } = useCustomTypes();
+  const typeOf = useServiceTypeLabel(serviceTypes);
 
   const catalogVersion = useDataVersion(['services', 'doctors']);
   useEffect(() => {
@@ -494,33 +500,26 @@ export function RegisterVisitPage() {
                 onChange={(e) => setServiceQ(e.target.value)}
               />
             </SearchBox>
-            {sq && (
-              <Results>
-                {catalog.slice(0, 12).map((s) => (
-                  <ResultRow key={s.id} type="button" onClick={() => addService(s)}>
-                    <WithThumb>
-                      {s.image && <ServiceThumb src={s.image} alt="" $size={36} />}
-                      <span>
-                        <strong>{s.name}</strong>
-                        <Muted>
-                          {t(`services.kinds.${s.kind}`)} · {money(Number(s.price))}
-                        </Muted>
-                      </span>
-                    </WithThumb>
-                  </ResultRow>
-                ))}
-                {catalog.length === 0 && <Empty>{t('services.noServices')}</Empty>}
-              </Results>
-            )}
-            {!sq && (
-              <Chips>
-                {catalog.slice(0, 14).map((s) => (
-                  <Chip key={s.id} type="button" $kind={s.kind} onClick={() => addService(s)}>
-                    {s.image && <ServiceThumb src={s.image} alt="" $size={20} $round />}
-                    {s.name}
-                  </Chip>
-                ))}
-              </Chips>
+            {catalog.length === 0 ? (
+              <Empty>{t('services.noServices')}</Empty>
+            ) : (
+              <CatalogGrid>
+                {catalog.map((s) => {
+                  const type = typeOf(s);
+                  return (
+                    <CatalogCard
+                      key={s.id}
+                      name={s.name}
+                      image={s.image}
+                      typeLabel={type.label}
+                      typeColor={type.color}
+                      price={money(Number(s.price))}
+                      addLabel={t('common.add')}
+                      onAdd={() => addService(s)}
+                    />
+                  );
+                })}
+              </CatalogGrid>
             )}
 
             {lines.length === 0 ? (
@@ -550,7 +549,7 @@ export function RegisterVisitPage() {
                             <span>{s?.name ?? '—'}</span>
                           </WithThumb>
                           <Muted>
-                            {s ? t(`services.kinds.${s.kind}`) : ''}
+                            {s ? typeOf(s).label : ''}
                             {l.referralId ? ` · ${t('register.fromReferral')}` : ''}
                           </Muted>
                         </Td>
@@ -949,10 +948,13 @@ const RowBtns = styled.div`
   gap: 6px;
   flex-shrink: 0;
 `;
-const Chips = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+const CatalogGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: ${({ theme }) => theme.spacing.sm};
+  max-height: 460px;
+  overflow-y: auto;
+  padding: 2px;
   margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 const ListTitle = styled.h3`
@@ -979,28 +981,6 @@ const ServiceThumb = styled.img<{ $size: number; $round?: boolean }>`
   object-fit: cover;
   border-radius: ${({ $round, theme }) => ($round ? '999px' : theme.borderRadius)};
   background: ${({ theme }) => theme.colors.background};
-`;
-const Chip = styled.button<{ $kind: ServiceKind }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-left: 3px solid
-    ${({ theme, $kind }) =>
-      $kind === 'CONSULTATION'
-        ? theme.colors.primary
-        : $kind === 'ANALYSIS'
-          ? theme.colors.warning
-          : theme.colors.success};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 12px;
-  cursor: pointer;
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-  }
 `;
 const Table = styled.table`
   width: 100%;

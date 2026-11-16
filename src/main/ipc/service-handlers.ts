@@ -79,6 +79,22 @@ function codeTaken(error: unknown): never {
   throw error;
 }
 
+/**
+ * A service's custom type: undefined = unchanged, null / '' = none, otherwise an active type; the
+ * type's behaviour becomes the service's kind (the request's kind is ignored).
+ */
+async function withServiceType(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (data.serviceTypeId === undefined) return data;
+  if (data.serviceTypeId === null || data.serviceTypeId === '') {
+    return { ...data, serviceTypeId: null };
+  }
+  const type = await getPrismaClient().serviceType.findUnique({
+    where: { id: String(data.serviceTypeId) },
+  });
+  if (!type || !type.active) throw new RefusedError('errors.invalidServiceKind');
+  return { ...data, serviceTypeId: type.id, kind: type.behavior };
+}
+
 export function setupServiceHandlers(): void {
   handle('services:getAll', async () => {
     try {
@@ -124,9 +140,10 @@ export function setupServiceHandlers(): void {
     }
   });
 
-  handle('services:create', async (ctx, data: Record<string, unknown>) => {
+  handle('services:create', async (ctx, raw: Record<string, unknown>) => {
     try {
       requireAdmin(ctx);
+      const data = await withServiceType(raw ?? {});
       const prisma = getPrismaClient();
       const { randomUUID } = await import('crypto');
       const service = await prisma.service.create({
@@ -139,6 +156,7 @@ export function setupServiceHandlers(): void {
           duration: (data.duration as number) || 30,
           ...serviceTypeFields(data),
           image: serviceImage(data.image) ?? null,
+          serviceTypeId: (data.serviceTypeId as string | null | undefined) ?? null,
           active: data.active !== false,
         },
       }).catch(codeTaken);
@@ -149,9 +167,10 @@ export function setupServiceHandlers(): void {
     }
   });
 
-  handle('services:update', async (ctx, id: string, data: Record<string, unknown>) => {
+  handle('services:update', async (ctx, id: string, raw: Record<string, unknown>) => {
     try {
       requireAdmin(ctx);
+      const data = await withServiceType(raw ?? {});
       const prisma = getPrismaClient();
       const current = await prisma.service.findUnique({ where: { id } });
       if (!current) throw new RefusedError('errors.notFound');
@@ -165,6 +184,7 @@ export function setupServiceHandlers(): void {
           duration: data.duration as number | undefined,
           ...serviceTypeFields(data, current),
           image: serviceImage(data.image),
+          serviceTypeId: data.serviceTypeId as string | null | undefined,
           active: data.active as boolean | undefined,
         },
       }).catch(codeTaken);

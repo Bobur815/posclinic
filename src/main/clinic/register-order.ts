@@ -5,7 +5,7 @@ import type { ServiceKind } from '../../shared/clinic';
 import { ADMIN_ROLES, checkOpenCase, type HandlerContext, RefusedError } from '../ipc/ipc-safe';
 import { normalizePhone } from '../../shared/phone';
 import { nextAppointmentNumber } from '../ipc/appointment-handlers';
-import { recomputeCaseStatus } from './case-status';
+import { completeOrderIfDone, recomputeCaseStatus } from './case-status';
 import { getClinicSettings } from './clinic-settings';
 import { type LineInput, PricingError, priceLines, sessionPlan } from './pricing';
 
@@ -261,7 +261,10 @@ export async function registerOrder(
         : null;
     const consultDoctor =
       priced.find((p) => p.kind === 'CONSULTATION')?.doctorId ?? legacyDoctor;
-    if (!theCase) {
+    // Only direct sales (drugs, ointments…) with no case: a sale, not a patient journey. It opens
+    // no case and is no visit for the plan's limit; inside an open case it joins that case.
+    const directOnly = priced.every((p) => p.kind === 'DIRECT_SALE');
+    if (!theCase && !directOnly) {
       // A new case is a new visit for the plan's monthly limit: asked here, where it happens.
       await checkOpenCase();
       theCase = await tx.clinicalCase.create({
@@ -287,7 +290,7 @@ export async function registerOrder(
         appointmentNumber: await nextAppointmentNumber(tx),
         patientId,
         doctorId: consultDoctor,
-        caseId: theCase.id,
+        caseId: theCase?.id ?? null,
         appointmentDate,
         notes: typeof input.notes === 'string' && input.notes.trim() ? input.notes.trim() : null,
         totalAmount,
@@ -306,6 +309,10 @@ export async function registerOrder(
             total: p.total,
             doctorId: p.doctorId,
             referralId: p.referralId,
+            // A free direct sale is done as it is registered (a paid one at payment, checkout).
+            ...(p.kind === 'DIRECT_SALE' && free
+              ? { status: 'DONE', startedAt: new Date(), completedAt: new Date() }
+              : {}),
             ...(p.kind === 'PROCEDURE'
               ? {
                   sessions: {
@@ -334,13 +341,16 @@ export async function registerOrder(
       });
     }
 
-    if (!theCase.doctorId && consultDoctor) {
-      await tx.clinicalCase.update({
-        where: { id: theCase.id },
-        data: { doctorId: consultDoctor },
-      });
+    if (free) await completeOrderIfDone(tx, appointment.id);
+    if (theCase) {
+      if (!theCase.doctorId && consultDoctor) {
+        await tx.clinicalCase.update({
+          where: { id: theCase.id },
+          data: { doctorId: consultDoctor },
+        });
+      }
+      await recomputeCaseStatus(tx, theCase.id);
     }
-    await recomputeCaseStatus(tx, theCase.id);
 
     return appointment;
   });

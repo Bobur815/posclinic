@@ -266,19 +266,12 @@ async function needed(
       return (await facts.activeDoctors(String(args[0] ?? ''))) >= 1
         ? 'license.feature.multiDoctor'
         : null;
+    // A new login (doctors:createLogin), or the Staff page asking when someone is about to be
+    // able to sign in (staff-handlers.ts): only then is a seat taken.
     case 'doctors:createLogin':
-    case 'users:create': {
+    case 'staff:seat': {
       const max = state.limits.staff;
       return max !== null && (await facts.activeUsers()) >= max ? 'license.limit.staff' : null;
-    }
-    case 'users:update': {
-      // Only switching a login on can exceed the limit; the user itself is not counted, so
-      // saving an already-active user's name never trips it.
-      if (arg(1).active !== true) return null;
-      const max = state.limits.staff;
-      return max !== null && (await facts.activeUsers(String(args[0] ?? ''))) >= max
-        ? 'license.limit.staff'
-        : null;
     }
     case 'print:prescription':
       return has('printPrescription') ? null : 'license.feature.printPrescription';

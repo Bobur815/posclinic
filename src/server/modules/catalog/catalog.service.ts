@@ -32,6 +32,23 @@ import type {
  */
 @Injectable()
 export class CatalogService {
+  /** The clinic's own order and staff types (till Settings → Types), for the web's lists. */
+  async listTypes(clinicId: string) {
+    const [serviceTypes, staffTypes] = await Promise.all([
+      this.prisma.serviceType.findMany({
+        where: { clinicId },
+        orderBy: [{ sortOrder: 'asc' }, { nameUz: 'asc' }],
+        select: { id: true, nameUz: true, nameRu: true, behavior: true, color: true, active: true },
+      }),
+      this.prisma.staffType.findMany({
+        where: { clinicId },
+        orderBy: { nameUz: 'asc' },
+        select: { id: true, nameUz: true, nameRu: true, access: true, active: true },
+      }),
+    ]);
+    return { serviceTypes, staffTypes };
+  }
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,

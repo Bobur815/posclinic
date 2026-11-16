@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { ClinicWorkflowSection } from './ClinicWorkflowSection';
+import { TypesSection } from './TypesSection';
 import { CloudSyncSection } from './CloudSyncSection';
 import { LanSection } from './LanSection';
 import { followLan, useIsSatellite } from '../../store/lan-store';
@@ -221,6 +222,8 @@ export function SettingsPage() {
 
       {/* The licence and the cloud sync belong to the main till; a satellite shows its link. */}
       <ClinicWorkflowSection />
+
+      <TypesSection />
 
       {!isSatellite && <SubscriptionSection />}
 

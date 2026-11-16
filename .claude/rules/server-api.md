@@ -60,6 +60,7 @@ Result      { id, itemId, caseId|null, patientId, serviceId, outcome: POSITIVE|N
 - New reject reason `missing_case`. A null `doctorId` is not checked; a non-null one must be the clinic's.
 - Pull services carry the type fields; the web catalog edits them with the till's consistency rules.
 - `GET /api/patients/:id` adds `cases: Case[]`, `latestVitals: Vitals|null`, `results: (Result & { serviceName })[]` (read-only).
+- **Custom types (v2.5):** push arrays `serviceTypes { id, nameUz, nameRu|null, behavior, color|null, sortOrder, active, createdAt, updatedAt }` and `staffTypes { id, nameUz, nameRu|null, access: NONE|RECEPTIONIST|NURSE|CLINIC_ADMIN, active, createdAt, updatedAt }`, applied first. `Service.serviceTypeId|null`, `User.staffTypeId|null` (plain ids). Kind `DIRECT_SALE` (done at payment, no case); role `STAFF` (no login, no staff seat). `GET /api/types` returns both lists (read-only; made on the till). Migration `20261116100000_custom_types`: additive.
 - Migration `20261115200000_clinical_workflow`: additive, plus `appointments.doctor_id` made nullable and a data
   backfill of the new item `status` from the visit status.
 

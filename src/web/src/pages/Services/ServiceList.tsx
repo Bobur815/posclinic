@@ -4,6 +4,7 @@ import { Layers, Plus, Pencil, RefreshCw, Search } from 'lucide-react';
 import { useToast } from '@context/ToastContext';
 import { servicesApi, type Service, type ServiceInput } from '../../api/client';
 import { useAsync } from '../../hooks/useAsync';
+import { useClinicTypes } from '../../hooks/useClinicTypes';
 import { useDebounced } from '../../hooks/useDebounced';
 import { errorText } from '../../lib/errors';
 import { formatMoney, formatNumber } from '../../lib/format';
@@ -44,6 +45,7 @@ const EMPTY: ServiceInput = {
 export function ServiceList() {
   const { t } = useTranslation();
   const { data, loading, error, reload } = useAsync(() => servicesApi.list(), []);
+  const types = useClinicTypes();
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [editing, setEditing] = useState<Service | 'new' | null>(null);
@@ -94,6 +96,7 @@ export function ServiceList() {
               <tr>
                 <Th>{t('services.code')}</Th>
                 <Th>{t('services.name')}</Th>
+                <Th>{t('services.kind')}</Th>
                 <Th $right>{t('services.price')}</Th>
                 <Th $right>{t('services.duration')}</Th>
                 <Th>{t('common.status')}</Th>
@@ -107,6 +110,9 @@ export function ServiceList() {
                   <Td>
                     {s.name}
                     {s.description && <div style={{ fontSize: 12, opacity: 0.7 }}>{s.description}</div>}
+                  </Td>
+                  <Td $nowrap>
+                    {types.serviceType(s.serviceTypeId)?.name ?? t(`services.kinds.${s.kind ?? 'PROCEDURE'}`)}
                   </Td>
                   <Td $right $nowrap>{formatMoney(s.price)}</Td>
                   <Td $right $nowrap>{formatNumber(s.duration)} {t('common.minutes')}</Td>
@@ -220,7 +226,7 @@ function ServiceForm({ service, onClose, onSaved }: { service: Service | null; o
               value={form.kind ?? 'PROCEDURE'}
               onChange={(e) => set('kind', e.target.value as ServiceInput['kind'])}
             >
-              {(['CONSULTATION', 'ANALYSIS', 'PROCEDURE'] as const).map((k) => (
+              {(['CONSULTATION', 'ANALYSIS', 'PROCEDURE', 'DIRECT_SALE'] as const).map((k) => (
                 <option key={k} value={k}>
                   {t(`services.kinds.${k}`)}
                 </option>

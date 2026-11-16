@@ -19,7 +19,7 @@ SavdoChef (`restaurant-app` ⇄ posgro `modules/savdochef`). Change this file an
 - Features: `reports` (reports over more than one day), `multiDoctor` (more than one active doctor),
   `printPrescription`, `debt` (checkout with partial/unpaid amount), upcoming (not built on the
   till yet): `labResults`, `telegramBot`. Unknown names from the server are ignored by the till.
-- Limits (`null` = unlimited): `terminals` (seats), `staff` (active users), `monthlyVisits`
+- Limits (`null` = unlimited): `terminals` (seats), `staff` (active users who can sign in; a no-login staff type, role STAFF, takes no seat), `monthlyVisits`
   (new **cases**, i.e. patient journeys, opened per calendar month; orders inside an open case do
   not count. Owner decision 2026-11-15, till-side meaning only).
 - Defaults (editable by super admin in SiteConfig `posclinic_config`):

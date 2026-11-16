@@ -41,6 +41,8 @@ model Clinic {
   vitals       PatientVitals[]
   referrals    Referral[]
   results      AnalysisResult[]
+  serviceTypes ServiceType[]
+  staffTypes   StaffType[]
 
   @@map("clinics")
 }
@@ -61,6 +63,9 @@ model User {
   createdAt    DateTime @map("created_at")
   updatedAt    DateTime @map("updated_at")
   syncedAt     DateTime @map("synced_at")
+
+  /// The till's custom staff type (till v2.5), a plain id.
+  staffTypeId String? @map("staff_type_id")
 
   @@unique([clinicId, phone])
   @@index([clinicId, syncedAt])
@@ -134,8 +139,10 @@ model Service {
   price          Decimal  @db.Decimal(14, 2)
   /// minutes
   duration       Int      @default(30)
-  /// CONSULTATION | ANALYSIS | PROCEDURE
+  /// CONSULTATION | ANALYSIS | PROCEDURE | DIRECT_SALE
   kind           String   @default("PROCEDURE")
+  /// The till's custom order type (till v2.5), a plain id.
+  serviceTypeId  String?  @map("service_type_id")
   isFollowUp     Boolean  @default(false) @map("is_follow_up")
   /// ANALYSIS: QUALITATIVE | QUANTITATIVE | TEXT
   resultType     String?  @map("result_type")
@@ -362,4 +369,42 @@ model TerminalHeartbeat {
 
   @@id([clinicId, terminalId])
   @@map("terminal_heartbeats")
+}
+
+/// The clinic's own order types (till Settings → Types), read-only on the web.
+model ServiceType {
+  id        String   @id
+  clinicId  String   @map("clinic_id")
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  nameUz    String   @map("name_uz")
+  nameRu    String?  @map("name_ru")
+  /// CONSULTATION | ANALYSIS | PROCEDURE | DIRECT_SALE
+  behavior  String
+  color     String?
+  sortOrder Int      @default(0) @map("sort_order")
+  active    Boolean  @default(true)
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  syncedAt  DateTime @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@map("service_types")
+}
+
+/// The clinic's own staff types (till Settings → Types), read-only on the web.
+model StaffType {
+  id        String   @id
+  clinicId  String   @map("clinic_id")
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  nameUz    String   @map("name_uz")
+  nameRu    String?  @map("name_ru")
+  /// NONE | RECEPTIONIST | NURSE | CLINIC_ADMIN
+  access    String
+  active    Boolean  @default(true)
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  syncedAt  DateTime @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@map("staff_types")
 }

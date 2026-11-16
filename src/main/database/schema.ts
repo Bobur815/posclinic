@@ -70,6 +70,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     await addAddressTablesIfNeeded(prisma);
     await addClinicalWorkflowIfNeeded(prisma);
     await addServiceImageIfNeeded(prisma);
+    await addCustomTypesIfNeeded(prisma);
     return;
   }
 
@@ -161,6 +162,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
   await addAddressTablesIfNeeded(prisma);
   await addClinicalWorkflowIfNeeded(prisma);
   await addServiceImageIfNeeded(prisma);
+  await addCustomTypesIfNeeded(prisma);
 }
 
 /**
@@ -593,4 +595,43 @@ async function addClinicalWorkflowIfNeeded(prisma: SchemaClient): Promise<void> 
 /** v2.5.0: a picture per service (till only, never synced). Additive and idempotent. */
 async function addServiceImageIfNeeded(prisma: SchemaClient): Promise<void> {
   await addColumnIfMissing(prisma, 'services', 'image', 'TEXT');
+}
+
+/**
+ * v2.5.0: order and staff types the clinic adds in Settings → Types, and the links from services
+ * and users. Additive and idempotent.
+ */
+async function addCustomTypesIfNeeded(prisma: SchemaClient): Promise<void> {
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS service_types (
+      id TEXT PRIMARY KEY,
+      name_uz TEXT NOT NULL,
+      name_ru TEXT,
+      behavior TEXT NOT NULL,
+      color TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS staff_types (
+      id TEXT PRIMARY KEY,
+      name_uz TEXT NOT NULL,
+      name_ru TEXT,
+      access TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await addColumnIfMissing(prisma, 'services', 'service_type_id', 'TEXT REFERENCES service_types(id)');
+  await addColumnIfMissing(prisma, 'users', 'staff_type_id', 'TEXT REFERENCES staff_types(id)');
+  await prisma.$executeRawUnsafe(
+    'CREATE INDEX IF NOT EXISTS idx_service_types_updated ON service_types(updated_at)',
+  );
+  await prisma.$executeRawUnsafe(
+    'CREATE INDEX IF NOT EXISTS idx_staff_types_updated ON staff_types(updated_at)',
+  );
 }

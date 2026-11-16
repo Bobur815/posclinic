@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Plus, Search, Edit2, X, Save, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { imageFileToDataUrl } from '../../components/form/image-file';
+import { useCustomTypes, useServiceTypeLabel, useTypeName } from '../../hooks/useCustomTypes';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
 import { ipcErrorKey } from '../../store/lan-store';
@@ -27,6 +28,8 @@ interface ServiceForm {
   referenceRange: string;
   /** Data URL (till only); null = none. */
   image: string | null;
+  /** A custom order type (Settings → Types): `kind` is then its behaviour. */
+  serviceTypeId: string | null;
   active: boolean;
 }
 
@@ -329,6 +332,7 @@ const emptyForm: ServiceForm = {
   resultUnit: '',
   referenceRange: '',
   image: null,
+  serviceTypeId: null,
   active: true,
 };
 
@@ -337,6 +341,9 @@ export function ServiceList() {
   const toast = useToast();
   // Main refuses services:create/update for other roles; this only hides the controls.
   const canEdit = useAuthStore((s) => s.user?.role === 'CLINIC_ADMIN' || s.user?.role === 'SUPER_ADMIN');
+  const { serviceTypes } = useCustomTypes();
+  const typeName = useTypeName();
+  const typeOf = useServiceTypeLabel(serviceTypes);
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -386,6 +393,7 @@ export function ServiceList() {
       resultUnit: svc.resultUnit ?? '',
       referenceRange: svc.referenceRange ?? '',
       image: svc.image ?? null,
+      serviceTypeId: svc.serviceTypeId ?? null,
       active: svc.active,
     });
     setShowModal(true);
@@ -409,6 +417,7 @@ export function ServiceList() {
         resultUnit: form.resultUnit,
         referenceRange: form.referenceRange,
         image: form.image,
+        serviceTypeId: form.serviceTypeId,
         active: form.active,
       };
       if (editingService) {
@@ -466,12 +475,36 @@ export function ServiceList() {
               </FormGroup>
               <FormGroup>
                 <Label>{t('services.kind')}</Label>
-                <Select value={form.kind} onChange={handleChange('kind')}>
-                  {SERVICE_KINDS.map((k) => (
-                    <option key={k} value={k}>
-                      {t(`services.kinds.${k}`)}
-                    </option>
-                  ))}
+                <Select
+                  value={form.serviceTypeId ? `type:${form.serviceTypeId}` : `kind:${form.kind}`}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v.startsWith('type:')) {
+                      const type = serviceTypes.find((x) => x.id === v.slice(5));
+                      if (type) setForm((p) => ({ ...p, serviceTypeId: type.id, kind: type.behavior }));
+                    } else {
+                      setForm((p) => ({ ...p, serviceTypeId: null, kind: v.slice(5) as ServiceKind }));
+                    }
+                  }}
+                >
+                  <optgroup label={t('services.builtInKinds')}>
+                    {SERVICE_KINDS.map((k) => (
+                      <option key={k} value={`kind:${k}`}>
+                        {t(`services.kinds.${k}`)}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {serviceTypes.some((x) => x.active || x.id === form.serviceTypeId) && (
+                    <optgroup label={t('services.clinicTypes')}>
+                      {serviceTypes
+                        .filter((x) => x.active || x.id === form.serviceTypeId)
+                        .map((x) => (
+                          <option key={x.id} value={`type:${x.id}`}>
+                            {typeName(x)} · {t(`types.behaviors.${x.behavior}`)}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
                 </Select>
               </FormGroup>
               {form.kind === 'CONSULTATION' && (
@@ -623,7 +656,7 @@ export function ServiceList() {
                   <Td style={{ color: '#0891b2', fontWeight: 500 }}>{svc.code}</Td>
                   <Td>{svc.name}</Td>
                   <Td>
-                    {t(`services.kinds.${svc.kind}`)}
+                    {typeOf(svc).label}
                     {svc.isFollowUp ? ` · ${t('services.followUpShort')}` : ''}
                   </Td>
                   <Td>{Number(svc.price).toLocaleString()} {t('common.currency')}</Td>

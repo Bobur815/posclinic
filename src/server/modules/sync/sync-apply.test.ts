@@ -27,6 +27,8 @@ class FakeDb implements SyncDb {
     referrals: new Map(),
     vitals: new Map(),
     results: new Map(),
+    serviceTypes: new Map(),
+    staffTypes: new Map(),
   };
   writes = 0;
 
@@ -177,6 +179,8 @@ describe('applyPush', () => {
       referrals: 0,
       vitals: 0,
       results: 0,
+      serviceTypes: 0,
+      staffTypes: 0,
     });
     assert.equal(r.written, 5);
     assert.equal((db.rows.users.get('u1')?.row as RowMap['users']).phone, '+998901112233');
@@ -436,6 +440,26 @@ describe('applyPush: clinical workflow rows (till v2.5)', () => {
         ['appointments', 'a3', 'missing_case'],
       ],
     );
+  });
+
+  it('accepts the clinic’s own order and staff types, and a no-login STAFF user', async () => {
+    const r = await applyPush(
+      db,
+      'c1',
+      {
+        serviceTypes: [
+          { id: 'st1', nameUz: 'Dorilar', nameRu: null, behavior: 'DIRECT_SALE', color: '#7c3aed', sortOrder: 0, active: true, createdAt: T0, updatedAt: T1 },
+          { id: 'st2', nameUz: 'X', behavior: 'MAGIC', active: true, createdAt: T0, updatedAt: T1 },
+        ],
+        staffTypes: [{ id: 'sf1', nameUz: 'Farrosh', nameRu: null, access: 'NONE', active: true, createdAt: T0, updatedAt: T1 }],
+        users: [user({ id: 'u9', phone: '90 777 66 55', role: 'STAFF', staffTypeId: 'sf1' })],
+        services: [service({ id: 's9', code: 'CREAM', kind: 'DIRECT_SALE', serviceTypeId: 'st1' })],
+      },
+      NOW,
+    );
+    assert.deepEqual(r.rejected.map((x) => [x.entity, x.id, x.reason]), [['serviceTypes', 'st2', 'invalid']]);
+    assert.equal((db.rows.users.get('u9')?.row as { staffTypeId: string }).staffTypeId, 'sf1');
+    assert.equal((db.rows.services.get('s9')?.row as { serviceTypeId: string }).serviceTypeId, 'st1');
   });
 
   it('accepts a NURSE login', async () => {

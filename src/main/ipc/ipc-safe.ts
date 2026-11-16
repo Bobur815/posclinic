@@ -124,6 +124,15 @@ let hooks: Hooks = {
   openCase: async () => null,
 };
 
+/**
+ * Ask the licence about something a handler is about to do (e.g. 'staff:seat' when a person
+ * becomes able to sign in). Throws the refusal; nothing when allowed.
+ */
+export async function checkLicence(channel: string, args: unknown[] = []): Promise<void> {
+  const refused = await hooks.gate(channel, args);
+  if (refused) throw new LicenseRefusedError(refused);
+}
+
 /** Throws the licence refusal if a new case may not be opened now. */
 export async function checkOpenCase(): Promise<void> {
   const refused = await hooks.openCase();
@@ -161,6 +170,9 @@ export function writtenEntities(channel: string): DataChangedEvent['entity'][] {
     return entity === 'appointments' ? ['appointments', 'cases'] : [entity];
   }
   if (channel === 'clinic:setSettings') return ['settings'];
+  // Types change how services and staff are shown (and their kind / role).
+  if (channel === 'types:saveServiceType') return ['services'];
+  if (channel === 'types:saveStaffType') return ['users'];
   return CLINICAL.test(channel) ? ['cases', 'appointments'] : [];
 }
 

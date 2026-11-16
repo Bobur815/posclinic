@@ -5,6 +5,10 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  ServiceTypeDto,
+  ServiceTypeInput,
+  StaffTypeDto,
+  StaffTypeInput,
   RecentPatientDto,
   StaffDto,
   StaffInput,
@@ -144,6 +148,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sessions: {
     tick: (sessionId: string, undo?: boolean) =>
       ipcRenderer.invoke('sessions:tick', sessionId, undo === true),
+  },
+  types: {
+    list: () => ipcRenderer.invoke('types:list'),
+    saveServiceType: (data: ServiceTypeInput) => ipcRenderer.invoke('types:saveServiceType', data),
+    saveStaffType: (data: StaffTypeInput) => ipcRenderer.invoke('types:saveStaffType', data),
   },
   credentials: {
     get: (phone: string) => ipcRenderer.invoke('credentials:get', phone),
@@ -341,6 +350,11 @@ declare global {
       };
       sessions: {
         tick: (sessionId: string, undo?: boolean) => Promise<unknown>;
+      };
+      types: {
+        list: () => Promise<{ serviceTypes: ServiceTypeDto[]; staffTypes: StaffTypeDto[] }>;
+        saveServiceType: (data: ServiceTypeInput) => Promise<ServiceTypeDto>;
+        saveStaffType: (data: StaffTypeInput) => Promise<StaffTypeDto>;
       };
       credentials: {
         get: (phone: string) => Promise<string | null>;

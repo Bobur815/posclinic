@@ -12,6 +12,8 @@ import { TILL_ROLES } from '../../common/roles';
  * results (the till's clinical records); an older till simply never sends them.
  */
 export const SYNC_ENTITIES = [
+  'serviceTypes',
+  'staffTypes',
   'users',
   'doctors',
   'services',
@@ -46,6 +48,7 @@ export interface UserIn extends Base {
   email: string | null;
   role: string;
   passwordHash: string;
+  staffTypeId: string | null;
 }
 export interface DoctorIn extends Base {
   fullName: string;
@@ -64,6 +67,7 @@ export interface ServiceIn extends Base {
   resultType: string | null;
   resultUnit: string | null;
   referenceRange: string | null;
+  serviceTypeId: string | null;
 }
 export interface PatientIn extends Base {
   patientCode: string;
@@ -177,7 +181,22 @@ export interface ResultIn extends Omit<Base, 'active'> {
   confirmedAt: Date | null;
 }
 
+export interface ServiceTypeIn extends Base {
+  nameUz: string;
+  nameRu: string | null;
+  behavior: string;
+  color: string | null;
+  sortOrder: number;
+}
+export interface StaffTypeIn extends Base {
+  nameUz: string;
+  nameRu: string | null;
+  access: string;
+}
+
 export interface RowMap {
+  serviceTypes: ServiceTypeIn;
+  staffTypes: StaffTypeIn;
   users: UserIn;
   doctors: DoctorIn;
   services: ServiceIn;
@@ -290,7 +309,8 @@ function oneOf(r: Raw, k: string, allowed: readonly string[], fallback?: string)
 function optOneOf(r: Raw, k: string, allowed: readonly string[]): string | null {
   return r[k] === null || r[k] === undefined ? null : oneOf(r, k, allowed);
 }
-const SERVICE_KINDS = ['CONSULTATION', 'ANALYSIS', 'PROCEDURE'] as const;
+const SERVICE_KINDS = ['CONSULTATION', 'ANALYSIS', 'PROCEDURE', 'DIRECT_SALE'] as const;
+const STAFF_ACCESS = ['NONE', 'RECEPTIONIST', 'NURSE', 'CLINIC_ADMIN'] as const;
 const RESULT_TYPES = ['QUALITATIVE', 'QUANTITATIVE', 'TEXT'] as const;
 const ITEM_STATUSES = ['WAITING', 'IN_PROGRESS', 'DONE', 'CANCELLED'] as const;
 const CASE_STATUSES = [
@@ -336,6 +356,7 @@ const PARSERS: {
       email: optStr(r, 'email', 200),
       role,
       passwordHash,
+      staffTypeId: optStr(r, 'staffTypeId', 64),
     };
   },
   doctors: (r) => ({
@@ -358,6 +379,7 @@ const PARSERS: {
     resultType: optOneOf(r, 'resultType', RESULT_TYPES),
     resultUnit: optStr(r, 'resultUnit', 100),
     referenceRange: optStr(r, 'referenceRange', 100),
+    serviceTypeId: optStr(r, 'serviceTypeId', 64),
   }),
   patients: (r) => ({
     ...base(r),
@@ -436,6 +458,24 @@ const PARSERS: {
 };
 
 Object.assign(PARSERS, {
+  serviceTypes: (r: Raw): ServiceTypeIn => ({
+    ...base(r),
+    nameUz: str(r, 'nameUz', 100),
+    nameRu: optStr(r, 'nameRu', 100),
+    behavior: oneOf(r, 'behavior', SERVICE_KINDS),
+    color: (() => {
+      const c = optStr(r, 'color', 7);
+      if (c !== null && !/^#[0-9a-fA-F]{6}$/.test(c)) throw new Invalid();
+      return c;
+    })(),
+    sortOrder: optNum(r, 'sortOrder', { int: true }) ?? 0,
+  }),
+  staffTypes: (r: Raw): StaffTypeIn => ({
+    ...base(r),
+    nameUz: str(r, 'nameUz', 100),
+    nameRu: optStr(r, 'nameRu', 100),
+    access: oneOf(r, 'access', STAFF_ACCESS),
+  }),
   cases: (r: Raw): CaseIn => ({
     id: str(r, 'id', 64),
     createdAt: date(r, 'createdAt'),

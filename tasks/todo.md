@@ -248,3 +248,17 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 **More answers (owner, 2026-11-15):** the plan limit `monthlyVisits` counts **new cases** (patient journeys) per calendar month, not orders: till-side meaning only, posgro just stores the number. Commit after each finished phase (not pushed).
 
 **Admin-doctors (owner, 2026-11-15):** a clinic admin can also be a doctor. Being a doctor is a profile linked to a login (`doctors.user_id`), not only the DOCTOR role: Doctors page → "Link existing login" (no extra staff seat, the role stays), setup option "I also see patients as a doctor", sidebar shows My queue to anyone with a profile. Admin-doctors may register and take payment (they are admins).
+
+---
+
+# Custom order and staff types + catalog cards (v2.5.0)
+
+**Owner decisions (2026-11-16):** staff type = name + access (no login / reception / nurse-lab / admin); order type = name + colour + a fixed behaviour (doctor / lab result / course / **sold directly**: done at payment, no queue, no case); no stock for drugs yet; both synced to the server (web read-only).
+
+- [x] SQLite: `service_types`, `staff_types`; `services.service_type_id`, `users.staff_type_id`; kind `DIRECT_SALE`; role `STAFF` (no login, no staff seat).
+- [x] Main: types CRUD (admin), service kind follows its type, staff role follows its type; login refuses STAFF; direct-sale lines done at payment and never open a case.
+- [x] Settings → Types (admin): order types and staff types.
+- [x] Staff page: pick a built-in role or a custom type; Services page: pick a type.
+- [x] Registration: catalog cards (bigger picture, type badge, price).
+- [x] Sync + server migration (types tables, type ids, DIRECT_SALE, STAFF) + web shows type names.
+- [x] Tests, i18n uz/ru, check + builds.

@@ -54,6 +54,10 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  /// Custom staff type (cleaner, accountant…); its access decides `role`. Null = a built-in role.
+  staffTypeId String?    @map("staff_type_id")
+  staffType   StaffType? @relation(fields: [staffTypeId], references: [id])
+
   doctor Doctor?
 
   @@index([clinicId])
@@ -160,7 +164,8 @@ model Service {
   description    String?
   price          Decimal
   duration       Int      @default(30)
-  /// CONSULTATION (needs a doctor) | ANALYSIS (has a result) | PROCEDURE (can be a course)
+  /// The behaviour: CONSULTATION (needs a doctor) | ANALYSIS (has a result) | PROCEDURE (can be
+  /// a course) | DIRECT_SALE (done at payment). With a serviceType it is that type's behaviour.
   kind           String   @default("PROCEDURE")
   /// Repeat consultation: free within `followUpFreeDays` of a paid consultation in the case.
   isFollowUp     Boolean  @default(false) @map("is_follow_up")
@@ -174,6 +179,10 @@ model Service {
   active         Boolean  @default(true)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
+
+  /// Custom order type (e.g. "Drugs and ointments"); null = shown by its kind.
+  serviceTypeId String?      @map("service_type_id")
+  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id])
 
   appointmentItems AppointmentItem[]
   referrals        Referral[]
@@ -426,4 +435,41 @@ model LanDevice {
   createdAt  DateTime  @default(now()) @map("created_at")
 
   @@map("lan_devices")
+}
+
+// ==================== CUSTOM TYPES (admin Settings → Types) ====================
+
+/// An order type the clinic adds: a name, a colour and one of the fixed behaviours.
+model ServiceType {
+  id        String   @id @default(cuid())
+  nameUz    String   @map("name_uz")
+  nameRu    String?  @map("name_ru")
+  /// CONSULTATION | ANALYSIS | PROCEDURE | DIRECT_SALE
+  behavior  String
+  /// #rrggbb for the badge
+  color     String?
+  sortOrder Int      @default(0) @map("sort_order")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  services Service[]
+
+  @@map("service_types")
+}
+
+/// A staff type the clinic adds (cleaner, guard, accountant…) and what it may do on the till.
+model StaffType {
+  id        String   @id @default(cuid())
+  nameUz    String   @map("name_uz")
+  nameRu    String?  @map("name_ru")
+  /// NONE (no login) | RECEPTIONIST | NURSE | CLINIC_ADMIN
+  access    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("staff_types")
 }

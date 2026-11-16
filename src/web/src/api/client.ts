@@ -62,7 +62,7 @@ http.interceptors.response.use(
 
 // ─── Shapes ──────────────────────────────────────────────────────────────────
 
-export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE';
+export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF';
 export type AppointmentStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'REFUNDED';
 
@@ -232,12 +232,20 @@ export interface Service {
   kind?: ServiceKind;
   isFollowUp?: boolean;
   resultType?: 'QUALITATIVE' | 'QUANTITATIVE' | 'TEXT' | null;
+  /** The till's custom order type, if any. */
+  serviceTypeId?: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export type ServiceKind = 'CONSULTATION' | 'ANALYSIS' | 'PROCEDURE';
+export type ServiceKind = 'CONSULTATION' | 'ANALYSIS' | 'PROCEDURE' | 'DIRECT_SALE';
+
+/** The clinic's own types, made on the till (Settings → Types); read-only here. */
+export interface ClinicTypes {
+  serviceTypes: { id: string; nameUz: string; nameRu: string | null; behavior: ServiceKind; color: string | null; active: boolean }[];
+  staffTypes: { id: string; nameUz: string; nameRu: string | null; access: string; active: boolean }[];
+}
 
 export interface StaffUser {
   id: string;
@@ -246,6 +254,8 @@ export interface StaffUser {
   email: string | null;
   role: StaffRole;
   active: boolean;
+  /** The till's custom staff type, if any. */
+  staffTypeId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -367,6 +377,9 @@ export type ServiceInput = Pick<Service, 'code' | 'name' | 'price' | 'duration' 
   kind?: ServiceKind;
   isFollowUp?: boolean;
   resultType?: 'QUALITATIVE' | 'QUANTITATIVE' | 'TEXT' | null;
+};
+export const typesApi = {
+  list: () => get<ClinicTypes>('/types'),
 };
 export const servicesApi = {
   list: () => list<Service>('/services'),

@@ -104,7 +104,7 @@ describe('Staff page', () => {
     assert.ok(u && (await bcrypt.compare('newpass1', u.password)));
   });
 
-  it('the staff limit covers new logins and re-activations, not edits of active users', async () => {
+  it('the staff limit: a seat for a new login or one switched on, never for an edit', async () => {
     const state = {
       mode: 'active',
       reason: null,
@@ -113,20 +113,38 @@ describe('Staff page', () => {
     } as unknown as Parameters<typeof refusal>[2];
     const facts = (n: number) => ({
       activeDoctors: async () => 0,
-      activeUsers: async (exclude?: string) => (exclude ? n - 1 : n),
+      activeUsers: async () => n,
       visitsThisMonth: async () => 0,
       appointmentBalance: async () => null,
     });
-    assert.equal(await refusal('users:create', [{}], state, facts(3)), 'license.limit.staff');
-    assert.equal(await refusal('users:create', [{}], state, facts(2)), null);
-    assert.equal(await refusal('users:update', ['u1', { fullName: 'x' }], state, facts(3)), null);
-    // Switching a login on when 3 others are active.
-    assert.equal(
-      await refusal('users:update', ['u9', { active: true }], state, {
-        ...facts(3),
-        activeUsers: async () => 3,
-      }),
-      'license.limit.staff',
-    );
+    assert.equal(await refusal('staff:seat', [], state, facts(3)), 'license.limit.staff');
+    assert.equal(await refusal('staff:seat', [], state, facts(2)), null);
+
+    // The Staff page asks for a seat only when someone becomes able to sign in.
+    const asked: string[] = [];
+    configureHandlers({
+      gate: async (channel) => {
+        asked.push(channel);
+        return null;
+      },
+    });
+    try {
+      const u = await as(admin)<StaffDto>('users:create', {
+        fullName: 'Seat',
+        phone: '+998951234567',
+        role: 'RECEPTIONIST',
+        password: 'secret1',
+      });
+      await as(admin)('users:update', u.id, { fullName: 'Renamed' });
+      await as(admin)('users:update', u.id, { active: false });
+      await as(admin)('users:update', u.id, { active: true });
+      assert.deepEqual(
+        asked.filter((c) => c === 'staff:seat'),
+        ['staff:seat', 'staff:seat'],
+        'on create and on switching back on, not on a rename or switching off',
+      );
+    } finally {
+      configureHandlers({ gate: async () => null });
+    }
   });
 });

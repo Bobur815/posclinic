@@ -10,9 +10,63 @@ export type PaymentStatus = 'PENDING' | 'PARTIAL' | 'PAID';
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'INSURANCE';
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
-/** CONSULTATION needs a doctor; ANALYSIS has a result; PROCEDURE can be a course. */
-export type ServiceKind = 'CONSULTATION' | 'ANALYSIS' | 'PROCEDURE';
-export const SERVICE_KINDS: readonly ServiceKind[] = ['CONSULTATION', 'ANALYSIS', 'PROCEDURE'];
+/**
+ * How a service behaves: CONSULTATION needs a doctor; ANALYSIS has a result; PROCEDURE can be a
+ * course; DIRECT_SALE (drugs, ointments…) is done at payment: no queue, no case.
+ */
+export type ServiceKind = 'CONSULTATION' | 'ANALYSIS' | 'PROCEDURE' | 'DIRECT_SALE';
+export const SERVICE_KINDS: readonly ServiceKind[] = [
+  'CONSULTATION',
+  'ANALYSIS',
+  'PROCEDURE',
+  'DIRECT_SALE',
+];
+
+/** What a custom staff type may do on the till: NONE = no login (on the staff list only). */
+export type StaffAccess = 'NONE' | 'RECEPTIONIST' | 'NURSE' | 'CLINIC_ADMIN';
+export const STAFF_ACCESS: readonly StaffAccess[] = ['NONE', 'RECEPTIONIST', 'NURSE', 'CLINIC_ADMIN'];
+
+/** An order type the clinic adds in Settings → Types (e.g. "Drugs and ointments"). */
+export interface ServiceTypeDto {
+  id: string;
+  nameUz: string;
+  nameRu: string | null;
+  behavior: ServiceKind;
+  color: string | null;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A staff type the clinic adds (cleaner, guard, accountant…). */
+export interface StaffTypeDto {
+  id: string;
+  nameUz: string;
+  nameRu: string | null;
+  access: StaffAccess;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceTypeInput {
+  id?: string;
+  nameUz: string;
+  nameRu?: string | null;
+  behavior: ServiceKind;
+  color?: string | null;
+  sortOrder?: number;
+  active?: boolean;
+}
+
+export interface StaffTypeInput {
+  id?: string;
+  nameUz: string;
+  nameRu?: string | null;
+  access: StaffAccess;
+  active?: boolean;
+}
 /** How an analysis result is entered: positive/negative, a number, or text. */
 export type ResultType = 'QUALITATIVE' | 'QUANTITATIVE' | 'TEXT';
 export const RESULT_TYPES: readonly ResultType[] = ['QUALITATIVE', 'QUANTITATIVE', 'TEXT'];
@@ -102,6 +156,8 @@ export interface ServiceDto {
   referenceRange: string | null;
   /** Till-only picture (data URL), shown in the desktop app; null = none. */
   image: string | null;
+  /** Custom order type; `kind` is then its behaviour. */
+  serviceTypeId: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -120,6 +176,8 @@ export interface ServiceInput {
   referenceRange?: string | null;
   /** Data URL; null removes it, undefined leaves it. */
   image?: string | null;
+  /** A custom order type sets `kind` to its behaviour; null = none (kind as sent). */
+  serviceTypeId?: string | null;
   active?: boolean;
 }
 
@@ -530,7 +588,8 @@ export interface ResultsReadyDto {
 
 // ── Staff logins (v2.5) ───────────────────────────────────────────────────────────────────
 
-export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE';
+/** STAFF: a custom type without till access (cleaner, guard…): on the list, never signs in. */
+export type StaffRole = 'CLINIC_ADMIN' | 'SUPER_ADMIN' | 'DOCTOR' | 'RECEPTIONIST' | 'NURSE' | 'STAFF';
 
 /** `users:list`: never the password hash. `doctor` set = a doctor's login (Doctors page). */
 export interface StaffDto {
@@ -543,12 +602,17 @@ export interface StaffDto {
   createdAt: string;
   updatedAt: string;
   doctor?: { id: string } | null;
+  /** Custom staff type; `role` follows its access. */
+  staffTypeId: string | null;
 }
 
 /** `users:create` (RECEPTIONIST | NURSE | CLINIC_ADMIN) and `users:update`. */
 export interface StaffInput {
   fullName: string;
   phone: string;
-  role: 'RECEPTIONIST' | 'NURSE' | 'CLINIC_ADMIN';
-  password: string;
+  /** A built-in role, or omitted when `staffTypeId` is set (its access decides). */
+  role?: 'RECEPTIONIST' | 'NURSE' | 'CLINIC_ADMIN';
+  staffTypeId?: string | null;
+  /** Not needed for a no-login type. */
+  password?: string;
 }

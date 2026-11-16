@@ -31,6 +31,10 @@ export class PrismaSyncDb implements SyncDb {
         return this.tx.patientVitals.findMany({ where, select: ref });
       case 'results':
         return this.tx.analysisResult.findMany({ where, select: ref });
+      case 'serviceTypes':
+        return this.tx.serviceType.findMany({ where, select: ref });
+      case 'staffTypes':
+        return this.tx.staffType.findMany({ where, select: ref });
       default:
         return [];
     }
@@ -144,6 +148,24 @@ export class PrismaSyncDb implements SyncDb {
       case 'results': {
         const { id, ...data } = row as RowMap['results'];
         await this.tx.analysisResult.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'serviceTypes': {
+        const { id, ...data } = row as RowMap['serviceTypes'];
+        await this.tx.serviceType.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'staffTypes': {
+        const { id, ...data } = row as RowMap['staffTypes'];
+        await this.tx.staffType.upsert({
           where: { id },
           create: { id, clinicId, ...data, syncedAt },
           update: { ...data, syncedAt },

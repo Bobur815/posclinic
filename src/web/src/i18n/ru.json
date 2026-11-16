@@ -94,7 +94,8 @@
     "SUPER_ADMIN": "Главный администратор",
     "DOCTOR": "Врач",
     "RECEPTIONIST": "Регистратор",
-    "NURSE": "Медсестра / лаборант"
+    "NURSE": "Медсестра / лаборант",
+    "STAFF": "Сотрудник (без входа)"
   },
   "dashboard": {
     "title": "Главная",
@@ -225,7 +226,8 @@
     "kinds": {
       "CONSULTATION": "Консультация",
       "ANALYSIS": "Анализ",
-      "PROCEDURE": "Процедура"
+      "PROCEDURE": "Процедура",
+      "DIRECT_SALE": "Прямая продажа"
     },
     "resultType": "Тип результата",
     "resultTypes": {

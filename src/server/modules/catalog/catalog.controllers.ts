@@ -14,6 +14,20 @@ import {
   UpdateUserDto,
 } from './dto/catalog.dto';
 
+@ApiTags('types')
+@ApiBearerAuth('JWT')
+@UseGuards(JwtAuthGuard)
+@Controller('types')
+export class TypesController {
+  constructor(private readonly catalog: CatalogService) {}
+
+  @Get()
+  @ApiOperation({ summary: "The clinic's own order and staff types (made on the till; read-only)" })
+  list(@CurrentUser() user: AuthUser) {
+    return this.catalog.listTypes(user.clinicId);
+  }
+}
+
 @ApiTags('services')
 @ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)

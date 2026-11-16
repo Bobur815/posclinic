@@ -61,7 +61,8 @@
       "user_deactivated": "Foydalanuvchi hisobi o'chirilgan",
       "too_many_attempts": "Juda ko'p noto'g'ri urinish. 5 daqiqadan keyin qayta urinib ko'ring",
       "login_failed": "Kirish xatosi",
-      "invalid_phone": "Telefon raqam noto'g'ri. Masalan: +998 90 123 45 67"
+      "invalid_phone": "Telefon raqam noto'g'ri. Masalan: +998 90 123 45 67",
+      "no_login": "Bu xodimga dasturga kirish berilmagan"
     },
     "phonePlaceholder": "+998 90 123 45 67",
     "forgotHint": "Parolni unutdingizmi? Klinika administratoriga murojaat qiling"
@@ -204,7 +205,8 @@
     "kinds": {
       "CONSULTATION": "Konsultatsiya",
       "ANALYSIS": "Tahlil",
-      "PROCEDURE": "Muolaja"
+      "PROCEDURE": "Muolaja",
+      "DIRECT_SALE": "To‘g‘ridan-to‘g‘ri sotuv"
     },
     "followUp": "Takroriy konsultatsiya",
     "followUpYes": "Ha: 14 kun ichida bepul",
@@ -220,7 +222,9 @@
     "addImage": "Rasm qo‘shish",
     "changeImage": "Rasmni almashtirish",
     "removeImage": "Rasmni olib tashlash",
-    "imageHint": "Faqat shu dasturda ko‘rinadi; 256 px gacha kichraytiriladi."
+    "imageHint": "Faqat shu dasturda ko‘rinadi; 256 px gacha kichraytiriladi.",
+    "builtInKinds": "Asosiy turlar",
+    "clinicTypes": "Klinika turlari"
   },
   "doctors": {
     "title": "Shifokorlar",
@@ -492,7 +496,10 @@
     "selfDemote": "O‘zingizni o‘chira yoki lavozimingizni pasaytira olmaysiz",
     "alreadyADoctor": "Bu kirish boshqa shifokorga bog‘langan",
     "doctorLoginKeep": "Shifokor kirishini ajratib bo‘lmaydi: kerak bo‘lmasa, “Xodimlar” sahifasida o‘chiring",
-    "invalidImage": "Rasm noto‘g‘ri yoki juda katta"
+    "invalidImage": "Rasm noto‘g‘ri yoki juda katta",
+    "invalidColor": "Rang noto‘g‘ri",
+    "passwordRequired": "Kirish uchun parol kiriting",
+    "noLoginType": "Bu xodim dasturga kirmaydi"
   },
   "license": {
     "title": "Obuna",
@@ -913,7 +920,8 @@
       "SUPER_ADMIN": "Bosh administrator",
       "DOCTOR": "Shifokor",
       "RECEPTIONIST": "Qabulxona",
-      "NURSE": "Hamshira / laborant"
+      "NURSE": "Hamshira / laborant",
+      "STAFF": "Xodim (kirishsiz)"
     },
     "doctorsPage": "Shifokorlar sahifasida",
     "doctorHint": "Shifokorga kirish “Shifokorlar” sahifasida beriladi (shifokor profiliga bog‘lanadi).",
@@ -921,7 +929,13 @@
     "newPassword": "Yangi parol (kamida 6 belgi)",
     "deactivate": "O‘chirish",
     "activate": "Yoqish",
-    "alsoDoctor": "shifokor ham"
+    "alsoDoctor": "shifokor ham",
+    "builtInRoles": "Asosiy lavozimlar",
+    "clinicTypes": "Klinika lavozimlari",
+    "noLogin": "kirishsiz",
+    "noLoginHint": "Bu lavozim dasturga kirmaydi: parol kerak emas.",
+    "givePassword": "Kirish berish",
+    "givePasswordHint": "Yangi lavozim dasturga kiradi: parol o‘rnating."
   },
   "date": {
     "day": "Kun",
@@ -944,5 +958,31 @@
       "Noyabr",
       "Dekabr"
     ]
+  },
+  "types": {
+    "title": "Turlar",
+    "orderTypes": "Buyurtma turlari",
+    "orderTypesHint": "Masalan, “Dori-darmonlar”: xizmatlar shu turdagi ish tartibida ishlaydi.",
+    "staffTypes": "Xodim lavozimlari",
+    "staffTypesHint": "Masalan, farrosh, qorovul, buxgalter: dasturdagi huquqi bilan.",
+    "none": "Hali qo‘shilmagan",
+    "add": "Qo‘shish",
+    "nameUz": "Nomi (o‘zbekcha)",
+    "nameRu": "Nomi (ruscha)",
+    "behavior": "Ish tartibi",
+    "color": "Rangi",
+    "accessLevel": "Dasturdagi huquqi",
+    "behaviors": {
+      "CONSULTATION": "Shifokor qabuli (konsultatsiya kabi)",
+      "ANALYSIS": "Natijali tahlil (tahlil kabi)",
+      "PROCEDURE": "Seansli kurs (muolaja kabi)",
+      "DIRECT_SALE": "To‘g‘ridan-to‘g‘ri sotuv (to‘lovda bajariladi)"
+    },
+    "access": {
+      "NONE": "Kirishsiz (faqat ro‘yxatda)",
+      "RECEPTIONIST": "Qabulxona",
+      "NURSE": "Hamshira / laborant",
+      "CLINIC_ADMIN": "Administrator"
+    }
   }
 }

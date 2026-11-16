@@ -1,5 +1,13 @@
 /** Till roles (the same strings the till stores). */
-export const TILL_ROLES = ['CLINIC_ADMIN', 'SUPER_ADMIN', 'DOCTOR', 'RECEPTIONIST', 'NURSE'] as const;
+/** STAFF: a till staff type without access (cleaner, guard…): on the list, never signs in. */
+export const TILL_ROLES = [
+  'CLINIC_ADMIN',
+  'SUPER_ADMIN',
+  'DOCTOR',
+  'RECEPTIONIST',
+  'NURSE',
+  'STAFF',
+] as const;
 export type TillRole = (typeof TILL_ROLES)[number];
 
 /** Roles that may sign in to the web dashboard. */

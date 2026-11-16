@@ -128,7 +128,7 @@ export function setupCareHandlers(): void {
   handle('queue:listOverview', async (ctx) => {
     actorOf(ctx);
     const items = await getPrismaClient().appointmentItem.findMany({
-      where: { status: OPEN_LINE, appointment: PAID },
+      where: { status: OPEN_LINE, appointment: PAID, service: { kind: { not: 'DIRECT_SALE' } } },
       include: QUEUE_INCLUDE,
       orderBy: { appointment: { createdAt: 'asc' } },
     });

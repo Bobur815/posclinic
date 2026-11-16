@@ -25,7 +25,12 @@ export function setupLicenseHandlers(): void {
       }),
     activeUsers: async (excludeId) =>
       getPrismaClient().user.count({
-        where: { active: true, ...(excludeId ? { id: { not: excludeId } } : {}) },
+        // A no-login staff type (role STAFF: cleaner, guard…) takes no seat.
+        where: {
+          active: true,
+          role: { not: 'STAFF' },
+          ...(excludeId ? { id: { not: excludeId } } : {}),
+        },
       }),
     visitsThisMonth: async () => {
       const start = new Date();

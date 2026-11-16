@@ -7,6 +7,7 @@ import { useToast } from '@context/ToastContext';
 import { usersApi, type StaffRole, type StaffUser } from '../../api/client';
 import { useAuthStore } from '../../store/auth-store';
 import { useAsync } from '../../hooks/useAsync';
+import { useClinicTypes } from '../../hooks/useClinicTypes';
 import { useDebounced } from '../../hooks/useDebounced';
 import { errorText } from '../../lib/errors';
 import { showPhone } from '../../lib/format';
@@ -39,6 +40,7 @@ export function UserList() {
   const { t } = useTranslation();
   const me = useAuthStore((s) => s.user);
   const { data, loading, error, reload } = useAsync(() => usersApi.list(), []);
+  const types = useClinicTypes();
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [editing, setEditing] = useState<StaffUser | 'new' | null>(null);
@@ -110,7 +112,7 @@ export function UserList() {
                   </Td>
                   <Td $nowrap>{showPhone(u.phone)}</Td>
                   <Td $muted>{u.email || '—'}</Td>
-                  <Td><Badge>{t(`roles.${u.role}`, u.role)}</Badge></Td>
+                  <Td><Badge>{types.staffType(u.staffTypeId) ?? t(`roles.${u.role}`, u.role)}</Badge></Td>
                   <Td><ActiveBadge active={u.active} /></Td>
                   <Td $right $nowrap>
                     <Button $small $variant="ghost" onClick={() => setResetting(u)} title={t('staff.resetPassword')} aria-label={t('staff.resetPassword')}>

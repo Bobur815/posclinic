@@ -89,6 +89,7 @@ interface ServiceRow {
   resultType?: string | null;
   resultUnit?: string | null;
   referenceRange?: string | null;
+  serviceTypeId?: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -106,6 +107,7 @@ export const serviceOut = (s: ServiceRow) => ({
   resultType: s.resultType ?? null,
   resultUnit: s.resultUnit ?? null,
   referenceRange: s.referenceRange ?? null,
+  serviceTypeId: s.serviceTypeId ?? null,
   active: s.active,
   createdAt: isoReq(s.createdAt),
   updatedAt: isoReq(s.updatedAt),
@@ -119,6 +121,7 @@ interface UserRow {
   role: string;
   active: boolean;
   passwordHash: string;
+  staffTypeId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -131,6 +134,7 @@ export const userOut = (u: UserRow) => ({
   email: u.email,
   role: u.role,
   active: u.active,
+  staffTypeId: u.staffTypeId ?? null,
   createdAt: isoReq(u.createdAt),
   updatedAt: isoReq(u.updatedAt),
 });

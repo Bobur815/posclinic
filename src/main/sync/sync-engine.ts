@@ -16,6 +16,9 @@ export const BATCH = 200;
 
 /** What a row points at goes first (the server's apply order, server-api.md). */
 export const PUSH_ORDER = [
+  // v2.5: the clinic's own types, before the users and services that point at them.
+  'serviceTypes',
+  'staffTypes',
   'users',
   'doctors',
   'services',
@@ -52,6 +55,10 @@ export interface SyncDb {
   patientVitals: any;
   // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
   analysisResult: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  serviceType: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  staffType: any;
   // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
   syncState: any;
 }
@@ -210,6 +217,8 @@ const MODEL: Record<PushEntity, keyof SyncDb> = {
   referrals: 'referral',
   vitals: 'patientVitals',
   results: 'analysisResult',
+  serviceTypes: 'serviceType',
+  staffTypes: 'staffType',
 };
 
 /** Fields each pulled entity may write on the till (nothing else from the server is trusted). */

@@ -1,4 +1,4 @@
-import { recomputeCaseStatus } from '../clinic/case-status';
+import { completeOrderIfDone, recomputeCaseStatus } from '../clinic/case-status';
 import {
   ADMIN_ROLES,
   errorSummary,
@@ -292,7 +292,18 @@ export function setupAppointmentHandlers(): void {
           const paidAmount = Math.min(totalAmount, alreadyPaid + amount);
           const paymentStatus = paidAmount >= totalAmount ? 'PAID' : 'PARTIAL';
 
-          return tx.appointment.update({
+          if (paymentStatus === 'PAID') {
+            const now = new Date();
+            await tx.appointmentItem.updateMany({
+              where: {
+                appointmentId: id,
+                status: { in: ['WAITING', 'IN_PROGRESS'] },
+                service: { kind: 'DIRECT_SALE' },
+              },
+              data: { status: 'DONE', startedAt: now, completedAt: now },
+            });
+          }
+          const paid = await tx.appointment.update({
             where: { id },
             data: {
               // Paying puts the lines in the doctor's / nurse's queue; the visit is completed
@@ -303,6 +314,14 @@ export function setupAppointmentHandlers(): void {
             },
             include: { patient: true, doctor: true, items: true },
           });
+          if (paymentStatus === 'PAID') {
+            await completeOrderIfDone(tx, id);
+            return tx.appointment.findUniqueOrThrow({
+              where: { id },
+              include: { patient: true, doctor: true, items: true },
+            });
+          }
+          return paid;
         });
 
         return ipcSafe(updated);

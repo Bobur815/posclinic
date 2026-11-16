@@ -27,9 +27,9 @@ export class CreateServiceDto {
   description?: string | null;
   @ApiProperty({ description: 'UZS' }) @IsNumber() @Min(0) @Max(1e12) price!: number;
   @ApiPropertyOptional({ default: 30 }) @IsOptional() @IsInt() @Min(0) @Max(1440) duration?: number;
-  @ApiPropertyOptional({ enum: ['CONSULTATION', 'ANALYSIS', 'PROCEDURE'] })
+  @ApiPropertyOptional({ enum: ['CONSULTATION', 'ANALYSIS', 'PROCEDURE', 'DIRECT_SALE'] })
   @IsOptional()
-  @IsIn(['CONSULTATION', 'ANALYSIS', 'PROCEDURE'])
+  @IsIn(['CONSULTATION', 'ANALYSIS', 'PROCEDURE', 'DIRECT_SALE'])
   kind?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isFollowUp?: boolean;
   @ApiPropertyOptional({ enum: ['QUALITATIVE', 'QUANTITATIVE', 'TEXT'], nullable: true })

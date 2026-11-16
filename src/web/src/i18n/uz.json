@@ -94,7 +94,8 @@
     "SUPER_ADMIN": "Bosh administrator",
     "DOCTOR": "Shifokor",
     "RECEPTIONIST": "Registrator",
-    "NURSE": "Hamshira / laborant"
+    "NURSE": "Hamshira / laborant",
+    "STAFF": "Xodim (kirishsiz)"
   },
   "dashboard": {
     "title": "Bosh sahifa",
@@ -225,7 +226,8 @@
     "kinds": {
       "CONSULTATION": "Konsultatsiya",
       "ANALYSIS": "Tahlil",
-      "PROCEDURE": "Muolaja"
+      "PROCEDURE": "Muolaja",
+      "DIRECT_SALE": "To‘g‘ridan-to‘g‘ri sotuv"
     },
     "resultType": "Natija turi",
     "resultTypes": {

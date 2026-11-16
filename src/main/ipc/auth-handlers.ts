@@ -31,7 +31,7 @@ function toActor(user: {
 export async function freshActor(actor: Actor | null): Promise<Actor | null> {
   if (!actor) return null;
   const user = await getPrismaClient().user.findUnique({ where: { id: actor.id } });
-  return user?.active ? toActor(user) : null;
+  return user?.active && user.role !== 'STAFF' ? toActor(user) : null;
 }
 
 // ── Remember-me token ──────────────────────────────────────────────────────────────────────
@@ -104,6 +104,7 @@ export function setupAuthHandlers(): void {
         return { success: false, error: 'invalid_credentials' };
       }
       if (!user.active) return { success: false, error: 'user_deactivated' };
+      if (user.role === 'STAFF') return { success: false, error: 'no_login' };
 
       const actor = toActor(user);
       ctx.setActor(actor);
@@ -127,7 +128,7 @@ export function setupAuthHandlers(): void {
       const id = await verifyToken(token);
       if (!id) return null;
       const user = await getPrismaClient().user.findUnique({ where: { id } });
-      if (!user || !user.active) return null;
+      if (!user || !user.active || user.role === 'STAFF') return null;
       const actor = toActor(user);
       ctx.setActor(actor);
       return actor;
