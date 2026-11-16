@@ -237,9 +237,12 @@ async function bootstrap() {
  * `posclinic-<name>`: database, login, saved login, licence link and single-instance lock.
  * Ignored by an installed (packaged) till. How to: docs/dev-several-tills.md.
  */
+// PowerShell eats the `--` of `npm run x -- --profile=y`, so npm takes `--profile=y` as its own
+// setting: it then arrives as npm_config_profile. The per-role scripts set POSCLINIC_PROFILE.
 const devProfile =
   process.argv.find((a) => a.startsWith('--profile='))?.slice('--profile='.length) ??
-  process.env.POSCLINIC_PROFILE;
+  process.env.POSCLINIC_PROFILE ??
+  process.env.npm_config_profile;
 if (!app.isPackaged && devProfile && /^[a-z0-9-]{1,32}$/i.test(devProfile)) {
   app.setPath('userData', path.join(app.getPath('appData'), `posclinic-${devProfile}`));
 }

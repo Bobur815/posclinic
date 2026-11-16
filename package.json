@@ -6,6 +6,10 @@
   "scripts": {
     "dev:pos": "cross-env APP_MODE=pos electron-vite dev",
     "dev:pos:extra": "cross-env NODE_ENV=development electron .",
+    "dev:pos:reception": "cross-env NODE_ENV=development POSCLINIC_PROFILE=reception electron .",
+    "dev:pos:doctor": "cross-env NODE_ENV=development POSCLINIC_PROFILE=doctor electron .",
+    "dev:pos:nurse": "cross-env NODE_ENV=development POSCLINIC_PROFILE=nurse electron .",
+    "dev:pos:admin": "cross-env NODE_ENV=development POSCLINIC_PROFILE=admin electron .",
     "dev:server": "nest start --watch",
     "build:pos": "cross-env APP_MODE=pos electron-vite build && electron-builder --config electron-builder.config.js",
     "build:server": "nest build",

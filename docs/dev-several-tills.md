@@ -8,9 +8,11 @@ run one **main till** and up to three **satellite tills**. Each copy gets its ow
 | Terminal | Command | Data folder (`%APPDATA%`) |
 |---|---|---|
 | 1 | `npm run dev:pos` (main till: the clinic database, Vite on :5175) | `posclinic` |
-| 2 | `npm run dev:pos:extra -- --profile=doctor` | `posclinic-doctor` |
-| 3 | `npm run dev:pos:extra -- --profile=nurse` | `posclinic-nurse` |
-| 4 | `npm run dev:pos:extra -- --profile=admin` | `posclinic-admin` |
+| 2 | `npm run dev:pos:doctor` | `posclinic-doctor` |
+| 3 | `npm run dev:pos:nurse` | `posclinic-nurse` |
+| 4 | `npm run dev:pos:admin` | `posclinic-admin` |
+
+Also `npm run dev:pos:reception`. Any other name: `npm run dev:pos:extra --profile=<name>` (in PowerShell without `--`: PowerShell removes it, and npm passes the profile on as `npm_config_profile`). The folders are created on first start; nothing to make by hand.
 
 Terminal 1 must stay running: the other copies use its build (`dist-electron`) and its renderer
 dev server (`localhost:5175`). After a change to `src/main`, restart the extra copies (the
