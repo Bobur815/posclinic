@@ -16,6 +16,7 @@ import {
   ListOrdered,
   TestTube,
   KeyRound,
+  Wallet,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuthStore } from '../../store/auth-store';
@@ -178,6 +179,7 @@ export function Sidebar() {
     : [
     { to: '/patients', icon: <Users size={18} />, label: t('nav.patients') },
     { to: '/appointments', icon: <Calendar size={18} />, label: t('nav.appointments') },
+    { to: '/shifts', icon: <Wallet size={18} />, label: t('nav.shifts') },
     { to: '/services', icon: <ClipboardList size={18} />, label: t('nav.services') },
     { to: '/doctors', icon: <Stethoscope size={18} />, label: t('nav.doctors') },
   ];

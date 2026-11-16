@@ -10,7 +10,7 @@ import type {
   QueueItemDto,
 } from '../../shared/clinic';
 import { useDatabaseClient } from '../database/sqlite-client';
-import { createTestDb, type TestDb } from '../test-utils/db';
+import { createTestDb, openTestShift, type TestDb } from '../test-utils/db';
 import { setupIpcHandlers } from './handlers';
 import {
   type Actor,
@@ -55,7 +55,7 @@ let visit: AppointmentDto;
 
 before(async () => {
   t = await createTestDb();
-  useDatabaseClient(t.db);
+  useDatabaseClient(t.db); await openTestShift(t.db);
   clearHandlers();
   setupIpcHandlers();
   configureHandlers({ gate: async () => null, onWrite: () => undefined, emit: () => undefined });

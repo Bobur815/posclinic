@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { createTestDb, type TestDb } from '../test-utils/db';
+import { createTestDb, openTestShift, type TestDb } from '../test-utils/db';
 import { getLink, getRole, plainCipher } from './config';
 import { LanService } from './lan-service';
 import { CODE_TTL_MS, hashSecret, PairingStore, secretMatches } from './pairing';
@@ -143,7 +143,7 @@ describe('LanService', () => {
   const freePort = () => 20_000 + Math.floor(Math.random() * 20_000);
 
   before(async () => {
-    main = await createTestDb();
+    main = await createTestDb(); await openTestShift(main.db);
     sat = await createTestDb();
   });
   after(async () => {

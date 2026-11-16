@@ -8,7 +8,7 @@ import { isUniqueConflict, withUniqueRetry } from '../ipc/appointment-handlers';
 import { freshActor } from '../ipc/auth-handlers';
 import { setupIpcHandlers } from '../ipc/handlers';
 import { clearHandlers, configureHandlers, hasHandler, invokeHandler } from '../ipc/ipc-safe';
-import { createTestDb, type TestDb } from '../test-utils/db';
+import { createTestDb, openTestShift, type TestDb } from '../test-utils/db';
 import type { SatelliteLink } from './config';
 import { revokeDevice } from './devices';
 import { MainLink, pairWithMain } from './main-link';
@@ -70,7 +70,7 @@ const hash = (p: string) => bcrypt.hash(p, 4);
 
 before(async () => {
   t = await createTestDb();
-  useDatabaseClient(t.db);
+  useDatabaseClient(t.db); await openTestShift(t.db);
   clearHandlers();
   setupIpcHandlers();
   configureHandlers({

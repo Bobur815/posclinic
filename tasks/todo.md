@@ -262,3 +262,106 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 - [x] Registration: catalog cards (bigger picture, type badge, price).
 - [x] Sync + server migration (types tables, type ids, DIRECT_SALE, STAFF) + web shows type names.
 - [x] Tests, i18n uz/ru, check + builds.
+
+## v2.6 Fiscal receipts through REGOS:VCR (plan 2026-11-16, waiting for approval)
+
+Copies SavdoChef F18 (`restaurant-app/src/main/fiscal/`: `vcr-client.ts`, `fiscal-service.ts`, `config.ts`, `order-status.ts`, `ofd-link.ts`, `shared/utils/fiscal-receipt.ts`, `test-utils/fake-vcr.ts`, `renderer/views/settings/fiscal-section.ts`) and posgro's tasnif lookups (`posgro/src/main/fiscal/tasnif.ts`). Same rules:
+- REGOS:VCR runs on the **main till's** PC (`http://127.0.0.1:22298/`, JSON-RPC, login `cassir`). Satellites forward every call, so only the main till talks to VCR.
+- "Allow, fiscalise later": a payment always commits; the receipt is sent after commit and retried.
+- Never twice: receipt `code` = `PC-<db prefix>-<appointmentNumber>`, looked up with `Receipt.GetInfo` before a resend.
+- VCR calls run one at a time. The VCR password is encrypted with safeStorage and never leaves main.
+
+**tasnif findings (checked live 2026-11-16).** The goods search (`elasticsearch/search`) does not index services. Services are found with `GET https://tasnif.soliq.uz/api/cls-api/mxik/search/by-params?text=<words>&lang=ru|uz_cyrl|uz_latn&size=&page=` (only `text` and `mxikCode` filter). Package codes come from `integration-mxik/get/history/<mxik>` (`packageNames`). Medical services are class `10902`:
+
+| Clinic service | MXIK | Package code (`xizmat (marta)`) |
+|---|---|---|
+| Parasitologist consultation (PAR-CONS, PAR-CONS2) | `10902001034000000` Консультация паразитолога | `1321927` |
+| Lab analyses (PAR-OP … PAR-MAL) | `10902002003000999` Лабораторная диагностика, прочие | `1321964` |
+| Procedures, courses (PAR-ENEMA) | `10902003035000000` Услуги паразитолога по лечению и проведению процедур | `1322001` |
+| Ultrasound, if the clinic adds one | `10902002002000003` УЗИ | (look up) |
+
+Each MXIK has its own package code: the package is always taken from the same MXIK, never mixed.
+
+### SQLite (in-place, additive: `schema.ts` ADD COLUMN + `schema.sqlite.prisma`)
+- [ ] `services`: `mxik TEXT`, `package_code TEXT` (null = the settings default for its kind).
+- [ ] `appointments`:
+  - `fiscal_status`: null = fiscal off when paid or never sent; otherwise `PENDING | FISCALIZED | FAILED | SKIPPED`.
+  - `fiscal_error`, `fiscal_attempts INT DEFAULT 0`.
+  - `fiscal_receipt_id`, `fiscal_receipt_no`, `fiscal_sign`, `fiscal_qr_url`, `fiscal_terminal_id`, `fiscal_at`.
+  - Index on `fiscal_status`.
+- [ ] Settings keys `fiscal_*` (as SavdoChef): enabled, host, port, login, password (encrypted), VAT mode, default MXIK + package per kind (consultation / analysis / procedure / direct sale), code prefix.
+- [ ] One-time data upgrade: fill the seeded parasitology services' MXIK + package from the table above, only where empty (Q7).
+
+### Main
+- [ ] `src/main/fiscal/`:
+  - `vcr-client.ts` and `ofd-link.ts`: copied.
+  - `config.ts`: settings keys, per-kind defaults.
+  - `fiscal-service.ts`: send, retry, look up by code, adopt, Z-report open and close, duplicate. No shifts, no debts, no edits.
+- [ ] `src/shared/fiscal-receipt.ts`: a pure builder. One position per paid line:
+  - `amount` = line `total` in tiyin; `quantity` x 1000;
+  - `discount` = line discount in tiyin (the course discount);
+  - `icps` / `package_code` from the service, or its kind's default;
+  - `barcode` = service code; `vat_value` per VAT mode (Q3).
+  - Payments per Q2. Throws on a missing MXIK, or when positions ≠ payments.
+- [ ] `src/main/fiscal/tasnif.ts`:
+  - `searchServices(text, lang)` (by-params) and `packagesFor(mxik)`.
+  - 8 s timeout, called from main (no CORS).
+  - Answers mapped to `{ code, name, className, packages }`.
+- [ ] `appointments:checkout`: when the visit becomes PAID (Q1) and fiscal is on, set `fiscal_status = PENDING` in the same transaction; after commit, `fiscal.kick()`.
+- [ ] Visit cancel and edit: refused on a FISCALIZED visit (Q5).
+- [ ] IPC, all through `handle()`:
+  - Admin: `fiscal:getConfig`, `fiscal:setConfig`, `fiscal:test`, `fiscal:zReport`, `fiscal:zOpen`, `fiscal:zClose`, `fiscal:searchMxik`, `fiscal:packages`.
+  - Reception + admin: `fiscal:retry`, `fiscal:retryAll`.
+  - Also: `fiscal:status`, `fiscal:duplicate`.
+  - Host allow-list as SavdoChef (`isAllowedVcrHost`); `redirect: 'error'`.
+- [ ] `index.ts`: create the FiscalService on the main till only; `start()` sends what is waiting once after start. `POSCLINIC_VCR_URL` override, unpackaged builds only.
+- [ ] LAN: satellites forward `fiscal:*` like every channel; the password never travels (only `hasPassword`).
+
+### Renderer
+- [ ] Settings → **Fiscal receipt** (admin):
+  - on/off; VCR host, port, login, password; test connection; VAT mode;
+  - default MXIK + package per kind, each with the tasnif search;
+  - Z-report state with Open / Close buttons;
+  - "waiting / failed" counters with "Send again".
+- [ ] Services form: an MXIK field with **Search tasnif**.
+  - Type words → a list of `code — name`; pick one.
+  - The package list is filled from tasnif, and the single `xizmat (marta)` is picked automatically.
+  - Validation: 17 digits.
+- [ ] Visit details and list:
+  - a fiscal badge (Sent / Waiting / Failed with the reason);
+  - "Send again"; "Print copy" (`Receipt.Duplicate`).
+- [ ] i18n uz + ru for all of it; VCR error texts from SavdoChef (`describeVcrError`).
+
+### Licence, sync, version
+- [ ] Licence: no new plan feature in v1 (every plan may fiscalise). The gate still applies: read-only mode refuses `fiscal:*` writes, except a retry of a visit already paid.
+- [ ] Sync: `services.mxik` / `package_code` synced (server column + migration + **SyncPushDto** + `sync.dto.test.ts`, lesson 2026-11-16). Fiscal receipt fields stay on the till in v1 (Q7).
+- [ ] Version 2.5.0 → **2.6.0**.
+
+### Tests and verification
+- [ ] `fiscal-receipt.test.ts`: tiyin/milli rounding, course discount, VAT modes, per-kind defaults, missing MXIK, unbalanced, payment mapping.
+- [ ] `vcr-client.test.ts` + `fiscal-service.test.ts` against a local fake VCR (copy `fake-vcr.ts`):
+  - a sale;
+  - a lost answer adopted by code;
+  - busy retry;
+  - an environment error keeps PENDING without counting an attempt;
+  - a data refusal → FAILED;
+  - Z-report auto-open on 704010.
+- [ ] `tasnif.test.ts` against a fake HTTP server (answer shapes from the live calls above).
+- [ ] `npm test`, typecheck, till build. One end-to-end pass: dev till → fake VCR (`POSCLINIC_VCR_URL`) → a paid visit → FISCALIZED with a receipt number.
+- [ ] Not verified without you: a real REGOS:VCR + fiscal module on the clinic PC.
+
+**Owner decisions (2026-11-16): all R, except 6: shifts like SavdoChef.** So:
+- Payments become rows (`payments`: visit, shift, method, amount, who, when); `paidAmount` stays the running total. Checkout needs an open shift (one for the whole clinic, all desks).
+- `shifts`: open with the opening cash; pay in / pay out (never edited; a mistake is undone by the opposite movement); close with the counted cash. The expected cash is frozen at close; history shows the difference. A shift with no payments or movements can be deleted (admin).
+- The Z-report follows the shift: opened with it (in the background), closed with it after the waiting receipts are sent, with buttons for when the two disagree.
+- A visit paid partly by transfer or insurance is SKIPPED as a whole (positions must equal the payments).
+- Commits: (A) shifts + payment rows, (B) MXIK codes (+ tasnif search, seeded codes, server/web), (C) fiscal receipts.
+
+### Questions (answered 2026-11-16)
+1. **Partial payments:** one receipt when the visit is fully paid (R), or a receipt for every payment (needs advance-payment receipts, much harder)?
+2. **Payment methods:** CASH → cash, CARD → card (R). TRANSFER and INSURANCE: not fiscalised, marked SKIPPED (R), or sent as cash?
+3. **VAT:** medical services are VAT-exempt (Tax Code, art. 243): send "Без НДС" (R). Also a 12 % option in settings, for a clinic that pays VAT on goods?
+4. **Direct-sale goods (drugs, ointments):** medicines need a marking code (Asl Belgisi) on the receipt. v1: services and unmarked goods only, and a marked drug line stops the receipt with a clear error (R)? Or leave direct-sale lines out of fiscal for now?
+5. **Refunds:** v1: a fiscalised visit cannot be cancelled in the app, and refunds are done in the REGOS app (R)? Or build `Receipt.FullRefund` now (scan the paper receipt's QR, as SavdoChef)?
+6. **Z-report:** posclinic has no shifts. Open it automatically before the first receipt of the day and close it with a button in Settings → Fiscal receipt (R)? Or also close it automatically at a set time?
+7. **Codes:** prefill the seeded parasitology services with the MXIK/package codes above (R)? Sync MXIK/package to the server so the web shows them (R), with fiscal status staying on the till for now (R)?

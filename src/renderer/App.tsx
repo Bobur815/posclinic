@@ -25,6 +25,7 @@ import { CheckoutPage } from './pages/Appointments/CheckoutPage';
 import { ServiceList } from './pages/Services/ServiceList';
 import { DoctorList } from './pages/Doctors/DoctorList';
 import { DailyReport } from './pages/Reports/DailyReport';
+import { ShiftsPage } from './pages/Shifts/ShiftsPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { UserSettingsPage } from './pages/Settings/UserSettingsPage';
 
@@ -106,6 +107,14 @@ function App() {
             }
           />
           <Route path="reports/daily" element={<DailyReport />} />
+          <Route
+            path="shifts"
+            element={
+              <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']}>
+                <ShiftsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="users"
             element={

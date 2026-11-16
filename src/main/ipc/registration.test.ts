@@ -5,7 +5,7 @@ import type { AppointmentDto, OpenCaseDto, PatientDto, QuoteDto } from '../../sh
 import { priceLines, sessionPlan, type PricingFacts } from '../clinic/pricing';
 import { resetApprovalThrottle } from '../clinic/register-order';
 import { useDatabaseClient } from '../database/sqlite-client';
-import { createTestDb, type TestDb } from '../test-utils/db';
+import { createTestDb, openTestShift, type TestDb } from '../test-utils/db';
 import { setupIpcHandlers } from './handlers';
 import {
   type Actor,
@@ -51,7 +51,7 @@ let other: PatientDto;
 
 before(async () => {
   t = await createTestDb();
-  useDatabaseClient(t.db);
+  useDatabaseClient(t.db); await openTestShift(t.db);
   clearHandlers();
   setupIpcHandlers();
   configureHandlers({ gate: async () => null, onWrite: () => undefined, emit: () => undefined });

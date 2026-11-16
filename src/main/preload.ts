@@ -5,6 +5,11 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  CashMovementDto,
+  CashMovementType,
+  ShiftCloseResultDto,
+  ShiftDto,
+  ShiftSummaryDto,
   ServiceTypeDto,
   ServiceTypeInput,
   StaffTypeDto,
@@ -148,6 +153,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sessions: {
     tick: (sessionId: string, undo?: boolean) =>
       ipcRenderer.invoke('sessions:tick', sessionId, undo === true),
+  },
+  shifts: {
+    getOpen: () => ipcRenderer.invoke('shifts:getOpen'),
+    list: (limit?: number) => ipcRenderer.invoke('shifts:list', limit),
+    summary: (id: string) => ipcRenderer.invoke('shifts:summary', id),
+    open: (data: { openingCash: number }) => ipcRenderer.invoke('shifts:open', data),
+    addCashMovement: (data: { type: CashMovementType; amount: number; note?: string }) =>
+      ipcRenderer.invoke('shifts:addCashMovement', data),
+    close: (data: { shiftId: string; countedCash: number }) =>
+      ipcRenderer.invoke('shifts:close', data),
+    delete: (id: string) => ipcRenderer.invoke('shifts:delete', id),
   },
   types: {
     list: () => ipcRenderer.invoke('types:list'),
@@ -350,6 +366,19 @@ declare global {
       };
       sessions: {
         tick: (sessionId: string, undo?: boolean) => Promise<unknown>;
+      };
+      shifts: {
+        getOpen: () => Promise<ShiftDto | null>;
+        list: (limit?: number) => Promise<ShiftDto[]>;
+        summary: (id: string) => Promise<ShiftSummaryDto>;
+        open: (data: { openingCash: number }) => Promise<ShiftDto>;
+        addCashMovement: (data: {
+          type: CashMovementType;
+          amount: number;
+          note?: string;
+        }) => Promise<CashMovementDto>;
+        close: (data: { shiftId: string; countedCash: number }) => Promise<ShiftCloseResultDto>;
+        delete: (id: string) => Promise<boolean>;
       };
       types: {
         list: () => Promise<{ serviceTypes: ServiceTypeDto[]; staffTypes: StaffTypeDto[] }>;

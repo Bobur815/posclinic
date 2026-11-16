@@ -10,6 +10,7 @@ import { setupDoctorHandlers } from './doctor-handlers';
 import { setupServiceHandlers } from './service-handlers';
 import { setupAppointmentHandlers } from './appointment-handlers';
 import { setupPrintHandlers } from './print-handlers';
+import { setupShiftHandlers } from './shift-handlers';
 
 export function setupIpcHandlers(): void {
   setupAuthHandlers();
@@ -24,4 +25,5 @@ export function setupIpcHandlers(): void {
   setupStaffHandlers();
   setupTypesHandlers();
   setupPrintHandlers();
+  setupShiftHandlers();
 }

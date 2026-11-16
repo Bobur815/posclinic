@@ -60,6 +60,11 @@ model User {
 
   doctor Doctor?
 
+  shiftsOpened   Shift[]        @relation("ShiftOpenedBy")
+  shiftsClosed   Shift[]        @relation("ShiftClosedBy")
+  cashMovements  CashMovement[]
+  paymentsTaken  Payment[]
+
   @@index([clinicId])
   @@map("users")
 }
@@ -249,7 +254,8 @@ model Appointment {
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
-  items AppointmentItem[]
+  items    AppointmentItem[]
+  payments Payment[]
 
   @@index([patientId])
   @@index([doctorId])
@@ -472,4 +478,75 @@ model StaffType {
   users User[]
 
   @@map("staff_types")
+}
+
+// ==================== SHIFTS (v2.6) ====================
+
+/// A cash shift (SavdoChef's "smena"): every payment is taken inside the one open shift. The
+/// drawer is counted at open and at close; the expected cash is frozen at close.
+model Shift {
+  id           String    @id @default(cuid())
+  /// OPEN | CLOSED
+  status       String    @default("OPEN")
+  /// 1 while open, NULL once closed. UNIQUE, so the database itself allows one open shift
+  /// (SQLite treats NULLs as distinct). Written by shifts.ts only.
+  openGuard    Int?      @unique @map("open_guard")
+  openedAt     DateTime  @default(now()) @map("opened_at")
+  closedAt     DateTime? @map("closed_at")
+  openedById   String?   @map("opened_by_id")
+  openedBy     User?     @relation("ShiftOpenedBy", fields: [openedById], references: [id])
+  closedById   String?   @map("closed_by_id")
+  closedBy     User?     @relation("ShiftClosedBy", fields: [closedById], references: [id])
+  openingCash  Decimal   @default(0) @map("opening_cash")
+  countedCash  Decimal?  @map("counted_cash")
+  expectedCash Decimal?  @map("expected_cash")
+  /// REGOS:VCR's Z-report opened for this shift, and when VCR closed it (v2.6 fiscal).
+  fiscalZReportId Int?      @map("fiscal_z_report_id")
+  fiscalZClosedAt DateTime? @map("fiscal_z_closed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  payments      Payment[]
+  cashMovements CashMovement[]
+
+  @@index([status])
+  @@map("shifts")
+}
+
+/// Cash put in or taken out of the open shift's drawer. Never edited or deleted: a mistake is
+/// undone with the opposite movement.
+model CashMovement {
+  id          String   @id @default(cuid())
+  shiftId     String   @map("shift_id")
+  shift       Shift    @relation(fields: [shiftId], references: [id])
+  /// PAY_IN | PAY_OUT
+  type        String
+  amount      Decimal
+  note        String   @default("")
+  createdById String?  @map("created_by_id")
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([shiftId])
+  @@map("cash_movements")
+}
+
+/// One payment on a visit (v2.6): the money actually kept (change is not), its method and shift.
+/// `appointments.paid_amount` stays the running total. Visits paid before v2.6 have no rows.
+model Payment {
+  id            String      @id @default(cuid())
+  appointmentId String      @map("appointment_id")
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  shiftId       String      @map("shift_id")
+  shift         Shift       @relation(fields: [shiftId], references: [id])
+  /// CASH | CARD | TRANSFER | INSURANCE
+  method        String
+  amount        Decimal
+  createdById   String?     @map("created_by_id")
+  createdBy     User?       @relation(fields: [createdById], references: [id])
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([appointmentId])
+  @@index([shiftId])
+  @@map("payments")
 }

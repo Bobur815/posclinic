@@ -616,3 +616,52 @@ export interface StaffInput {
   /** Not needed for a no-login type. */
   password?: string;
 }
+
+// ── Cash shifts (v2.6) ───────────────────────────────────────────────────────────────────────
+
+export type CashMovementType = 'PAY_IN' | 'PAY_OUT';
+
+export interface ShiftDto {
+  id: string;
+  status: 'OPEN' | 'CLOSED';
+  openedAt: string;
+  closedAt: string | null;
+  openedBy: string | null;
+  closedBy: string | null;
+  openingCash: number;
+  /** Counted at close; null while open. */
+  countedCash: number | null;
+  /** Frozen at close; null while open. */
+  expectedCash: number | null;
+  /** counted - expected; null while open. */
+  difference: number | null;
+  fiscalZReportId: number | null;
+  fiscalZClosedAt: string | null;
+}
+
+export interface CashMovementDto {
+  id: string;
+  type: CashMovementType;
+  amount: number;
+  note: string;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export interface ShiftSummaryDto {
+  shift: ShiftDto;
+  sales: Record<PaymentMethod, number>;
+  salesTotal: number;
+  visits: number;
+  payIn: number;
+  payOut: number;
+  /** The open shift's expected cash now, or the figure frozen at close. */
+  expectedCash: number;
+  movements: CashMovementDto[];
+}
+
+/** What closing a shift returns: the shift and, with fiscal receipts on, what VCR could not do. */
+export interface ShiftCloseResultDto {
+  shift: ShiftDto;
+  fiscalProblem: string | null;
+}

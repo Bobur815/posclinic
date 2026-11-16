@@ -71,6 +71,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     await addClinicalWorkflowIfNeeded(prisma);
     await addServiceImageIfNeeded(prisma);
     await addCustomTypesIfNeeded(prisma);
+    await addShiftsIfNeeded(prisma);
     return;
   }
 
@@ -163,6 +164,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
   await addClinicalWorkflowIfNeeded(prisma);
   await addServiceImageIfNeeded(prisma);
   await addCustomTypesIfNeeded(prisma);
+  await addShiftsIfNeeded(prisma);
 }
 
 /**
@@ -634,4 +636,58 @@ async function addCustomTypesIfNeeded(prisma: SchemaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
     'CREATE INDEX IF NOT EXISTS idx_staff_types_updated ON staff_types(updated_at)',
   );
+}
+
+/**
+ * v2.6.0: cash shifts, the drawer's cash movements, and one row per payment on a visit. New tables
+ * only, so additive and idempotent; visits paid before v2.6 keep their totals and get no rows.
+ */
+async function addShiftsIfNeeded(prisma: SchemaClient): Promise<void> {
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS shifts (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'OPEN',
+      open_guard INTEGER UNIQUE,
+      opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      closed_at DATETIME,
+      opened_by_id TEXT REFERENCES users(id),
+      closed_by_id TEXT REFERENCES users(id),
+      opening_cash REAL NOT NULL DEFAULT 0,
+      counted_cash REAL,
+      expected_cash REAL,
+      fiscal_z_report_id INTEGER,
+      fiscal_z_closed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS cash_movements (
+      id TEXT PRIMARY KEY,
+      shift_id TEXT NOT NULL REFERENCES shifts(id),
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      created_by_id TEXT REFERENCES users(id),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  await prisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS payments (
+      id TEXT PRIMARY KEY,
+      appointment_id TEXT NOT NULL REFERENCES appointments(id),
+      shift_id TEXT NOT NULL REFERENCES shifts(id),
+      method TEXT NOT NULL,
+      amount REAL NOT NULL,
+      created_by_id TEXT REFERENCES users(id),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_shifts_status ON shifts(status)',
+    'CREATE INDEX IF NOT EXISTS idx_cash_movements_shift ON cash_movements(shift_id)',
+    'CREATE INDEX IF NOT EXISTS idx_payments_appointment ON payments(appointment_id)',
+    'CREATE INDEX IF NOT EXISTS idx_payments_shift ON payments(shift_id)',
+  ];
+  for (const sql of indexes) await prisma.$executeRawUnsafe(sql);
 }

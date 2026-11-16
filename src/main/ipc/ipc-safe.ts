@@ -166,10 +166,15 @@ export function writtenEntities(channel: string): DataChangedEvent['entity'][] {
   const w = WRITES.exec(channel);
   if (w) {
     const entity = w[1] as DataChangedEvent['entity'];
-    // A registration opens / moves a case; payment releases lines to the queues.
+    // A registration opens / moves a case; payment releases lines to the queues and is a
+    // payment of the open shift.
+    if (channel === 'appointments:checkout') return ['appointments', 'cases', 'shifts'];
     return entity === 'appointments' ? ['appointments', 'cases'] : [entity];
   }
   if (channel === 'clinic:setSettings') return ['settings'];
+  // v2.6: cash shifts (the drawer, its movements); fiscal receipts change visits.
+  if (/^shifts:(open|close|addCashMovement|delete)$/.test(channel)) return ['shifts'];
+  if (/^fiscal:(retry|retryAll|setConfig)$/.test(channel)) return ['appointments'];
   // Types change how services and staff are shown (and their kind / role).
   if (channel === 'types:saveServiceType') return ['services'];
   if (channel === 'types:saveStaffType') return ['users'];

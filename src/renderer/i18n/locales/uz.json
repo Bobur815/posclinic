@@ -87,7 +87,8 @@
     "myQueue": "Mening navbatim",
     "queue": "Navbat",
     "lab": "Laboratoriya va muolajalar",
-    "myAccount": "Mening hisobim"
+    "myAccount": "Mening hisobim",
+    "shifts": "Smena"
   },
   "dashboard": {
     "title": "Bosh sahifa",
@@ -499,7 +500,14 @@
     "invalidImage": "Rasm noto‘g‘ri yoki juda katta",
     "invalidColor": "Rang noto‘g‘ri",
     "passwordRequired": "Kirish uchun parol kiriting",
-    "noLoginType": "Bu xodim dasturga kirmaydi"
+    "noLoginType": "Bu xodim dasturga kirmaydi",
+    "invalidInput": "Ma'lumot noto'g'ri",
+    "noOpenShift": "Ochiq smena yo'q. Avval smenani oching",
+    "shiftAlreadyOpen": "Ochiq smena allaqachon bor",
+    "shiftClosed": "Smena allaqachon yopilgan",
+    "shiftNotEmpty": "Smenada to'lov yoki kassa harakati bor, uni o'chirib bo'lmaydi",
+    "payOutExceedsCash": "Kassada kutilayotgan naqd puldan ko'p chiqarib bo'lmaydi",
+    "fiscalAfterClose": "Smena yopildi, lekin fiskal Z-hisobotni yopib bo'lmadi"
   },
   "license": {
     "title": "Obuna",
@@ -984,5 +992,35 @@
       "NURSE": "Hamshira / laborant",
       "CLINIC_ADMIN": "Administrator"
     }
+  },
+  "shifts": {
+    "title": "Smena",
+    "current": "Ochiq smena",
+    "open": "Smenani ochish",
+    "opened": "Smena ochildi",
+    "close": "Smenani yopish",
+    "closedEven": "Smena yopildi. Kassa to'g'ri",
+    "closedDiff": "Smena yopildi. Farq: {{amount}}",
+    "noneOpen": "Ochiq smena yo'q. To'lov qabul qilish uchun smenani oching.",
+    "neededForPayment": "To'lov faqat ochiq smenada qabul qilinadi.",
+    "openedAtBy": "Ochilgan: {{at}} · {{by}}",
+    "openedAt": "Ochilgan",
+    "closedAt": "Yopilgan",
+    "statusOpen": "Ochiq",
+    "openingCash": "Boshlang'ich naqd",
+    "countedCash": "Sanalgan naqd",
+    "expectedCash": "Kutilayotgan naqd",
+    "expectedHint": "Kassada bo'lishi kerak: {{amount}}",
+    "difference": "Farq",
+    "salesTotal": "Jami to'lovlar",
+    "visits": "To'langan qabullar",
+    "payIn": "Kassaga kirim",
+    "payOut": "Kassadan chiqim",
+    "amount": "Summa",
+    "note": "Izoh",
+    "movements": "Kassa harakatlari",
+    "history": "Smenalar tarixi",
+    "delete": "Smenani o'chirish",
+    "deleteConfirm": "Faqat to'lovsiz va kassa harakatisiz smena o'chiriladi. O'chirilsinmi?"
   }
 }

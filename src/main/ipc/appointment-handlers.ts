@@ -8,6 +8,7 @@ import {
   requireReception,
 } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
+import { money, PAYMENT_METHODS, requireOpenShiftId } from '../clinic/shifts';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
 import { type RegisterInput, registerOrder } from '../clinic/register-order';
@@ -275,9 +276,16 @@ export function setupAppointmentHandlers(): void {
         if (!Number.isFinite(amount) || amount <= 0) throw new RefusedError('errors.invalidAmount');
         const prisma = getPrismaClient();
 
+        const method = String(data?.paymentMethod ?? '');
+        if (!(PAYMENT_METHODS as readonly string[]).includes(method)) {
+          throw new RefusedError('errors.invalidInput');
+        }
+
         // Read and write in one transaction: two desks paying the same visit cannot both
         // add onto the same old balance.
         const updated = await prisma.$transaction(async (tx) => {
+          // v2.6: money is taken inside the open cash shift only.
+          const shiftId = await requireOpenShiftId(tx);
           const appointment = await tx.appointment.findUnique({
             where: { id },
             select: { totalAmount: true, paidAmount: true, status: true },
@@ -289,8 +297,18 @@ export function setupAppointmentHandlers(): void {
           const alreadyPaid = Number(appointment.paidAmount);
           if (alreadyPaid >= totalAmount) throw new RefusedError('errors.alreadyPaid');
 
-          const paidAmount = Math.min(totalAmount, alreadyPaid + amount);
+          const paidAmount = money(Math.min(totalAmount, alreadyPaid + amount));
           const paymentStatus = paidAmount >= totalAmount ? 'PAID' : 'PARTIAL';
+          // What stays in the drawer: the change handed back is not a payment.
+          await tx.payment.create({
+            data: {
+              appointmentId: id,
+              shiftId,
+              method,
+              amount: money(paidAmount - alreadyPaid),
+              createdById: ctx.actor?.id ?? null,
+            },
+          });
 
           if (paymentStatus === 'PAID') {
             const now = new Date();
@@ -309,7 +327,7 @@ export function setupAppointmentHandlers(): void {
               // Paying puts the lines in the doctor's / nurse's queue; the visit is completed
               // when its lines are done (queue handlers), not by the payment.
               paymentStatus,
-              paymentMethod: data.paymentMethod,
+              paymentMethod: method,
               paidAmount,
             },
             include: { patient: true, doctor: true, items: true },

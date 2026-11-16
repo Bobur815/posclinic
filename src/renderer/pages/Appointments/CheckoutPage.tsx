@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { ArrowLeft, CheckCircle, Printer } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Printer, Wallet } from 'lucide-react';
+import { useDataVersion } from '../../hooks/useDataVersion';
 import { ipcErrorKey } from '../../store/lan-store';
 import { useToast } from '../../context/ToastContext';
 
@@ -183,6 +184,32 @@ const ConfirmBtn = styled.button`
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
+/** v2.6: money is taken inside an open cash shift only (main refuses otherwise). */
+const ShiftNotice = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.warning};
+  background: ${({ theme }) => `${theme.colors.warning}18`};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 13px;
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: ${({ theme }) => theme.colors.primary};
+    color: #fff;
+    cursor: pointer;
+  }
+`;
+
 const SuccessCard = styled.div`
   text-align: center;
   padding: ${({ theme }) => theme.spacing.xl};
@@ -243,6 +270,16 @@ export function CheckoutPage() {
   const [amountStr, setAmountStr] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [shiftOpen, setShiftOpen] = useState<boolean | null>(null);
+  const shiftsVersion = useDataVersion(['shifts']);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reloads when a shift opens or closes
+  useEffect(() => {
+    window.electronAPI.shifts
+      .getOpen()
+      .then((s) => setShiftOpen(s !== null))
+      .catch(() => setShiftOpen(null));
+  }, [shiftsVersion]);
 
   useEffect(() => {
     if (!id) return;
@@ -386,6 +423,16 @@ export function CheckoutPage() {
         </PaymentMethodGrid>
       </Card>
 
+      {shiftOpen === false && (
+        <ShiftNotice>
+          <span>{t('shifts.neededForPayment')}</span>
+          <button type="button" onClick={() => navigate('/shifts')}>
+            <Wallet size={14} />
+            {t('shifts.open')}
+          </button>
+        </ShiftNotice>
+      )}
+
       <Card>
         <InputGroup>
           <Label>{t('checkout.enterAmount')}</Label>
@@ -407,7 +454,7 @@ export function CheckoutPage() {
 
         <ConfirmBtn
           onClick={handleConfirm}
-          disabled={isProcessing || enteredAmount <= 0}
+          disabled={isProcessing || enteredAmount <= 0 || shiftOpen === false}
         >
           <CheckCircle size={18} />
           {isProcessing ? t('common.processing') : t('checkout.confirmPayment')}

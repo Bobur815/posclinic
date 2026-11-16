@@ -32,3 +32,9 @@ export async function createTestDb(): Promise<TestDb> {
     },
   };
 }
+
+/** Opens a cash shift (v2.6): checkout takes money only inside one. */
+export async function openTestShift(db: PrismaClient): Promise<string> {
+  const s = await db.shift.create({ data: { status: 'OPEN', openGuard: 1 } });
+  return s.id;
+}
