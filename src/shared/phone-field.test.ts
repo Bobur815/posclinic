@@ -18,6 +18,24 @@ describe('phone field helpers', () => {
     assert.equal(phoneLocalDigits(null), '');
   });
 
+  it('typing digit by digit never adds 998 to what is shown (the field reads its own value back)', () => {
+    let stored = '';
+    let shown = '';
+    for (const digit of '991234567') {
+      // What the input holds after the key press, as PhoneInput sees it, then what it stores.
+      stored = phoneFieldValue(`${shown}${digit}`);
+      shown = formatPhoneLocal(stored);
+    }
+    assert.equal(shown, '99 123 45 67');
+    assert.equal(stored, '+998991234567');
+    assert.equal(formatPhoneLocal(phoneFieldValue('9')), '9');
+    assert.equal(formatPhoneLocal('+9989'), '9');
+    assert.equal(formatPhoneLocal('+998'), '');
+    // A real local number starting with 99 / 98 is kept as typed.
+    assert.equal(phoneLocalDigits('991234567'), '991234567');
+    assert.equal(phoneLocalDigits('98 123 45 67'), '981234567');
+  });
+
   it('formats as typed and hands the form the canonical value', () => {
     assert.equal(formatPhoneLocal('9012'), '90 12');
     assert.equal(formatPhoneLocal('+998901234567'), '90 123 45 67');

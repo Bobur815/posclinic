@@ -20,7 +20,15 @@ export function normalizePhone(raw: string | null | undefined): string | null {
 
 /** The 9 local digits in any typed or stored form ("+998 90…", "99890…", "90 123…"), at most 9. */
 export function phoneLocalDigits(value: string | null | undefined): string {
-  let d = (value ?? '').replace(/\D/g, '');
+  const v = (value ?? '').trim();
+  // "+998…" always carries the country code, however short (a field's own partial value is
+  // "+9989" after one digit). Without the "+", a leading 998 is the code only when there are
+  // more than 9 digits: "99 123 45 67" and "98 …" are real local numbers.
+  if (v.startsWith('+')) {
+    const d = v.replace(/\D/g, '');
+    return (d.startsWith('998') ? d.slice(3) : d).slice(0, 9);
+  }
+  let d = v.replace(/\D/g, '');
   if (d.length > 9 && d.startsWith('998')) d = d.slice(3);
   return d.slice(0, 9);
 }
