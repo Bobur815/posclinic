@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { Plus, Search, Edit2, X, Save } from 'lucide-react';
+import { Plus, Search, Edit2, X, Save, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { imageFileToDataUrl } from '../../components/form/image-file';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
 import { ipcErrorKey } from '../../store/lan-store';
@@ -24,10 +25,61 @@ interface ServiceForm {
   resultType: ResultType;
   resultUnit: string;
   referenceRange: string;
+  /** Data URL (till only); null = none. */
+  image: string | null;
   active: boolean;
 }
 
 const Page = styled.div``;
+
+const Thumb = styled.img<{ $size: number }>`
+  width: ${({ $size }) => $size}px;
+  height: ${({ $size }) => $size}px;
+  object-fit: cover;
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+  display: block;
+`;
+
+const ThumbEmpty = styled.div<{ $size: number }>`
+  width: ${({ $size }) => $size}px;
+  height: ${({ $size }) => $size}px;
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px dashed ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  display: grid;
+  place-items: center;
+`;
+
+const ImageRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: ${({ theme }) => theme.spacing.md};
+`;
+
+const SmallBtn = styled.label`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 13px;
+  cursor: pointer;
+  &:focus-within {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+`;
 
 const Header = styled.div`
   display: flex;
@@ -276,6 +328,7 @@ const emptyForm: ServiceForm = {
   resultType: 'QUALITATIVE',
   resultUnit: '',
   referenceRange: '',
+  image: null,
   active: true,
 };
 
@@ -332,6 +385,7 @@ export function ServiceList() {
       resultType: svc.resultType ?? 'QUALITATIVE',
       resultUnit: svc.resultUnit ?? '',
       referenceRange: svc.referenceRange ?? '',
+      image: svc.image ?? null,
       active: svc.active,
     });
     setShowModal(true);
@@ -354,6 +408,7 @@ export function ServiceList() {
         resultType: form.resultType,
         resultUnit: form.resultUnit,
         referenceRange: form.referenceRange,
+        image: form.image,
         active: form.active,
       };
       if (editingService) {
@@ -466,6 +521,43 @@ export function ServiceList() {
                 </Select>
               </FormGroup>
             </FormGrid>
+            <ImageRow>
+              {form.image ? (
+                <Thumb $size={72} src={form.image} alt="" />
+              ) : (
+                <ThumbEmpty $size={72}>
+                  <ImageIcon size={22} />
+                </ThumbEmpty>
+              )}
+              <div style={{ display: 'grid', gap: 6 }}>
+                <SmallBtn>
+                  <ImageIcon size={14} />
+                  {form.image ? t('services.changeImage') : t('services.addImage')}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/bmp"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (!file) return;
+                      try {
+                        const image = await imageFileToDataUrl(file);
+                        setForm((prev) => ({ ...prev, image }));
+                      } catch {
+                        toast.error(t('errors.invalidImage'));
+                      }
+                    }}
+                  />
+                </SmallBtn>
+                {form.image && (
+                  <SmallBtn as="button" type="button" onClick={() => setForm((prev) => ({ ...prev, image: null }))}>
+                    <Trash2 size={14} />
+                    {t('services.removeImage')}
+                  </SmallBtn>
+                )}
+              </div>
+              <span style={{ fontSize: 12, opacity: 0.7 }}>{t('services.imageHint')}</span>
+            </ImageRow>
             <ModalFooter>
               <CancelBtn onClick={() => setShowModal(false)}>{t('common.cancel')}</CancelBtn>
               <SaveBtn onClick={handleSave} disabled={isSaving || !form.code.trim() || !form.name.trim() || !form.price}>
@@ -506,6 +598,7 @@ export function ServiceList() {
           <Table>
             <thead>
               <tr>
+                <Th />
                 <Th>{t('services.code')}</Th>
                 <Th>{t('services.name')}</Th>
                 <Th>{t('services.kind')}</Th>
@@ -518,6 +611,15 @@ export function ServiceList() {
             <tbody>
               {filtered.map((svc) => (
                 <Tr key={svc.id}>
+                  <Td style={{ width: 52 }}>
+                    {svc.image ? (
+                      <Thumb $size={36} src={svc.image} alt="" />
+                    ) : (
+                      <ThumbEmpty $size={36}>
+                        <ImageIcon size={14} />
+                      </ThumbEmpty>
+                    )}
+                  </Td>
                   <Td style={{ color: '#0891b2', fontWeight: 500 }}>{svc.code}</Td>
                   <Td>{svc.name}</Td>
                   <Td>

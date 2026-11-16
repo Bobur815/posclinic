@@ -125,6 +125,43 @@ export function setupPatientHandlers(): void {
     }
   });
 
+  /**
+   * Registration step 1 before anything is typed: the patients of the latest visits, newest
+   * first, once each, with when they last came and for what.
+   */
+  handle('patients:recent', async (_ctx, limit?: unknown) => {
+    try {
+      const take = Math.min(Math.max(Number(limit) || 12, 1), 50);
+      const visits = await getPrismaClient().appointment.findMany({
+        where: { patient: { active: true } },
+        orderBy: { createdAt: 'desc' },
+        take: take * 6,
+        select: {
+          createdAt: true,
+          status: true,
+          patient: true,
+          items: { select: { serviceName: true }, take: 3 },
+        },
+      });
+      const seen = new Set<string>();
+      const out = [];
+      for (const v of visits) {
+        if (seen.has(v.patient.id)) continue;
+        seen.add(v.patient.id);
+        out.push({
+          ...v.patient,
+          lastVisitAt: v.createdAt,
+          lastServices: v.items.map((i) => i.serviceName),
+        });
+        if (out.length >= take) break;
+      }
+      return ipcSafe(out);
+    } catch (error) {
+      log.error('[patients:recent]', errorSummary(error));
+      throw error;
+    }
+  });
+
   handle('patients:getById', async (_event, id: string) => {
     try {
       const prisma = getPrismaClient();

@@ -9,6 +9,7 @@ import type {
   OpenCaseDto,
   PatientDto,
   QuoteDto,
+  RecentPatientDto,
   RegisterLineInput,
   ServiceDto,
   ServiceKind,
@@ -52,6 +53,15 @@ export function RegisterVisitPage() {
   const [visitedTo, setVisitedTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [results, setResults] = useState<PatientDto[]>([]);
+  // Before anything is typed: the patients of the latest visits, one click away.
+  const [recent, setRecent] = useState<RecentPatientDto[] | null>(null);
+  const recentVersion = useDataVersion(['appointments', 'patients']);
+  useEffect(() => {
+    window.electronAPI.patients
+      .recent(12)
+      .then(setRecent)
+      .catch(() => setRecent([]));
+  }, [recentVersion]);
   const [searching, setSearching] = useState(false);
 
   // Coming back from "New patient": start on that patient.
@@ -98,6 +108,13 @@ export function RegisterVisitPage() {
       clearTimeout(timer);
     };
   }, [criteria, hasCriteria]);
+
+  const choosePatient = (p: PatientDto) => {
+    setPatient(p);
+    setLines([]);
+    setApproval(null);
+    setStep(2);
+  };
 
   // ── Step 2: the order ─────────────────────────────────────────────────────────────────────
   const [cases, setCases] = useState<OpenCaseDto[]>([]);
@@ -307,7 +324,30 @@ export function RegisterVisitPage() {
           )}
 
           {!hasCriteria ? (
-            <Empty>{t('register.searchHint')}</Empty>
+            recent === null ? (
+              <Empty>{t('common.loading')}</Empty>
+            ) : recent.length === 0 ? (
+              <Empty>{t('register.searchHint')}</Empty>
+            ) : (
+              <>
+                <ListTitle>{t('register.recentPatients')}</ListTitle>
+                <Results>
+                  {recent.map((p) => (
+                    <ResultRow key={p.id} type="button" onClick={() => choosePatient(p)}>
+                      <RowHead>
+                        <strong>{p.fullName}</strong>
+                        <Muted>{format(new Date(p.lastVisitAt), 'dd.MM.yyyy HH:mm')}</Muted>
+                      </RowHead>
+                      <Muted>
+                        {p.patientCode} · {p.phone}
+                        {p.birthDate ? ` · ${p.birthDate.slice(0, 4)}` : ''}
+                      </Muted>
+                      {p.lastServices.length > 0 && <Muted>{p.lastServices.join(', ')}</Muted>}
+                    </ResultRow>
+                  ))}
+                </Results>
+              </>
+            )
           ) : searching && results.length === 0 ? (
             <Empty>{t('common.loading')}</Empty>
           ) : results.length === 0 ? (
@@ -315,16 +355,7 @@ export function RegisterVisitPage() {
           ) : (
             <Results>
               {results.map((p) => (
-                <ResultRow
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    setPatient(p);
-                    setLines([]);
-                    setApproval(null);
-                    setStep(2);
-                  }}
-                >
+                <ResultRow key={p.id} type="button" onClick={() => choosePatient(p)}>
                   <strong>{p.fullName}</strong>
                   <Muted>
                     {p.patientCode} · {p.phone}
@@ -467,10 +498,15 @@ export function RegisterVisitPage() {
               <Results>
                 {catalog.slice(0, 12).map((s) => (
                   <ResultRow key={s.id} type="button" onClick={() => addService(s)}>
-                    <strong>{s.name}</strong>
-                    <Muted>
-                      {t(`services.kinds.${s.kind}`)} · {money(Number(s.price))}
-                    </Muted>
+                    <WithThumb>
+                      {s.image && <ServiceThumb src={s.image} alt="" $size={36} />}
+                      <span>
+                        <strong>{s.name}</strong>
+                        <Muted>
+                          {t(`services.kinds.${s.kind}`)} · {money(Number(s.price))}
+                        </Muted>
+                      </span>
+                    </WithThumb>
                   </ResultRow>
                 ))}
                 {catalog.length === 0 && <Empty>{t('services.noServices')}</Empty>}
@@ -480,6 +516,7 @@ export function RegisterVisitPage() {
               <Chips>
                 {catalog.slice(0, 14).map((s) => (
                   <Chip key={s.id} type="button" $kind={s.kind} onClick={() => addService(s)}>
+                    {s.image && <ServiceThumb src={s.image} alt="" $size={20} $round />}
                     {s.name}
                   </Chip>
                 ))}
@@ -508,7 +545,10 @@ export function RegisterVisitPage() {
                     return (
                       <tr key={l.key}>
                         <Td>
-                          {s?.name ?? '—'}
+                          <WithThumb>
+                            {s?.image && <ServiceThumb src={s.image} alt="" $size={28} />}
+                            <span>{s?.name ?? '—'}</span>
+                          </WithThumb>
                           <Muted>
                             {s ? t(`services.kinds.${s.kind}`) : ''}
                             {l.referralId ? ` · ${t('register.fromReferral')}` : ''}
@@ -915,7 +955,35 @@ const Chips = styled.div`
   gap: 6px;
   margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
+const ListTitle = styled.h3`
+  margin: ${({ theme }) => theme.spacing.sm} 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+const RowHead = styled.span`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+`;
+const WithThumb = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+const ServiceThumb = styled.img<{ $size: number; $round?: boolean }>`
+  flex: none;
+  width: ${({ $size }) => $size}px;
+  height: ${({ $size }) => $size}px;
+  object-fit: cover;
+  border-radius: ${({ $round, theme }) => ($round ? '999px' : theme.borderRadius)};
+  background: ${({ theme }) => theme.colors.background};
+`;
 const Chip = styled.button<{ $kind: ServiceKind }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid ${({ theme }) => theme.colors.border};

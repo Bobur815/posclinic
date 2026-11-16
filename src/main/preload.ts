@@ -5,6 +5,7 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  RecentPatientDto,
   StaffDto,
   StaffInput,
   LabQueueDto,
@@ -70,6 +71,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAll: (filters?: { active?: boolean }) =>
       ipcRenderer.invoke('patients:getAll', filters),
     search: (query: string | PatientSearch) => ipcRenderer.invoke('patients:search', query),
+    recent: (limit?: number) => ipcRenderer.invoke('patients:recent', limit),
     getById: (id: string) => ipcRenderer.invoke('patients:getById', id),
     create: (data: PatientInput) => ipcRenderer.invoke('patients:create', data),
     update: (id: string, data: PatientInput) =>
@@ -285,6 +287,7 @@ declare global {
       patients: {
         getAll: (filters?: { active?: boolean }) => Promise<PatientDto[]>;
         search: (query: string | PatientSearch) => Promise<PatientDto[]>;
+        recent: (limit?: number) => Promise<RecentPatientDto[]>;
         getById: (id: string) => Promise<PatientWithVisitsDto | null>;
         create: (data: PatientInput) => Promise<PatientDto>;
         update: (id: string, data: PatientInput) => Promise<PatientDto>;

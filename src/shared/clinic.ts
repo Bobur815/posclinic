@@ -100,6 +100,8 @@ export interface ServiceDto {
   resultType: ResultType | null;
   resultUnit: string | null;
   referenceRange: string | null;
+  /** Till-only picture (data URL), shown in the desktop app; null = none. */
+  image: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -116,6 +118,8 @@ export interface ServiceInput {
   resultType?: ResultType | null;
   resultUnit?: string | null;
   referenceRange?: string | null;
+  /** Data URL; null removes it, undefined leaves it. */
+  image?: string | null;
   active?: boolean;
 }
 
@@ -281,6 +285,12 @@ export interface OpenCaseDto {
       doctor: { id: string; fullName: string } | null;
     }
   >;
+}
+
+/** `patients:recent`: a patient of the latest visits (registration step 1). */
+export interface RecentPatientDto extends PatientDto {
+  lastVisitAt: string;
+  lastServices: string[];
 }
 
 /** `patients:search`: text and / or filters (codes, `YYYY-MM-DD` visit dates). */

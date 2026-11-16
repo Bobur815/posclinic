@@ -54,6 +54,26 @@ export function serviceTypeFields(
   };
 }
 
+/** Largest stored picture: the till resizes to ≤ 256 px before saving, so this is generous. */
+export const SERVICE_IMAGE_MAX = 300_000;
+
+/**
+ * A service picture as sent by ServiceList: undefined = unchanged, null / '' = remove, otherwise
+ * a PNG / JPEG / WebP data URL within SERVICE_IMAGE_MAX characters.
+ */
+export function serviceImage(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  if (
+    typeof v !== 'string' ||
+    v.length > SERVICE_IMAGE_MAX ||
+    !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(v)
+  ) {
+    throw new RefusedError('errors.invalidImage');
+  }
+  return v;
+}
+
 function codeTaken(error: unknown): never {
   if (isUniqueConflict(error, ['code'])) throw new RefusedError('errors.codeTaken');
   throw error;
@@ -118,6 +138,7 @@ export function setupServiceHandlers(): void {
           price: data.price as number,
           duration: (data.duration as number) || 30,
           ...serviceTypeFields(data),
+          image: serviceImage(data.image) ?? null,
           active: data.active !== false,
         },
       }).catch(codeTaken);
@@ -143,6 +164,7 @@ export function setupServiceHandlers(): void {
           price: data.price as number | undefined,
           duration: data.duration as number | undefined,
           ...serviceTypeFields(data, current),
+          image: serviceImage(data.image),
           active: data.active as boolean | undefined,
         },
       }).catch(codeTaken);

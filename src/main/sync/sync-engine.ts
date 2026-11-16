@@ -160,8 +160,11 @@ export function toWire(entity: PushEntity, row: Record<string, unknown>): Record
         ),
       });
     }
-    case 'services':
-      return dates({ ...row, price: Number(row.price) });
+    case 'services': {
+      // The picture is the till's own (v2.5): never sent to the server.
+      const { image: _image, ...rest } = row;
+      return dates({ ...rest, price: Number(rest.price) });
+    }
     case 'vitals': {
       const n = (v: unknown) => (v === null || v === undefined ? null : Number(v));
       return dates({

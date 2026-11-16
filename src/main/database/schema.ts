@@ -69,6 +69,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     await addLanTablesIfNeeded(prisma);
     await addAddressTablesIfNeeded(prisma);
     await addClinicalWorkflowIfNeeded(prisma);
+    await addServiceImageIfNeeded(prisma);
     return;
   }
 
@@ -159,6 +160,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
   await addLanTablesIfNeeded(prisma);
   await addAddressTablesIfNeeded(prisma);
   await addClinicalWorkflowIfNeeded(prisma);
+  await addServiceImageIfNeeded(prisma);
 }
 
 /**
@@ -586,4 +588,9 @@ async function addClinicalWorkflowIfNeeded(prisma: SchemaClient): Promise<void> 
     'CREATE INDEX IF NOT EXISTS idx_sessions_planned ON treatment_sessions(planned_date, done_at)',
   ];
   for (const sql of indexes) await prisma.$executeRawUnsafe(sql);
+}
+
+/** v2.5.0: a picture per service (till only, never synced). Additive and idempotent. */
+async function addServiceImageIfNeeded(prisma: SchemaClient): Promise<void> {
+  await addColumnIfMissing(prisma, 'services', 'image', 'TEXT');
 }

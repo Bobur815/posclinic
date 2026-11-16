@@ -216,7 +216,11 @@
       "TEXT": "Matn"
     },
     "resultUnit": "O‘lchov birligi",
-    "referenceRange": "Me’yor"
+    "referenceRange": "Me’yor",
+    "addImage": "Rasm qo‘shish",
+    "changeImage": "Rasmni almashtirish",
+    "removeImage": "Rasmni olib tashlash",
+    "imageHint": "Faqat shu dasturda ko‘rinadi; 256 px gacha kichraytiriladi."
   },
   "doctors": {
     "title": "Shifokorlar",
@@ -487,7 +491,8 @@
     "nameRequired": "Ismni kiriting",
     "selfDemote": "O‘zingizni o‘chira yoki lavozimingizni pasaytira olmaysiz",
     "alreadyADoctor": "Bu kirish boshqa shifokorga bog‘langan",
-    "doctorLoginKeep": "Shifokor kirishini ajratib bo‘lmaydi: kerak bo‘lmasa, “Xodimlar” sahifasida o‘chiring"
+    "doctorLoginKeep": "Shifokor kirishini ajratib bo‘lmaydi: kerak bo‘lmasa, “Xodimlar” sahifasida o‘chiring",
+    "invalidImage": "Rasm noto‘g‘ri yoki juda katta"
   },
   "license": {
     "title": "Obuna",
@@ -785,7 +790,8 @@
     "adminApproval": "Administrator ruxsati",
     "adminApprovalHint": "Katta chegirma uchun administrator telefon va parolini kiritadi.",
     "approve": "Ruxsat berish",
-    "approvalChecked": "Saqlashda administrator paroli tekshiriladi"
+    "approvalChecked": "Saqlashda administrator paroli tekshiriladi",
+    "recentPatients": "Oxirgi tashriflar"
   },
   "cases": {
     "status": {

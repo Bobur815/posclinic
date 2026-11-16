@@ -24,7 +24,9 @@ const BackBtn = styled.button`
   font-size: 13px;
   cursor: pointer;
   margin-bottom: ${({ theme }) => theme.spacing.md};
-  &:hover { opacity: 0.8; }
+  &:hover {
+    opacity: 0.8;
+  }
 `;
 
 const Title = styled.h1`
@@ -75,7 +77,10 @@ const Input = styled.input`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 14px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const Select = styled.select`
@@ -86,7 +91,10 @@ const Select = styled.select`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 14px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const Textarea = styled.textarea`
@@ -99,7 +107,10 @@ const Textarea = styled.textarea`
   font-size: 14px;
   min-height: 80px;
   resize: vertical;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const Hint = styled.p`
@@ -123,7 +134,9 @@ const CancelBtn = styled.button`
   font-size: 14px;
   cursor: pointer;
   color: ${({ theme }) => theme.colors.text};
-  &:hover { border-color: ${({ theme }) => theme.colors.primary}; }
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const SaveBtn = styled.button`
@@ -138,8 +151,13 @@ const SaveBtn = styled.button`
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -214,9 +232,11 @@ export function PatientForm() {
     }
   }, [isEdit, id]);
 
-  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
-  };
+  const handleChange =
+    (field: string) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,7 +282,12 @@ export function PatientForm() {
     }
   };
 
-  if (isFetching) return <Page><div>{t('common.loading')}</div></Page>;
+  if (isFetching)
+    return (
+      <Page>
+        <div>{t('common.loading')}</div>
+      </Page>
+    );
 
   return (
     <Page>
@@ -277,11 +302,17 @@ export function PatientForm() {
         <form onSubmit={handleSubmit}>
           <Grid>
             <FormGroup>
-              <Label>{t('patients.fullName')}<Required>*</Required></Label>
+              <Label>
+                {t('patients.fullName')}
+                <Required>*</Required>
+              </Label>
               <Input value={form.fullName} onChange={handleChange('fullName')} required />
             </FormGroup>
             <FormGroup>
-              <Label>{t('patients.phone')}<Required>*</Required></Label>
+              <Label>
+                {t('patients.phone')}
+                <Required>*</Required>
+              </Label>
               <PhoneInput
                 value={form.phone}
                 onChange={(phone) => setForm((prev) => ({ ...prev, phone }))}
@@ -310,7 +341,9 @@ export function PatientForm() {
               <Select value={form.bloodType} onChange={handleChange('bloodType')}>
                 <option value="">—</option>
                 {BLOOD_TYPES.map((bt) => (
-                  <option key={bt} value={bt}>{bt}</option>
+                  <option key={bt} value={bt}>
+                    {bt}
+                  </option>
                 ))}
               </Select>
             </FormGroup>
@@ -344,6 +377,12 @@ export function PatientForm() {
             </FullWidth>
             <FullWidth>
               <FormGroup>
+                <Label>{t('address.street')}</Label>
+                <Input value={form.address} onChange={handleChange('address')} />
+              </FormGroup>
+            </FullWidth>
+            <FullWidth>
+              <FormGroup>
                 <Label>{t('patients.allergies')}</Label>
                 <Input value={form.allergies} onChange={handleChange('allergies')} />
               </FormGroup>
@@ -351,13 +390,10 @@ export function PatientForm() {
             <FullWidth>
               <FormGroup>
                 <Label>{t('care.chronicConditions')}</Label>
-                <Input value={form.chronicConditions} onChange={handleChange('chronicConditions')} />
-              </FormGroup>
-            </FullWidth>
-            <FullWidth>
-              <FormGroup>
-                <Label>{t('address.street')}</Label>
-                <Input value={form.address} onChange={handleChange('address')} />
+                <Input
+                  value={form.chronicConditions}
+                  onChange={handleChange('chronicConditions')}
+                />
               </FormGroup>
             </FullWidth>
             <FullWidth>
