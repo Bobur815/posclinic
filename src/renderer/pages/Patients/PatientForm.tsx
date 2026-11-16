@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -8,6 +8,7 @@ import { ipcErrorKey } from '../../store/lan-store';
 import type { Gender } from '../../../shared/clinic';
 import { AddressSelector, type AddressValue } from '../../components/address/AddressSelector';
 import { PhoneInput } from '../../components/form/PhoneInput';
+import { BirthDatePicker } from '../../components/form/BirthDatePicker';
 
 const Page = styled.div`
   max-width: 720px;
@@ -148,6 +149,7 @@ export function PatientForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const birthLabelId = useId();
   const toast = useToast();
   const isEdit = Boolean(id);
 
@@ -287,8 +289,12 @@ export function PatientForm() {
               />
             </FormGroup>
             <FormGroup>
-              <Label>{t('patients.birthDate')}</Label>
-              <Input type="date" value={form.birthDate} onChange={handleChange('birthDate')} />
+              <Label id={birthLabelId}>{t('patients.birthDate')}</Label>
+              <BirthDatePicker
+                labelledBy={birthLabelId}
+                value={form.birthDate}
+                onChange={(birthDate) => setForm((prev) => ({ ...prev, birthDate }))}
+              />
             </FormGroup>
             <FormGroup>
               <Label>{t('patients.gender')}</Label>

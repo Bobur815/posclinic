@@ -916,5 +916,27 @@
     "deactivate": "O‘chirish",
     "activate": "Yoqish",
     "alsoDoctor": "shifokor ham"
+  },
+  "date": {
+    "day": "Kun",
+    "month": "Oy",
+    "year": "Yil",
+    "dd": "KK",
+    "mm": "OO",
+    "yyyy": "YYYY",
+    "months": [
+      "Yanvar",
+      "Fevral",
+      "Mart",
+      "Aprel",
+      "May",
+      "Iyun",
+      "Iyul",
+      "Avgust",
+      "Sentabr",
+      "Oktabr",
+      "Noyabr",
+      "Dekabr"
+    ]
   }
 }
