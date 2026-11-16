@@ -10,6 +10,7 @@ import { useNavGroups } from './Sidebar';
 
 const Bar = styled.header`
   height: 60px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;

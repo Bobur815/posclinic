@@ -8,9 +8,16 @@ import { SubscriptionBanner } from './SubscriptionBanner';
 import { clinicApi } from '../../api/client';
 import { useAuthStore } from '../../store/auth-store';
 
+/**
+ * App shell: exactly one screen tall, never scrolled itself. The sidebar fills the height and
+ * the top bar keeps its size; only <Content> scrolls. (When the whole page scrolled, the sticky
+ * sidebar slid away and the top bar was squeezed by its flex column.)
+ */
 const Container = styled.div`
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background-color: ${({ theme }) => theme.colors.background};
 `;
 
@@ -19,10 +26,15 @@ const Main = styled.div`
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
 `;
 
 const Content = styled.main`
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: ${({ theme }) => theme.spacing.lg};
   min-width: 0;
 

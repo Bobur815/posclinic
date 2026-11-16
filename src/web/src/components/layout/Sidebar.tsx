@@ -39,9 +39,8 @@ interface NavGroup {
 const Container = styled.aside<{ $collapsed: boolean }>`
   width: ${({ $collapsed }) => ($collapsed ? MINI_SIDEBAR_WIDTH : SIDEBAR_WIDTH)}px;
   min-width: ${({ $collapsed }) => ($collapsed ? MINI_SIDEBAR_WIDTH : SIDEBAR_WIDTH)}px;
-  height: 100vh;
-  position: sticky;
-  top: 0;
+  height: 100%;
+  flex-shrink: 0;
   background-color: ${({ theme }) => theme.colors.surface};
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;

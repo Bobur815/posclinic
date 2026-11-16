@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/auth-store';
 import { daysLeft, EXPIRY_WARN_DAYS } from '../../lib/subscription';
 
 const Banner = styled.div<{ $expired: boolean }>`
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;
