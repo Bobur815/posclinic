@@ -3,7 +3,11 @@ import { app } from 'electron';
 import fs from 'fs';
 import { type AdminUnitDataset, importAdminUnits } from './admin-units';
 import adminUnitsDataset from './data/admin-units.json';
-import { normalizePatientPhones, resendClinicalSyncOnce } from './data-upgrades';
+import {
+  fillSeededFiscalCodesOnce,
+  normalizePatientPhones,
+  resendClinicalSyncOnce,
+} from './data-upgrades';
 import { createSchemaIfNeeded } from './schema';
 
 /**
@@ -37,6 +41,12 @@ async function upgradeDatabase(db: any): Promise<void> {
     if (reset.length) console.log(`[db] cloud sync: ${reset.length} entities will be sent again (one-time)`);
   } catch (error) {
     console.error('[db] sync resend reset failed (left as is):', error);
+  }
+  try {
+    const filled = await fillSeededFiscalCodesOnce(db);
+    if (filled) console.log(`[db] fiscal codes filled on ${filled} starter services (one-time)`);
+  } catch (error) {
+    console.error('[db] fiscal code fill failed (left as is):', error);
   }
 }
 

@@ -234,6 +234,9 @@ export interface Service {
   resultType?: 'QUALITATIVE' | 'QUANTITATIVE' | 'TEXT' | null;
   /** The till's custom order type, if any. */
   serviceTypeId?: string | null;
+  /** Fiscal receipt codes, set on the till (v2.6); read-only here. */
+  mxik?: string | null;
+  packageCode?: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;

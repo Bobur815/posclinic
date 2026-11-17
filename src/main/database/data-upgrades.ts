@@ -1,4 +1,6 @@
+import { parasitologyCodeFor } from '../../shared/fiscal-codes';
 import { normalizePhone } from '../../shared/phone';
+import { PARASITOLOGY_SERVICES } from './seed-parasitology';
 
 /**
  * In-place DATA upgrades, run after the schema upgrades every time the clinic DB opens. Each one
@@ -80,4 +82,36 @@ export async function resendClinicalSyncOnce(db: Db): Promise<string[]> {
     db.setting.create({ data: { key: RESEND_KEY, value: JSON.stringify(new Date().toISOString()) } }),
   ]);
   return [...RESEND_ENTITIES];
+}
+
+/**
+ * One-time (v2.6): the starter parasitology services (seed-parasitology.ts) get their fiscal codes
+ * (MXIK + package, by kind). Only rows still without an MXIK, and only once, so an admin who
+ * changes or clears a code later is never overruled. Through Prisma, so `updatedAt` moves and
+ * cloud sync sends the codes up. Returns how many services were filled.
+ */
+const FISCAL_CODES_KEY = 'fiscal_codes_seeded_v26';
+
+export async function fillSeededFiscalCodesOnce(db: Db): Promise<number> {
+  const done = await db.setting.findUnique({ where: { key: FISCAL_CODES_KEY } });
+  if (done) return 0;
+  const seeded = new Map(PARASITOLOGY_SERVICES.map((s) => [s.code, s.kind]));
+  const rows: { id: string; code: string }[] = await db.service.findMany({
+    where: { code: { in: [...seeded.keys()] }, mxik: null },
+    select: { id: true, code: true },
+  });
+  let filled = 0;
+  for (const r of rows) {
+    const code = parasitologyCodeFor(seeded.get(r.code) ?? '');
+    if (!code) continue;
+    await db.service.update({
+      where: { id: r.id },
+      data: { mxik: code.mxik, packageCode: code.packageCode },
+    });
+    filled += 1;
+  }
+  await db.setting.create({
+    data: { key: FISCAL_CODES_KEY, value: JSON.stringify(new Date().toISOString()) },
+  });
+  return filled;
 }

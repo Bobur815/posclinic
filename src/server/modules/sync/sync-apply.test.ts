@@ -462,6 +462,28 @@ describe('applyPush: clinical workflow rows (till v2.5)', () => {
     assert.equal((db.rows.services.get('s9')?.row as { serviceTypeId: string }).serviceTypeId, 'st1');
   });
 
+  it('keeps a service’s fiscal codes (v2.6); a bad code is dropped, not the row', async () => {
+    const r = await applyPush(
+      db,
+      'c1',
+      {
+        services: [
+          service({ id: 'sm1', code: 'MX1', mxik: '10902001034000000', packageCode: '1321927' }),
+          service({ id: 'sm2', code: 'MX2', mxik: '1090-junk', packageCode: 'abc' }),
+          service({ id: 'sm3', code: 'MX3' }),
+          service({ id: 'sm4', code: 'MX4', mxik: '1'.repeat(400), packageCode: 1321927 }),
+        ],
+      },
+      NOW,
+    );
+    assert.deepEqual(r.rejected, []);
+    const row = (id: string) => db.rows.services.get(id)?.row as { mxik: string | null; packageCode: string | null };
+    assert.deepEqual([row('sm1').mxik, row('sm1').packageCode], ['10902001034000000', '1321927']);
+    assert.deepEqual([row('sm2').mxik, row('sm2').packageCode], [null, null]);
+    assert.deepEqual([row('sm3').mxik, row('sm3').packageCode], [null, null]);
+    assert.deepEqual([row('sm4').mxik, row('sm4').packageCode], [null, null], 'too long / not a string');
+  });
+
   it('accepts a NURSE login', async () => {
     const r = await applyPush(
       db,

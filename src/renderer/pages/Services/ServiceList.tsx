@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Plus, Search, Edit2, X, Save, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { imageFileToDataUrl } from '../../components/form/image-file';
+import { MxikField } from '../../components/form/MxikField';
 import { useCustomTypes, useServiceTypeLabel, useTypeName } from '../../hooks/useCustomTypes';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
@@ -30,6 +31,9 @@ interface ServiceForm {
   image: string | null;
   /** A custom order type (Settings → Types): `kind` is then its behaviour. */
   serviceTypeId: string | null;
+  /** Fiscal receipt (v2.6): '' = the kind's default from Settings → Fiscal receipt. */
+  mxik: string;
+  packageCode: string;
   active: boolean;
 }
 
@@ -333,6 +337,8 @@ const emptyForm: ServiceForm = {
   referenceRange: '',
   image: null,
   serviceTypeId: null,
+  mxik: '',
+  packageCode: '',
   active: true,
 };
 
@@ -394,6 +400,8 @@ export function ServiceList() {
       referenceRange: svc.referenceRange ?? '',
       image: svc.image ?? null,
       serviceTypeId: svc.serviceTypeId ?? null,
+      mxik: svc.mxik ?? '',
+      packageCode: svc.packageCode ?? '',
       active: svc.active,
     });
     setShowModal(true);
@@ -418,6 +426,8 @@ export function ServiceList() {
         referenceRange: form.referenceRange,
         image: form.image,
         serviceTypeId: form.serviceTypeId,
+        mxik: form.mxik || null,
+        packageCode: form.mxik ? form.packageCode || null : null,
         active: form.active,
       };
       if (editingService) {
@@ -546,6 +556,14 @@ export function ServiceList() {
                   )}
                 </>
               )}
+              <FullWidth>
+                <Label>{t('mxik.label')}</Label>
+                <MxikField
+                  value={{ mxik: form.mxik, packageCode: form.packageCode }}
+                  onChange={(v) => setForm((p) => ({ ...p, ...v }))}
+                  placeholder={t('mxik.defaultPlaceholder')}
+                />
+              </FullWidth>
               <FormGroup>
                 <Label>{t('common.status')}</Label>
                 <Select value={String(form.active)} onChange={handleChange('active')}>
@@ -593,7 +611,16 @@ export function ServiceList() {
             </ImageRow>
             <ModalFooter>
               <CancelBtn onClick={() => setShowModal(false)}>{t('common.cancel')}</CancelBtn>
-              <SaveBtn onClick={handleSave} disabled={isSaving || !form.code.trim() || !form.name.trim() || !form.price}>
+              <SaveBtn
+                onClick={handleSave}
+                disabled={
+                  isSaving ||
+                  !form.code.trim() ||
+                  !form.name.trim() ||
+                  !form.price ||
+                  (form.mxik !== '' && !/^\d{17}$/.test(form.mxik))
+                }
+              >
                 <Save size={14} />
                 {isSaving ? t('common.processing') : t('common.save')}
               </SaveBtn>
@@ -636,6 +663,7 @@ export function ServiceList() {
                 <Th>{t('services.name')}</Th>
                 <Th>{t('services.kind')}</Th>
                 <Th>{t('services.price')}</Th>
+                <Th>{t('mxik.short')}</Th>
                 <Th>{t('services.duration')}</Th>
                 <Th>{t('common.status')}</Th>
                 <Th>{t('common.actions')}</Th>
@@ -660,6 +688,9 @@ export function ServiceList() {
                     {svc.isFollowUp ? ` · ${t('services.followUpShort')}` : ''}
                   </Td>
                   <Td>{Number(svc.price).toLocaleString()} {t('common.currency')}</Td>
+                  <Td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>
+                    {svc.mxik ?? <span style={{ opacity: 0.5 }}>{t('mxik.byKind')}</span>}
+                  </Td>
                   <Td>{svc.duration ? `${svc.duration} ${t('common.minutes')}` : '—'}</Td>
                   <Td>
                     <Badge $active={svc.active}>

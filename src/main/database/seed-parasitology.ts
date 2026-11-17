@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ResultType, ServiceKind } from '../../shared/clinic';
+import { parasitologyCodeFor } from '../../shared/fiscal-codes';
 
 /**
  * Starter services for a parasitology clinic, written once when a till is first set up. Prices
@@ -117,6 +118,8 @@ interface ServiceWriter {
         kind: ServiceKind;
         isFollowUp: boolean;
         resultType: ResultType | null;
+        mxik: string | null;
+        packageCode: string | null;
       };
     }): Promise<unknown>;
   };
@@ -139,6 +142,9 @@ export async function seedParasitologyServices(
         kind: s.kind,
         isFollowUp: s.isFollowUp ?? false,
         resultType: s.resultType ?? null,
+        // v2.6: the fiscal receipt's codes (tasnif.soliq.uz), by kind.
+        mxik: parasitologyCodeFor(s.kind)?.mxik ?? null,
+        packageCode: parasitologyCodeFor(s.kind)?.packageCode ?? null,
       },
     });
   }

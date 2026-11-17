@@ -181,6 +181,10 @@ model Service {
   /// Picture for the till only (v2.5): a data URL (PNG / JPEG / WebP, ≤ 256 px, resized on the
   /// till). Never synced to the server; the web dashboard does not show it.
   image          String?
+  /// Fiscal receipt (v2.6): MXIK (IKPU, 17 digits, tasnif.soliq.uz) and its package code. Null =
+  /// the Settings → Fiscal receipt default for the service's kind.
+  mxik           String?
+  packageCode    String?  @map("package_code")
   active         Boolean  @default(true)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")

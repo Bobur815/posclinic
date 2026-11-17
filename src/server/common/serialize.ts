@@ -90,6 +90,8 @@ interface ServiceRow {
   resultUnit?: string | null;
   referenceRange?: string | null;
   serviceTypeId?: string | null;
+  mxik?: string | null;
+  packageCode?: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -108,6 +110,8 @@ export const serviceOut = (s: ServiceRow) => ({
   resultUnit: s.resultUnit ?? null,
   referenceRange: s.referenceRange ?? null,
   serviceTypeId: s.serviceTypeId ?? null,
+  mxik: s.mxik ?? null,
+  packageCode: s.packageCode ?? null,
   active: s.active,
   createdAt: isoReq(s.createdAt),
   updatedAt: isoReq(s.updatedAt),

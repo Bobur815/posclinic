@@ -235,7 +235,9 @@
       "QUANTITATIVE": "Son (titr)",
       "TEXT": "Matn"
     },
-    "followUp": "Takroriy konsultatsiya (14 kun ichida bepul)"
+    "followUp": "Takroriy konsultatsiya (14 kun ichida bepul)",
+    "mxik": "MXIK",
+    "mxikHint": "Fiskal chek kodi, kassada (Xizmatlar) kiritiladi"
   },
   "doctors": {
     "title": "Shifokorlar",

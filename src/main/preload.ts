@@ -5,6 +5,9 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  MxikHitDto,
+  MxikPackageDto,
+  TasnifLang,
   CashMovementDto,
   CashMovementType,
   ShiftCloseResultDto,
@@ -110,6 +113,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     create: (data: ServiceInput) => ipcRenderer.invoke('services:create', data),
     update: (id: string, data: ServiceInput) =>
       ipcRenderer.invoke('services:update', id, data),
+    searchMxik: (text: string, lang: TasnifLang) =>
+      ipcRenderer.invoke('services:searchMxik', text, lang),
+    mxikPackages: (mxik: string, lang: TasnifLang) =>
+      ipcRenderer.invoke('services:mxikPackages', mxik, lang),
   },
 
   // Appointments
@@ -333,6 +340,8 @@ declare global {
         search: (query: string) => Promise<ServiceDto[]>;
         create: (data: ServiceInput) => Promise<ServiceDto>;
         update: (id: string, data: ServiceInput) => Promise<ServiceDto>;
+        searchMxik: (text: string, lang: TasnifLang) => Promise<MxikHitDto[]>;
+        mxikPackages: (mxik: string, lang: TasnifLang) => Promise<MxikPackageDto[]>;
       };
       appointments: {
         create: (data: AppointmentCreateInput) => Promise<AppointmentDto>;

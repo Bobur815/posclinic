@@ -148,6 +148,9 @@ model Service {
   resultType     String?  @map("result_type")
   resultUnit     String?  @map("result_unit")
   referenceRange String?  @map("reference_range")
+  /// Fiscal receipt codes from the till (v2.6): MXIK (IKPU, 17 digits) and its package code.
+  mxik           String?
+  packageCode    String?  @map("package_code")
   active         Boolean  @default(true)
   createdAt      DateTime @map("created_at")
   updatedAt      DateTime @map("updated_at")

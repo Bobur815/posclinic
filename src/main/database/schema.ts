@@ -72,6 +72,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     await addServiceImageIfNeeded(prisma);
     await addCustomTypesIfNeeded(prisma);
     await addShiftsIfNeeded(prisma);
+    await addServiceFiscalCodesIfNeeded(prisma);
     return;
   }
 
@@ -165,6 +166,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
   await addServiceImageIfNeeded(prisma);
   await addCustomTypesIfNeeded(prisma);
   await addShiftsIfNeeded(prisma);
+  await addServiceFiscalCodesIfNeeded(prisma);
 }
 
 /**
@@ -690,4 +692,10 @@ async function addShiftsIfNeeded(prisma: SchemaClient): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_payments_shift ON payments(shift_id)',
   ];
   for (const sql of indexes) await prisma.$executeRawUnsafe(sql);
+}
+
+/** v2.6.0: a service's MXIK and package code for the fiscal receipt. Additive and idempotent. */
+async function addServiceFiscalCodesIfNeeded(prisma: SchemaClient): Promise<void> {
+  await addColumnIfMissing(prisma, 'services', 'mxik', 'TEXT');
+  await addColumnIfMissing(prisma, 'services', 'package_code', 'TEXT');
 }

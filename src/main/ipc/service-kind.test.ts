@@ -82,4 +82,26 @@ describe('service types', () => {
       (e: Error) => e.message === 'errors.invalidServiceKind',
     );
   });
+
+  it('stores fiscal codes (v2.6): 17-digit MXIK, digits package; clearing the MXIK clears both', async () => {
+    const base = { code: 'FX-1', name: 'Fx', price: 1000, duration: 10, kind: 'CONSULTATION' };
+    const s = await call<ServiceDto>('services:create', {
+      ...base,
+      mxik: ' 10902001034000000 ',
+      packageCode: '1321927',
+    });
+    assert.deepEqual([s.mxik, s.packageCode], ['10902001034000000', '1321927']);
+    const renamed = await call<ServiceDto>('services:update', s.id, { name: 'Fx 2' });
+    assert.deepEqual([renamed.mxik, renamed.packageCode], ['10902001034000000', '1321927']);
+    const cleared = await call<ServiceDto>('services:update', s.id, { mxik: '' });
+    assert.deepEqual([cleared.mxik, cleared.packageCode], [null, null]);
+    await assert.rejects(
+      call('services:update', s.id, { mxik: '1090200103400000' }),
+      (e: Error) => e.message === 'errors.invalidMxik',
+    );
+    await assert.rejects(
+      call('services:update', s.id, { mxik: '10902001034000000', packageCode: 'x1' }),
+      (e: Error) => e.message === 'errors.invalidPackageCode',
+    );
+  });
 });

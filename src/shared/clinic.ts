@@ -156,6 +156,9 @@ export interface ServiceDto {
   referenceRange: string | null;
   /** Till-only picture (data URL), shown in the desktop app; null = none. */
   image: string | null;
+  /** Fiscal receipt (v2.6): MXIK and package code; null = the kind's default in settings. */
+  mxik: string | null;
+  packageCode: string | null;
   /** Custom order type; `kind` is then its behaviour. */
   serviceTypeId: string | null;
   active: boolean;
@@ -176,6 +179,9 @@ export interface ServiceInput {
   referenceRange?: string | null;
   /** Data URL; null removes it, undefined leaves it. */
   image?: string | null;
+  /** 17 digits; null / '' = none (clears the package code too). */
+  mxik?: string | null;
+  packageCode?: string | null;
   /** A custom order type sets `kind` to its behaviour; null = none (kind as sent). */
   serviceTypeId?: string | null;
   active?: boolean;
@@ -665,3 +671,18 @@ export interface ShiftCloseResultDto {
   shift: ShiftDto;
   fiscalProblem: string | null;
 }
+
+/** A tasnif.soliq.uz search hit (v2.6). */
+export interface MxikHitDto {
+  code: string;
+  name: string;
+  className: string;
+  groupName: string;
+}
+
+export interface MxikPackageDto {
+  code: string;
+  name: string;
+}
+
+export type TasnifLang = 'uz_latn' | 'uz_cyrl' | 'ru';

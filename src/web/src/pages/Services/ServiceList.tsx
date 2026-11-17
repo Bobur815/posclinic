@@ -98,6 +98,7 @@ export function ServiceList() {
                 <Th>{t('services.name')}</Th>
                 <Th>{t('services.kind')}</Th>
                 <Th $right>{t('services.price')}</Th>
+                <Th title={t('services.mxikHint')}>{t('services.mxik')}</Th>
                 <Th $right>{t('services.duration')}</Th>
                 <Th>{t('common.status')}</Th>
                 <Th />
@@ -115,6 +116,7 @@ export function ServiceList() {
                     {types.serviceType(s.serviceTypeId)?.name ?? t(`services.kinds.${s.kind ?? 'PROCEDURE'}`)}
                   </Td>
                   <Td $right $nowrap>{formatMoney(s.price)}</Td>
+                  <Td $muted $nowrap>{s.mxik ?? '—'}</Td>
                   <Td $right $nowrap>{formatNumber(s.duration)} {t('common.minutes')}</Td>
                   <Td><ActiveBadge active={s.active} /></Td>
                   <Td $right>

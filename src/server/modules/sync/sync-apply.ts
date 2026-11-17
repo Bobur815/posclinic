@@ -68,6 +68,8 @@ export interface ServiceIn extends Base {
   resultUnit: string | null;
   referenceRange: string | null;
   serviceTypeId: string | null;
+  mxik: string | null;
+  packageCode: string | null;
 }
 export interface PatientIn extends Base {
   patientCode: string;
@@ -279,6 +281,15 @@ function optStr(r: Raw, k: string, max = TEXT_MAX): string | null {
   if (typeof v !== 'string' || v.length > max) throw new Invalid();
   return v;
 }
+/** A string value as sent, or null for anything else; never throws (the caller validates). */
+function looseStr(r: Raw, k: string): string | null {
+  const v = r[k];
+  return typeof v === 'string' ? v : null;
+}
+/** A code of digits only (MXIK, package code), else null: a bad code never fails the row. */
+function digits(v: string | null, max: number): string | null {
+  return v !== null && new RegExp(`^\\d{1,${max}}$`).test(v) ? v : null;
+}
 function date(r: Raw, k: string): Date {
   const v = r[k];
   const d = typeof v === 'string' || v instanceof Date ? new Date(v) : null;
@@ -380,6 +391,9 @@ const PARSERS: {
     resultUnit: optStr(r, 'resultUnit', 100),
     referenceRange: optStr(r, 'referenceRange', 100),
     serviceTypeId: optStr(r, 'serviceTypeId', 64),
+    // v2.6: fiscal codes; a v2.5 till sends none (null). Digits only, else dropped.
+    mxik: digits(looseStr(r, 'mxik'), 17),
+    packageCode: digits(looseStr(r, 'packageCode'), 20),
   }),
   patients: (r) => ({
     ...base(r),

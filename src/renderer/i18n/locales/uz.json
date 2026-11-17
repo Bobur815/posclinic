@@ -507,7 +507,10 @@
     "shiftClosed": "Smena allaqachon yopilgan",
     "shiftNotEmpty": "Smenada to'lov yoki kassa harakati bor, uni o'chirib bo'lmaydi",
     "payOutExceedsCash": "Kassada kutilayotgan naqd puldan ko'p chiqarib bo'lmaydi",
-    "fiscalAfterClose": "Smena yopildi, lekin fiskal Z-hisobotni yopib bo'lmadi"
+    "fiscalAfterClose": "Smena yopildi, lekin fiskal Z-hisobotni yopib bo'lmadi",
+    "invalidMxik": "MXIK kodi 17 ta raqamdan iborat bo'lishi kerak",
+    "invalidPackageCode": "Qadoq (o'lchov birligi) kodi noto'g'ri",
+    "tasnifUnavailable": "tasnif.soliq.uz bilan aloqa yo'q. Internetni tekshiring"
   },
   "license": {
     "title": "Obuna",
@@ -1022,5 +1025,17 @@
     "history": "Smenalar tarixi",
     "delete": "Smenani o'chirish",
     "deleteConfirm": "Faqat to'lovsiz va kassa harakatisiz smena o'chiriladi. O'chirilsinmi?"
+  },
+  "mxik": {
+    "label": "MXIK (IKPU) kodi — fiskal chek uchun",
+    "short": "MXIK",
+    "byKind": "turi bo'yicha",
+    "defaultPlaceholder": "Bo'sh: sozlamalardagi tur bo'yicha kod",
+    "searchTasnif": "tasnif.soliq.uz dan qidirish",
+    "searchPlaceholder": "Masalan: parazitolog, laborator, konsultatsiya",
+    "searchHint": "Xizmatlar 1 bilan boshlanadi (tibbiy xizmatlar: 10902…). Faqat qidiruv so'zlari yuboriladi.",
+    "noHits": "Hech narsa topilmadi. Boshqa so'z bilan urinib ko'ring (ruscha ham bo'ladi).",
+    "packageCode": "Qadoq kodi",
+    "packagePlaceholder": "Masalan: 1321927"
   }
 }
