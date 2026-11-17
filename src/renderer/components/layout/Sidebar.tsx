@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -173,6 +173,14 @@ export function Sidebar() {
   const { isCollapsed } = useSidebar();
   const { user } = useAuthStore();
   const location = useLocation();
+  // This till's own version (each satellite shows its own), never a hard-coded one.
+  const [version, setVersion] = useState('');
+  useEffect(() => {
+    window.electronAPI.app
+      .getVersion()
+      .then(setVersion)
+      .catch(() => setVersion(''));
+  }, []);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // The page's item is always in sight: after a navigation it is scrolled into view if hidden.
@@ -285,7 +293,7 @@ export function Sidebar() {
       </NavScroll>
 
       <BottomSection>
-        <VersionText $collapsed={isCollapsed}>v1.0.0</VersionText>
+        <VersionText $collapsed={isCollapsed}>{version && `v${version}`}</VersionText>
       </BottomSection>
     </SidebarWrapper>
   );
