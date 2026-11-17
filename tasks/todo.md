@@ -381,3 +381,15 @@ Each MXIK has its own package code: the package is always taken from the same MX
   - The UI was not clicked through.
 - Not verified: a real REGOS:VCR and fiscal module. To try without one: npm run dev:fake-vcr (127.0.0.1:22298, cassir / pass).
 - Security review fixes: a saved VCR password is not reused when host, port or login change (it must be typed again). Closing a shift and "Send again for all" no longer wait for VCR, so a satellite call never times out; the result shows on the Z panel. The VCR timeout is 20 s. Errors are logged as their kind only. A reply that is not JSON is not echoed back. Left for later: clearing a saved VCR password without replacing it, and theme colours on the visit badge.
+
+## v2.7.0: Printer + Receipt settings, real printing (2026-11-17)
+
+Ported from SavdoChef/posgro (`printer/thermal-printer.ts`, `shared/receipt-html.ts`, `PrinterSettings`, `ReceiptSettings`, `utils/receipt-logo.ts`).
+
+- [x] Settings → Printer: this PC's receipt printer, roll width 80/58, optional A4 printer for prescriptions, cash drawer (ESC/POS over winspool, Windows only). Saved per PC in `userData/printer.json`, because a satellite has its own printer.
+- [x] Settings → Receipt: the clinic's layout (language, clinic name, address, phone, STIR, header and footer lines, top and bottom images, show/hide ticks), with a live preview. Kept on the main till (`settings.receipt_layout`); satellites read it over the LAN.
+- [x] Print jobs: `print:serviceReceipt` and `print:prescription` now really print (they only logged before), through one serial queue with a 60 s timeout. Test print, and the drawer opens after a cash payment.
+- [x] Satellites print on their own printer, with the visit (now with its payments) and the layout fetched from the main till.
+- [x] The print buttons show the real result ("no printer chosen", "printer not found", driver errors).
+- Verified: 252/252 tests (20 new), typecheck, electron-vite build. Not verified: a real thermal printer or drawer, and the UI was not clicked through.
+- Security review fixes: the PC printer channels are not licence-gated (a satellite has no licence; they were refused there), printing a visit stays gated. Printing a visit needs a signed-in user; the drawer needs reception or an admin. Errors are logged with `errorSummary`. PowerShell is started by its full path.

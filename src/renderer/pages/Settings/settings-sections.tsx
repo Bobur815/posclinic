@@ -3,7 +3,9 @@ import {
   CloudUpload,
   CreditCard,
   Network,
+  Printer,
   Receipt,
+  ReceiptText,
   Settings,
   Shapes,
   Stethoscope,
@@ -14,6 +16,8 @@ import { CloudSyncSection } from './CloudSyncSection';
 import { FiscalSection } from './FiscalSection';
 import { GeneralSettings } from './GeneralSettings';
 import { LanSection } from './LanSection';
+import { PrinterSection } from './PrinterSection';
+import { ReceiptSection } from './ReceiptSection';
 import { SubscriptionSection } from './SubscriptionSection';
 import { TypesSection } from './TypesSection';
 import { UpdateSection } from './UpdateSection';
@@ -48,6 +52,20 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     title: 'clinicSettings.title',
     description: 'settings.tiles.clinic',
     component: ClinicWorkflowSection,
+  },
+  {
+    key: 'printer',
+    icon: <Printer size={30} />,
+    title: 'printing.title',
+    description: 'settings.tiles.printer',
+    component: PrinterSection,
+  },
+  {
+    key: 'receipt',
+    icon: <ReceiptText size={30} />,
+    title: 'receiptSettings.title',
+    description: 'settings.tiles.receipt',
+    component: ReceiptSection,
   },
   {
     key: 'types',

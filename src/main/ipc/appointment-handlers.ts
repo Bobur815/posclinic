@@ -13,6 +13,7 @@ import { fiscalStatusAtPayment } from '../fiscal/fiscal-service';
 import { getFiscalService } from '../fiscal/registry';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
+import { PRINTABLE_APPOINTMENT_INCLUDE } from './print-handlers';
 import { type RegisterInput, registerOrder } from '../clinic/register-order';
 
 type Db = ReturnType<typeof getPrismaClient>;
@@ -136,7 +137,13 @@ export function setupAppointmentHandlers(): void {
       const prisma = getPrismaClient();
       const appointment = await prisma.appointment.findUnique({
         where: { id },
-        include: { patient: true, doctor: true, items: { include: { service: true } } },
+        include: {
+          patient: true,
+          doctor: true,
+          items: { include: { service: true } },
+          // Its payments (method, amount, cashier's name): the receipt a satellite prints.
+          payments: PRINTABLE_APPOINTMENT_INCLUDE.payments,
+        },
       });
       return ipcSafe(appointment);
     } catch (error) {

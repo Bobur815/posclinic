@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { AdminUnitDto } from '../shared/address';
 import type { ActivateResult, LicenseStatusDto } from '../shared/license';
 import type { SyncStatusDto } from '../shared/sync';
+import type { PrinterConfig, PrintResult, TestPrintTarget } from '../shared/printing';
+import type { ReceiptLayout } from '../shared/receipt-html';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
@@ -219,6 +221,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('print:serviceReceipt', appointmentId),
     prescription: (appointmentId: string) =>
       ipcRenderer.invoke('print:prescription', appointmentId),
+    // This PC's printers (Settings → Printer)
+    listPrinters: () => ipcRenderer.invoke('print:listPrinters'),
+    getConfig: () => ipcRenderer.invoke('print:getConfig'),
+    setConfig: (patch: Partial<PrinterConfig>) => ipcRenderer.invoke('print:setConfig', patch),
+    test: (target: TestPrintTarget) => ipcRenderer.invoke('print:test', target),
+    openDrawer: () => ipcRenderer.invoke('print:openDrawer'),
+    testDrawer: () => ipcRenderer.invoke('print:testDrawer'),
+  },
+  // The clinic's receipt layout (Settings → Receipt; the main till's)
+  receipt: {
+    getLayout: () => ipcRenderer.invoke('receipt:getLayout'),
+    setLayout: (patch: Partial<ReceiptLayout>) => ipcRenderer.invoke('receipt:setLayout', patch),
   },
 
   // Licence (posgro). The renderer only reads status; main enforces it on every call.
@@ -445,8 +459,18 @@ declare global {
         setSettings: (patch: Partial<ClinicSettingsDto>) => Promise<ClinicSettingsDto>;
       };
       print: {
-        serviceReceipt: (appointmentId: string) => Promise<{ success: boolean; error?: string }>;
-        prescription: (appointmentId: string) => Promise<{ success: boolean; error?: string }>;
+        serviceReceipt: (appointmentId: string) => Promise<PrintResult>;
+        prescription: (appointmentId: string) => Promise<PrintResult>;
+        listPrinters: () => Promise<string[]>;
+        getConfig: () => Promise<PrinterConfig>;
+        setConfig: (patch: Partial<PrinterConfig>) => Promise<PrinterConfig>;
+        test: (target: TestPrintTarget) => Promise<PrintResult>;
+        openDrawer: () => Promise<PrintResult>;
+        testDrawer: () => Promise<PrintResult>;
+      };
+      receipt: {
+        getLayout: () => Promise<ReceiptLayout>;
+        setLayout: (patch: Partial<ReceiptLayout>) => Promise<ReceiptLayout>;
       };
       license: {
         status: () => Promise<LicenseStatusDto>;

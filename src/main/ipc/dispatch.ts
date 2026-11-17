@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, type WebContents } from 'electron';
 import type { LicenseStatusDto } from '../../shared/license';
 import type { AppEvent } from '../../shared/lan';
+import type { PrintSourceAppointment, ReceiptLayout } from '../../shared/receipt-html';
 import { getAppConfig } from '../config/app-config';
 import type { LanService } from '../lan/lan-service';
 import { runsOverLan } from '../lan/server';
@@ -8,6 +9,7 @@ import { log } from '../logger';
 import { freshActor } from './auth-handlers';
 import {
   type Actor,
+  errorSummary,
   type HandlerContext,
   invokeHandler,
   LicenseRefusedError,
@@ -36,6 +38,10 @@ const NEEDS_REMOTE_ACTOR: ReadonlySet<string> = new Set([
   'update:download',
   'update:install',
   'lan:leave',
+  // This PC's printers: a clinic admin's to change (print-handlers.ts).
+  'print:setConfig',
+  'print:openDrawer',
+  'print:testDrawer',
 ]);
 
 /** Belong to a main till: a satellite refuses them outright. */
@@ -140,6 +146,11 @@ async function satelliteCall(
   }
   const print = PRINTERS[channel];
   if (print) return satellitePrint(channel, print, sender, args);
+  // The test page shows the clinic's layout (its logo), which is the main till's.
+  if (channel === 'print:test') {
+    const layout = await forward('receipt:getLayout', sender, []).catch(() => undefined);
+    args = [args[0], layout];
+  }
   if (runsOverLan(channel)) return forward(channel, sender, args);
 
   if (REFUSED_ON_SATELLITE.test(channel)) throw new RefusedError('lan.errors.mainOnly');
@@ -155,11 +166,10 @@ async function satellitePrint(
   args: unknown[],
 ): Promise<unknown> {
   try {
-    const appointment = (await forward('appointments:getById', sender, [args[0]])) as {
-      id: string;
-      appointmentNumber: string;
-    } | null;
-    if (!appointment) return { success: false, error: 'Appointment not found' };
+    const appointment = (await forward('appointments:getById', sender, [
+      args[0],
+    ])) as PrintSourceAppointment | null;
+    if (!appointment) return { success: false, error: 'errors.notFound' };
     if (channel === 'print:prescription') {
       const status = (await forward('license:status', sender, [])) as LicenseStatusDto;
       if (!status.features.includes('printPrescription')) {
@@ -167,9 +177,10 @@ async function satellitePrint(
         return { success: false, error: 'license.feature.printPrescription' };
       }
     }
-    return print(appointment);
+    const layout = (await forward('receipt:getLayout', sender, [])) as ReceiptLayout;
+    return await print(appointment, layout);
   } catch (error) {
-    log.warn(`[${channel}] on satellite failed`, error);
+    log.warn(`[${channel}] on satellite failed`, errorSummary(error));
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }

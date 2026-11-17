@@ -7,6 +7,7 @@ import { freshActor } from './ipc/auth-handlers';
 import { CredentialStore } from './ipc/credential-store';
 import { bindIpc, broadcast, sendToWindows } from './ipc/dispatch';
 import { setupIpcHandlers } from './ipc/handlers';
+import { setPrinterConfigFile } from './ipc/print-handlers';
 import {
   configureHandlers,
   emitEvents,
@@ -243,6 +244,8 @@ async function bootstrap() {
     await initializeDatabase();
 
     lan = createLanService();
+    // This PC's printers (per machine, as the UI scale; satellites have their own).
+    setPrinterConfigFile(path.join(app.getPath('userData'), 'printer.json'));
     setupIpcHandlers();
     setupLicenseHandlers();
     setupUpdateHandlers();

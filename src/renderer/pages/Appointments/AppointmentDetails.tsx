@@ -9,6 +9,7 @@ import type { FiscalStatus } from '../../../shared/clinic';
 import { ipcErrorText } from '../../store/lan-store';
 import { format } from 'date-fns';
 import { useToast } from '../../context/ToastContext';
+import { usePrint } from '../../hooks/usePrint';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 
 interface AppointmentData {
@@ -185,6 +186,7 @@ export function AppointmentDetails() {
   const { id } = useParams<{ id: string }>();
   const dataVersion = useDataVersion(['appointments', 'patients', 'doctors']);
   const toast = useToast();
+  const print = usePrint();
   const [appointment, setAppointment] = useState<AppointmentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -211,8 +213,7 @@ export function AppointmentDetails() {
 
   const handlePrintReceipt = async () => {
     if (!id) return;
-    await window.electronAPI.print.serviceReceipt(id);
-    toast.success(t('common.success'));
+    await print.receipt(id);
   };
 
   const [fiscalBusy, setFiscalBusy] = useState(false);
@@ -238,8 +239,7 @@ export function AppointmentDetails() {
 
   const handlePrintPrescription = async () => {
     if (!id) return;
-    await window.electronAPI.print.prescription(id);
-    toast.success(t('common.success'));
+    await print.prescription(id);
   };
 
   const getStatusColor = (s: string) => {

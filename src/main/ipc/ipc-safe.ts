@@ -155,7 +155,10 @@ export function emitEvents(events: AppEvent[]): void {
  * Channels the licence never gates: signing in, and the till's own machinery (licence, setup,
  * updater, LAN, config, cloud sync status, app info).
  */
-const UNGATED = /^(auth|license|setup|update|lan|config|sync|app|credentials):/;
+const UNGATED =
+  /^(auth|license|setup|update|lan|config|sync|app|credentials):|^print:(listPrinters|getConfig|setConfig|test|openDrawer|testDrawer)$/;
+// This PC's printers are the machine's own (a satellite has no licence of its own to gate them);
+// printing a visit (`print:serviceReceipt`, `print:prescription`) stays gated.
 const WRITES =
   /^(patients|appointments|doctors|services|users):(create|update|checkout|createLogin|linkUser|unlinkUser|resetPassword)$/;
 /** Clinical-record writes (v2.5): every channel of these namespaces that is not a read. */

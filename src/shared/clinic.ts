@@ -234,6 +234,13 @@ export interface AppointmentDto {
   patient: PatientDto;
   doctor: DoctorDto | null;
   items: AppointmentItemDto[];
+  /** `appointments:getById` only: what was paid, oldest first (the printed receipt). */
+  payments?: Array<{
+    method: PaymentMethod;
+    amount: number;
+    createdAt: string;
+    createdBy: { fullName: string } | null;
+  }>;
 }
 
 /** `patients:getById`: the patient with the last 20 visits. */

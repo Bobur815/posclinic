@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle, Printer, Wallet } from 'lucide-react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { ipcErrorKey } from '../../store/lan-store';
 import { useToast } from '../../context/ToastContext';
+import { usePrint } from '../../hooks/usePrint';
 
 interface AppointmentData {
   id: string;
@@ -290,6 +291,7 @@ export function CheckoutPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const toast = useToast();
+  const print = usePrint();
 
   const [appointment, setAppointment] = useState<AppointmentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -335,11 +337,15 @@ export function CheckoutPage() {
         amount: enteredAmount,
       });
       setIsDone(true);
+      // Cash went in: open this PC's drawer when it has one (Settings → Printer).
+      if (paymentMethod === 'CASH') {
+        window.electronAPI.print.openDrawer().catch(() => undefined);
+      }
       // Optional queue ticket / receipt (Settings → Clinic). A printer problem never undoes
       // the payment; the receipt can still be printed from the done screen.
       const settings = await window.electronAPI.clinic.getSettings().catch(() => null);
       if (settings?.printTicketAfterPayment) {
-        window.electronAPI.print.serviceReceipt(id).catch(() => undefined);
+        print.receipt(id).catch(() => undefined);
       }
     } catch (error) {
       // Licence refusals are already toasted by LicenseBanner; show every other reason here.
@@ -352,8 +358,7 @@ export function CheckoutPage() {
 
   const handlePrint = async () => {
     if (!id) return;
-    await window.electronAPI.print.serviceReceipt(id);
-    toast.success(t('common.success'));
+    await print.receipt(id);
   };
 
   if (isDone) {
