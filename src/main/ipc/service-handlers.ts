@@ -8,9 +8,13 @@ import {
   SERVICE_KINDS,
   type ServiceKind,
 } from '../../shared/clinic';
-import { MXIK_PATTERN, PACKAGE_CODE_PATTERN } from '../../shared/fiscal-codes';
 import {
-  mxikPackages,
+  MXIK_PATTERN,
+  PACKAGE_CODE_PATTERN,
+  PARASITOLOGY_FISCAL_CODES,
+} from '../../shared/fiscal-codes';
+import {
+  createPackageLookup,
   searchMxik,
   type TasnifLang,
   TasnifUnavailableError,
@@ -50,7 +54,14 @@ const TASNIF_LANGS: readonly TasnifLang[] = ['uz_latn', 'uz_cyrl', 'ru'];
 const tasnifLang = (v: unknown): TasnifLang =>
   TASNIF_LANGS.includes(v as TasnifLang) ? (v as TasnifLang) : 'uz_latn';
 
-/** tasnif being unreachable is a refusal the form can show; anything else is a bug. */
+/**
+ * Package codes for the MXIK fields (v2.6): starter codes locally, tasnif answers kept for the
+ * session, and tasnif unreachable answered as `unavailable` (the field takes a typed code), never
+ * thrown: a slow tasnif is not an error of the form.
+ */
+const packageLookup = createPackageLookup({}, Object.values(PARASITOLOGY_FISCAL_CODES));
+
+/** tasnif being unreachable on a search is a refusal the form shows; anything else is a bug. */
 async function askTasnif<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
@@ -230,7 +241,7 @@ export function setupServiceHandlers(): void {
 
   handle('services:mxikPackages', async (ctx, mxik: unknown, lang: unknown) => {
     requireAdmin(ctx);
-    return askTasnif(() => mxikPackages(String(mxik ?? ''), tasnifLang(lang)));
+    return packageLookup(String(mxik ?? ''), tasnifLang(lang));
   });
 
   handle('services:update', async (ctx, id: string, raw: Record<string, unknown>) => {

@@ -35,11 +35,15 @@ export function MxikField({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [packages, setPackages] = useState<MxikPackageDto[]>([]);
+  /** tasnif could not be asked for this MXIK's packages: the code is typed. */
+  const [offline, setOffline] = useState(false);
 
   const valid = /^\d{17}$/.test(value.mxik);
 
-  // The package list of the MXIK shown (also for one typed or loaded from the service).
+  // The package list of the MXIK shown (also for one typed or loaded from the service). Main
+  // answers known codes itself and keeps tasnif's answers; tasnif unreachable is not an error.
   useEffect(() => {
+    setOffline(false);
     if (!valid) {
       setPackages([]);
       return;
@@ -47,14 +51,20 @@ export function MxikField({
     let live = true;
     window.electronAPI.services
       .mxikPackages(value.mxik, lang)
-      .then((list) => {
+      .then(({ packages: list, unavailable }) => {
         if (!live) return;
         setPackages(list);
+        setOffline(unavailable);
         if (list.length === 1 && !value.packageCode) {
           onChange({ mxik: value.mxik, packageCode: list[0]!.code });
         }
       })
-      .catch(() => live && setPackages([]));
+      .catch(() => {
+        if (live) {
+          setPackages([]);
+          setOffline(true);
+        }
+      });
     return () => {
       live = false;
     };
@@ -177,6 +187,7 @@ export function MxikField({
           )}
         </Row>
       )}
+      {valid && offline && packages.length === 0 && <Hint>{t('mxik.packagesOffline')}</Hint>}
     </Wrap>
   );
 }

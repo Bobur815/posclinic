@@ -1059,7 +1059,8 @@
     "searchHint": "Xizmatlar 1 bilan boshlanadi (tibbiy xizmatlar: 10902…). Faqat qidiruv so'zlari yuboriladi.",
     "noHits": "Hech narsa topilmadi. Boshqa so'z bilan urinib ko'ring (ruscha ham bo'ladi).",
     "packageCode": "Qadoq kodi",
-    "packagePlaceholder": "Masalan: 1321927"
+    "packagePlaceholder": "Masalan: 1321927",
+    "packagesOffline": "tasnif.soliq.uz javob bermadi: qadoq kodini qo'lda kiriting (xizmatlar uchun odatda «xizmat (marta)» kodi)."
   },
   "fiscal": {
     "title": "Fiskal chek (REGOS:VCR)",

@@ -130,3 +130,55 @@ export async function mxikPackages(
   }
   return out;
 }
+
+export interface PackageAnswer {
+  packages: MxikPackage[];
+  /** tasnif could not be asked (offline, slow): the code is typed by hand. */
+  unavailable: boolean;
+}
+
+/** What tasnif calls a service's one package ("xizmat (marta)"), in each language. */
+const SERVICE_UNIT: Record<TasnifLang, string> = {
+  uz_latn: 'xizmat (marta)',
+  uz_cyrl: 'хизмат (марта)',
+  ru: 'услуга (раз)',
+};
+
+/**
+ * Package codes for the MXIK fields, without asking tasnif more than needed:
+ *   - the till's starter codes (shared/fiscal-codes.ts) are answered locally;
+ *   - an answer is kept for the session (package codes do not change while the till runs), and
+ *     the same MXIK asked twice at once (several fields on a page) is one request;
+ *   - tasnif unreachable is an answer too (`unavailable`), never an error: the field then takes
+ *     the code typed by hand. A failure is not kept, so the next field asks again.
+ */
+export function createPackageLookup(
+  opts: TasnifOptions = {},
+  known: ReadonlyArray<{ mxik: string; packageCode: string }> = [],
+) {
+  const local = new Map(known.map((k) => [k.mxik, k.packageCode]));
+  const cache = new Map<string, MxikPackage[]>();
+  const inFlight = new Map<string, Promise<PackageAnswer>>();
+  return async (mxik: string, lang: TasnifLang = 'uz_latn'): Promise<PackageAnswer> => {
+    if (!MXIK_PATTERN.test(String(mxik ?? ''))) return { packages: [], unavailable: false };
+    const own = local.get(mxik);
+    if (own) return { packages: [{ code: own, name: SERVICE_UNIT[lang] }], unavailable: false };
+    const key = `${mxik}|${lang}`;
+    const hit = cache.get(key);
+    if (hit) return { packages: hit, unavailable: false };
+    const running = inFlight.get(key);
+    if (running) return running;
+    const ask = mxikPackages(mxik, lang, opts)
+      .then((packages) => {
+        cache.set(key, packages);
+        return { packages, unavailable: false };
+      })
+      .catch((e: unknown) => {
+        if (!(e instanceof TasnifUnavailableError)) throw e;
+        return { packages: [], unavailable: true };
+      })
+      .finally(() => inFlight.delete(key));
+    inFlight.set(key, ask);
+    return ask;
+  };
+}

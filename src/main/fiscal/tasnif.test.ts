@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
-import { mxikPackages, searchMxik, TasnifUnavailableError } from './tasnif';
+import { createPackageLookup, mxikPackages, searchMxik, TasnifUnavailableError } from './tasnif';
 
 /** tasnif lookups against a local fake answering with the shapes seen live (2026-11-16). */
 
@@ -108,5 +108,36 @@ describe('tasnif MXIK lookups', () => {
     ]);
     assert.deepEqual(await mxikPackages('10902002003000999', 'ru', { baseUrl }), []);
     assert.deepEqual(await mxikPackages('123', 'ru', { baseUrl }), []);
+  });
+});
+
+describe('package lookup for the MXIK fields', () => {
+  it('answers known codes locally, keeps tasnif answers, asks once for parallel fields', async () => {
+    const lookup = createPackageLookup({ baseUrl }, [
+      { mxik: '10902002003000999', packageCode: '1321964' },
+    ]);
+    const count = () => asked.filter((u) => u.includes('/integration-mxik/')).length;
+    const start = count();
+    assert.deepEqual(await lookup('10902002003000999', 'ru'), {
+      packages: [{ code: '1321964', name: 'услуга (раз)' }],
+      unavailable: false,
+    });
+    assert.equal(count(), start, 'a known code asks nothing');
+
+    const [a, b] = await Promise.all([
+      lookup('10902001034000000', 'uz_latn'),
+      lookup('10902001034000000', 'uz_latn'),
+    ]);
+    assert.deepEqual(a, b);
+    assert.equal(a.packages[0]!.code, '1321927');
+    assert.equal(count(), start + 1, 'two fields at once: one request');
+    await lookup('10902001034000000', 'uz_latn');
+    assert.equal(count(), start + 1, 'kept for the session');
+  });
+
+  it('tasnif unreachable is an answer, not an error, and is not kept', async () => {
+    const lookup = createPackageLookup({ baseUrl: 'http://127.0.0.1:1' });
+    assert.deepEqual(await lookup('10902001034000000', 'ru'), { packages: [], unavailable: true });
+    assert.deepEqual(await lookup('bad', 'ru'), { packages: [], unavailable: false });
   });
 });

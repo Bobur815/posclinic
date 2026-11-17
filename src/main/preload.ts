@@ -360,7 +360,11 @@ declare global {
         create: (data: ServiceInput) => Promise<ServiceDto>;
         update: (id: string, data: ServiceInput) => Promise<ServiceDto>;
         searchMxik: (text: string, lang: TasnifLang) => Promise<MxikHitDto[]>;
-        mxikPackages: (mxik: string, lang: TasnifLang) => Promise<MxikPackageDto[]>;
+        /** `unavailable`: tasnif could not be asked; the package code is typed by hand. */
+        mxikPackages: (
+          mxik: string,
+          lang: TasnifLang,
+        ) => Promise<{ packages: MxikPackageDto[]; unavailable: boolean }>;
       };
       appointments: {
         create: (data: AppointmentCreateInput) => Promise<AppointmentDto>;
