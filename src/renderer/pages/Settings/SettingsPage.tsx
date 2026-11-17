@@ -1,4 +1,4 @@
-import { ArrowLeft, KeyRound, UserCog } from 'lucide-react';
+import { ArrowLeft, KeyRound } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -8,8 +8,8 @@ import { SETTINGS_SECTIONS } from './settings-sections';
 
 /**
  * Settings, divided into sections as posgro: a grid of tiles, each opening its own page
- * (/settings/<section>, SettingsSectionPage). Staff and the signed-in person's own account keep
- * their own pages. Admins only (route-guarded in App.tsx; main enforces every change).
+ * (/settings/<section>, SettingsSectionPage). Staff has no tile: it is in the sidebar. The
+ * person's own account keeps its own page. Admins only (route-guarded in App.tsx; main enforces).
  */
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -27,13 +27,6 @@ export function SettingsPage() {
       description: t(s.description),
       path: `/settings/${s.key}`,
     })),
-    {
-      key: 'users',
-      icon: <UserCog size={30} />,
-      title: t('nav.users'),
-      description: t('settings.tiles.users'),
-      path: '/users',
-    },
     {
       key: 'account',
       icon: <KeyRound size={30} />,
