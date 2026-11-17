@@ -99,12 +99,33 @@ const Divider = styled.div`
   flex-shrink: 0;
 `;
 
-const UserChip = styled.div`
+/**
+ * The signed-in person; opens My account. A real button with the theme's colours: without its own
+ * background and colour it took the browser's light-grey button face, unreadable in dark mode.
+ */
+const UserChip = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
+  border: 1px solid transparent;
   border-radius: ${({ theme }) => theme.borderRadius};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.border};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary};
+    outline-offset: 1px;
+  }
 `;
 
 const UserName = styled.span`
@@ -168,13 +189,11 @@ export function AppBar() {
 
       {user && (
         <UserChip
-          as="button"
           type="button"
           onClick={() => navigate('/settings/user')}
           title={t('nav.myAccount')}
-          style={{ cursor: 'pointer', border: 0, font: 'inherit' }}
         >
-          <User size={15} style={{ opacity: 0.6 }} />
+          <User size={15} />
           <UserName>{user.fullName}</UserName>
           <RoleBadge>{t(`staff.roles.${user.role}`, user.role)}</RoleBadge>
         </UserChip>
