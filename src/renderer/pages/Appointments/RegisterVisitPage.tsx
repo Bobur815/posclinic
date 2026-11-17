@@ -755,7 +755,7 @@ function ApprovalDialog({
 // ── styles (theme tokens) ───────────────────────────────────────────────────────────────────
 
 const Page = styled.div`
-  max-width: 980px;
+  max-width: 1440px;
 `;
 const BackBtn = styled.button`
   display: flex;

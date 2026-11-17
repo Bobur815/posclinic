@@ -39,7 +39,7 @@ interface AppointmentData {
 }
 
 const Page = styled.div`
-  max-width: 900px;
+  max-width: 1280px;
 `;
 
 const BackBtn = styled.button`
@@ -112,7 +112,7 @@ const SectionTitle = styled.h3`
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: ${({ theme }) => theme.spacing.md};
 `;
 

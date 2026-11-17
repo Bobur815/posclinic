@@ -4,7 +4,7 @@ import type { CaseStatus, ItemStatus } from '../../../shared/clinic';
 /** Styled pieces shared by the queue and case pages (theme tokens, light + dark). */
 
 export const Page = styled.div`
-  max-width: 1100px;
+  max-width: 1600px;
 `;
 export const Title = styled.h1`
   font-size: 22px;

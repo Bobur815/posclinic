@@ -5,9 +5,19 @@ import { formatPhone } from '../../../shared/phone';
 import { Save, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
+import { UiScaleSetting } from '../../components/common/UiScaleSetting';
 
 const Page = styled.div`
-  max-width: 480px;
+  max-width: 640px;
+`;
+
+/** This PC's screen scale, for every role (Settings is admins only). */
+const ScaleCard = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius};
+  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Title = styled.h1`
@@ -239,6 +249,10 @@ export function UserSettingsPage() {
           </SaveBtn>
         </form>
       </Card>
+
+      <ScaleCard>
+        <UiScaleSetting />
+      </ScaleCard>
     </Page>
   );
 }

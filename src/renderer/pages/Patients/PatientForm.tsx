@@ -11,7 +11,7 @@ import { PhoneInput } from '../../components/form/PhoneInput';
 import { BirthDatePicker } from '../../components/form/BirthDatePicker';
 
 const Page = styled.div`
-  max-width: 720px;
+  max-width: 880px;
 `;
 
 const BackBtn = styled.button`

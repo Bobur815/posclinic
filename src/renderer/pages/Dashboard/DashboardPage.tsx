@@ -24,7 +24,7 @@ interface TodaySummary {
 }
 
 const Page = styled.div`
-  max-width: 1200px;
+  max-width: 1600px;
 `;
 
 const PageTitle = styled.h1`

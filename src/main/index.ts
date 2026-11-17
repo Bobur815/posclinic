@@ -10,6 +10,7 @@ import { setupIpcHandlers } from './ipc/handlers';
 import {
   configureHandlers,
   emitEvents,
+  RefusedError,
   errorSummary,
   handle,
   hasHandler,
@@ -27,7 +28,14 @@ import { getCloudSync } from './sync/sync-service';
 import { FiscalService } from './fiscal/fiscal-service';
 import { setFiscalService } from './fiscal/registry';
 import { configureShiftHooks } from './ipc/shift-handlers';
-import { createSetupWindow, createWindow } from './window';
+import { isUiScaleChoice } from './ui-scale';
+import {
+  createSetupWindow,
+  createWindow,
+  currentUiScale,
+  getUiScaleChoice,
+  setUiScaleChoice,
+} from './window';
 
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -102,6 +110,13 @@ function registerCoreHandlers(): void {
   handle('credentials:clear', () => credentials.clear());
 
   handle('app:getVersion', () => app.getVersion());
+
+  // This PC's UI scale (Settings → General): 'auto' follows the window, or a fixed factor.
+  handle('app:getUiScale', () => ({ choice: getUiScaleChoice(), scale: currentUiScale() }));
+  handle('app:setUiScale', (_ctx, choice: unknown) => {
+    if (!isUiScaleChoice(choice)) throw new RefusedError('errors.invalidSetting');
+    return { choice, scale: setUiScaleChoice(choice) };
+  });
 
   handle('app:isOnline', () => net.isOnline());
 

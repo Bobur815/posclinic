@@ -78,10 +78,10 @@ export function SettingsSectionPage() {
 }
 
 const Page = styled.div`
-  max-width: 1100px;
+  max-width: 1400px;
 `;
 const SectionPage = styled.div`
-  max-width: 760px;
+  max-width: 920px;
 `;
 const Title = styled.h1`
   font-size: 22px;

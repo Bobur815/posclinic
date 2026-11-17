@@ -337,7 +337,11 @@
       "lan": "Qo'shimcha kassalarni ulash",
       "update": "Dasturning yangi versiyasi",
       "account": "Ismingiz va parolingiz"
-    }
+    },
+    "uiScale": "Ekran o'lchami",
+    "uiScaleAuto": "Avto",
+    "uiScaleAutoNow": "Oynaga qarab o'zi tanlanadi: hozir {{pct}}. Faqat shu kompyuter uchun.",
+    "uiScaleDesc": "Yozuvlar va tugmalar o'lchami. Faqat shu kompyuter uchun saqlanadi."
   },
   "print": {
     "receipt": "Chek",

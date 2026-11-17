@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Sun, Moon, Globe, Monitor, Info } from 'lucide-react';
 import { useTheme } from '../../theme/ThemeProvider';
+import { UiScaleSetting } from '../../components/common/UiScaleSetting';
 
 interface LocalConfig {
   clinicId: string;
@@ -171,6 +172,7 @@ export function GeneralSettings() {
               </ToggleBtn>
             </ToggleGroup>
           </SettingRow>
+          <UiScaleSetting />
         </Card>
       </Section>
 

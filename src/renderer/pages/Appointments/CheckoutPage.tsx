@@ -25,7 +25,23 @@ interface AppointmentData {
 }
 
 const Page = styled.div`
-  max-width: 680px;
+  max-width: 1200px;
+`;
+
+/** Wide screens: the services on the left, the payment beside them; one column when narrow. */
+const Columns = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr);
+  gap: ${({ theme }) => theme.spacing.md};
+  align-items: start;
+  @media (max-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+`;
+
+const PayColumn = styled.div`
+  display: grid;
+  align-content: start;
 `;
 
 const BackBtn = styled.button`
@@ -364,6 +380,7 @@ export function CheckoutPage() {
 
       <Title>{t('appointments.checkout')} — {appointment.appointmentNumber}</Title>
 
+      <Columns>
       <Card>
         <SectionTitle>{t('appointments.services')}</SectionTitle>
         <Table>
@@ -412,6 +429,7 @@ export function CheckoutPage() {
         </TotalSection>
       </Card>
 
+      <PayColumn>
       <Card>
         <SectionTitle>{t('checkout.selectPaymentMethod')}</SectionTitle>
         <PaymentMethodGrid>
@@ -460,6 +478,8 @@ export function CheckoutPage() {
           {isProcessing ? t('common.processing') : t('checkout.confirmPayment')}
         </ConfirmBtn>
       </Card>
+      </PayColumn>
+      </Columns>
     </Page>
   );
 }

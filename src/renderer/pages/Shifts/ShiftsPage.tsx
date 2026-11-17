@@ -365,7 +365,7 @@ function AmountDialog(props: {
 const Page = styled.div`
   display: grid;
   gap: 16px;
-  max-width: 1100px;
+  max-width: 1500px;
 `;
 const Header = styled.div`
   display: flex;

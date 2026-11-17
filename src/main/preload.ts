@@ -242,6 +242,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
+    getUiScale: () => ipcRenderer.invoke('app:getUiScale'),
+    setUiScale: (choice: 'auto' | number) => ipcRenderer.invoke('app:setUiScale', choice),
     isOnline: (): Promise<boolean> => ipcRenderer.invoke('app:isOnline'),
     getClinicInfo: () => ipcRenderer.invoke('app:getClinicInfo'),
     quit: () => ipcRenderer.invoke('app:quit'),
@@ -451,6 +453,9 @@ declare global {
       };
       app: {
         getVersion: () => Promise<string>;
+        /** This PC's UI scale: the choice ('auto' or a factor) and the factor shown now. */
+        getUiScale: () => Promise<{ choice: 'auto' | number; scale: number }>;
+        setUiScale: (choice: 'auto' | number) => Promise<{ choice: 'auto' | number; scale: number }>;
         isOnline: () => Promise<boolean>;
         getClinicInfo: () => Promise<{ clinicId: string; clinicName: string } | null>;
         quit: () => Promise<void>;

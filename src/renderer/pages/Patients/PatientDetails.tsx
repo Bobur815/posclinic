@@ -45,7 +45,7 @@ interface PatientData {
 }
 
 const Page = styled.div`
-  max-width: 900px;
+  max-width: 1280px;
 `;
 
 const BackBtn = styled.button`
