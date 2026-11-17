@@ -1,3 +1,4 @@
+import { Paged } from './ui';
 import { useTranslation } from 'react-i18next';
 import { Table, Td, Th, Tr } from './ui';
 import { formatMoney, formatNumber } from '../lib/format';
@@ -10,38 +11,42 @@ export function RankTable({ rows, nameLabel }: { rows: ReportBreakdownRow[]; nam
   const hasDebt = rows.some((r) => r.debt !== undefined);
   return (
     <div style={{ overflowX: 'auto' }}>
-      <Table>
-        <thead>
-          <tr>
-            <Th>{nameLabel}</Th>
-            <Th $right>{t('reports.visits')}</Th>
-            <Th $right>{t('reports.revenue')}</Th>
-            {hasPaid && <Th $right>{t('reports.paid')}</Th>}
-            {hasDebt && <Th $right>{t('reports.debt')}</Th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <Tr key={`${r.name}-${i}`}>
-              <Td>{r.name}</Td>
-              <Td $right>{formatNumber(r.count ?? r.visits ?? 0)}</Td>
-              <Td $right $nowrap>
-                {formatMoney(r.revenue)}
-              </Td>
-              {hasPaid && (
-                <Td $right $nowrap>
-                  {formatMoney(r.paid ?? 0)}
-                </Td>
-              )}
-              {hasDebt && (
-                <Td $right $nowrap>
-                  {formatMoney(r.debt ?? 0)}
-                </Td>
-              )}
-            </Tr>
-          ))}
-        </tbody>
-      </Table>
+      <Paged rows={rows}>
+        {(pageRows) => (
+          <Table>
+            <thead>
+              <tr>
+                <Th>{nameLabel}</Th>
+                <Th $right>{t('reports.visits')}</Th>
+                <Th $right>{t('reports.revenue')}</Th>
+                {hasPaid && <Th $right>{t('reports.paid')}</Th>}
+                {hasDebt && <Th $right>{t('reports.debt')}</Th>}
+              </tr>
+            </thead>
+            <tbody>
+              {pageRows.map((r, i) => (
+                <Tr key={`${r.name}-${i}`}>
+                  <Td>{r.name}</Td>
+                  <Td $right>{formatNumber(r.count ?? r.visits ?? 0)}</Td>
+                  <Td $right $nowrap>
+                    {formatMoney(r.revenue)}
+                  </Td>
+                  {hasPaid && (
+                    <Td $right $nowrap>
+                      {formatMoney(r.paid ?? 0)}
+                    </Td>
+                  )}
+                  {hasDebt && (
+                    <Td $right $nowrap>
+                      {formatMoney(r.debt ?? 0)}
+                    </Td>
+                  )}
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Paged>
     </div>
   );
 }

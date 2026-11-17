@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { Sun, Moon, Globe, Monitor, Info } from 'lucide-react';
 import { useTheme } from '../../theme/ThemeProvider';
-import { UiScaleSetting } from '../../components/common/UiScaleSetting';
+import { UiScaleSetting } from './UiScaleSetting';
 
 interface LocalConfig {
   clinicId: string;
@@ -42,7 +42,9 @@ const SettingRow = styled.div`
   align-items: center;
   padding: 14px 16px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const SettingInfo = styled.div``;
@@ -67,7 +69,8 @@ const ToggleGroup = styled.div`
 const ToggleBtn = styled.button<{ $active: boolean }>`
   padding: 6px 14px;
   border-radius: ${({ theme }) => theme.borderRadius};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  border: 1px solid
+    ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
   background: ${({ $active, theme }) => ($active ? theme.colors.primary : 'transparent')};
   color: ${({ $active }) => ($active ? 'white' : 'inherit')};
   font-size: 13px;
@@ -83,7 +86,9 @@ const InfoItem = styled.div`
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const InfoLabel = styled.span`
@@ -105,7 +110,10 @@ const Input = styled.input`
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
   width: 280px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 /**

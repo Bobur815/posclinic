@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
@@ -91,7 +92,9 @@ const Btn = styled.button<{ $variant?: 'primary' | 'danger' | 'secondary' }>`
     return theme.colors.background;
   }};
   color: ${({ $variant, theme }) => ($variant === 'secondary' ? theme.colors.text : 'white')};
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const Card = styled.div`
@@ -198,7 +201,7 @@ export function AppointmentDetails() {
     if (!id) return;
     try {
       await window.electronAPI.appointments.update(id, { status: 'CANCELLED' });
-      setAppointment((prev) => prev ? { ...prev, status: 'CANCELLED' } : null);
+      setAppointment((prev) => (prev ? { ...prev, status: 'CANCELLED' } : null));
       toast.success(t('common.success'));
     } catch {
       toast.error(t('common.error'));
@@ -225,7 +228,13 @@ export function AppointmentDetails() {
     }
   };
   const fiscalColor = (s: FiscalStatus) =>
-    s === 'FISCALIZED' ? '#22c55e' : s === 'FAILED' ? '#ef4444' : s === 'PENDING' ? '#f59e0b' : '#94a3b8';
+    s === 'FISCALIZED'
+      ? '#22c55e'
+      : s === 'FAILED'
+        ? '#ef4444'
+        : s === 'PENDING'
+          ? '#f59e0b'
+          : '#94a3b8';
 
   const handlePrintPrescription = async () => {
     if (!id) return;
@@ -235,18 +244,25 @@ export function AppointmentDetails() {
 
   const getStatusColor = (s: string) => {
     switch (s) {
-      case 'COMPLETED': return '#22c55e';
-      case 'SCHEDULED': return '#0891b2';
-      case 'CANCELLED': return '#ef4444';
-      default: return '#f59e0b';
+      case 'COMPLETED':
+        return '#22c55e';
+      case 'SCHEDULED':
+        return '#0891b2';
+      case 'CANCELLED':
+        return '#ef4444';
+      default:
+        return '#f59e0b';
     }
   };
 
   const getPaymentColor = (s: string) => {
     switch (s) {
-      case 'PAID': return '#22c55e';
-      case 'PARTIAL': return '#f59e0b';
-      default: return '#ef4444';
+      case 'PAID':
+        return '#22c55e';
+      case 'PARTIAL':
+        return '#f59e0b';
+      default:
+        return '#ef4444';
     }
   };
 
@@ -292,26 +308,29 @@ export function AppointmentDetails() {
             <Printer size={15} />
             {t('appointments.printReceipt')}
           </Btn>
-          {id && (appointment.fiscalStatus === 'PENDING' || appointment.fiscalStatus === 'FAILED') && (
-            <Btn
-              $variant="secondary"
-              disabled={fiscalBusy}
-              onClick={() =>
-                fiscalAction(async () => {
-                  const r = await window.electronAPI.fiscal.retry(id);
-                  if (r !== 'sent') throw new Error('errors.fiscalNotAllSent');
-                }, t('fiscal.sent'))
-              }
-            >
-              <RefreshCw size={15} />
-              {t('fiscal.sendAgain')}
-            </Btn>
-          )}
+          {id &&
+            (appointment.fiscalStatus === 'PENDING' || appointment.fiscalStatus === 'FAILED') && (
+              <Btn
+                $variant="secondary"
+                disabled={fiscalBusy}
+                onClick={() =>
+                  fiscalAction(async () => {
+                    const r = await window.electronAPI.fiscal.retry(id);
+                    if (r !== 'sent') throw new Error('errors.fiscalNotAllSent');
+                  }, t('fiscal.sent'))
+                }
+              >
+                <RefreshCw size={15} />
+                {t('fiscal.sendAgain')}
+              </Btn>
+            )}
           {id && appointment.fiscalStatus === 'FISCALIZED' && (
             <Btn
               $variant="secondary"
               disabled={fiscalBusy}
-              onClick={() => fiscalAction(() => window.electronAPI.fiscal.duplicate(id), t('common.success'))}
+              onClick={() =>
+                fiscalAction(() => window.electronAPI.fiscal.duplicate(id), t('common.success'))
+              }
             >
               <Receipt size={15} />
               {t('fiscal.printCopy')}
@@ -340,18 +359,24 @@ export function AppointmentDetails() {
             >
               {appointment.patient.fullName}
             </InfoValue>
-            <InfoValue style={{ fontSize: '12px', opacity: 0.7 }}>{appointment.patient.phone}</InfoValue>
+            <InfoValue style={{ fontSize: '12px', opacity: 0.7 }}>
+              {appointment.patient.phone}
+            </InfoValue>
           </InfoItem>
           <InfoItem>
             <InfoLabel>{t('appointments.doctor')}</InfoLabel>
             <InfoValue>{appointment.doctor?.fullName ?? '—'}</InfoValue>
             {appointment.doctor?.specialty && (
-              <InfoValue style={{ fontSize: '12px', opacity: 0.7 }}>{appointment.doctor.specialty}</InfoValue>
+              <InfoValue style={{ fontSize: '12px', opacity: 0.7 }}>
+                {appointment.doctor.specialty}
+              </InfoValue>
             )}
           </InfoItem>
           <InfoItem>
             <InfoLabel>{t('appointments.appointmentDate')}</InfoLabel>
-            <InfoValue>{format(new Date(appointment.appointmentDate), 'dd.MM.yyyy HH:mm')}</InfoValue>
+            <InfoValue>
+              {format(new Date(appointment.appointmentDate), 'dd.MM.yyyy HH:mm')}
+            </InfoValue>
           </InfoItem>
           <InfoItem>
             <InfoLabel>{t('appointments.status')}</InfoLabel>
@@ -362,27 +387,40 @@ export function AppointmentDetails() {
           <InfoItem>
             <InfoLabel>{t('appointments.paymentStatus')}</InfoLabel>
             <Badge $color={getPaymentColor(appointment.paymentStatus)}>
-              {t(`appointments.paymentStatuses.${appointment.paymentStatus}`, appointment.paymentStatus)}
+              {t(
+                `appointments.paymentStatuses.${appointment.paymentStatus}`,
+                appointment.paymentStatus,
+              )}
             </Badge>
           </InfoItem>
           {appointment.fiscalStatus && (
             <InfoItem>
               <InfoLabel>{t('fiscal.receipt')}</InfoLabel>
-              <Badge $color={fiscalColor(appointment.fiscalStatus)} title={appointment.fiscalError ?? undefined}>
+              <Badge
+                $color={fiscalColor(appointment.fiscalStatus)}
+                title={appointment.fiscalError ?? undefined}
+              >
                 {t(`fiscal.statuses.${appointment.fiscalStatus}`)}
                 {appointment.fiscalReceiptNo && appointment.fiscalStatus === 'FISCALIZED'
                   ? ` № ${appointment.fiscalReceiptNo}`
                   : ''}
               </Badge>
               {appointment.fiscalError && appointment.fiscalStatus !== 'FISCALIZED' && (
-                <InfoValue style={{ fontSize: '12px', opacity: 0.8 }}>{appointment.fiscalError}</InfoValue>
+                <InfoValue style={{ fontSize: '12px', opacity: 0.8 }}>
+                  {appointment.fiscalError}
+                </InfoValue>
               )}
             </InfoItem>
           )}
           {appointment.paymentMethod && (
             <InfoItem>
               <InfoLabel>{t('checkout.selectPaymentMethod')}</InfoLabel>
-              <InfoValue>{t(`appointments.paymentMethods.${appointment.paymentMethod}`, appointment.paymentMethod)}</InfoValue>
+              <InfoValue>
+                {t(
+                  `appointments.paymentMethods.${appointment.paymentMethod}`,
+                  appointment.paymentMethod,
+                )}
+              </InfoValue>
             </InfoItem>
           )}
         </Grid>
@@ -390,26 +428,34 @@ export function AppointmentDetails() {
 
       <Card>
         <SectionTitle>{t('appointments.services')}</SectionTitle>
-        <Table>
-          <thead>
-            <tr>
-              <Th>{t('services.name')}</Th>
-              <Th>{t('appointments.quantity')}</Th>
-              <Th>{t('appointments.unitPrice')}</Th>
-              <Th>{t('appointments.subtotal')}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {appointment.items.map((item) => (
-              <tr key={item.id}>
-                <Td>{item.serviceName}</Td>
-                <Td>{item.quantity}</Td>
-                <Td>{Number(item.unitPrice).toLocaleString()} {t('common.currency')}</Td>
-                <Td>{Number(item.total).toLocaleString()} {t('common.currency')}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <Paged rows={appointment.items}>
+          {(pageRows) => (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>{t('services.name')}</Th>
+                  <Th>{t('appointments.quantity')}</Th>
+                  <Th>{t('appointments.unitPrice')}</Th>
+                  <Th>{t('appointments.subtotal')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((item) => (
+                  <tr key={item.id}>
+                    <Td>{item.serviceName}</Td>
+                    <Td>{item.quantity}</Td>
+                    <Td>
+                      {Number(item.unitPrice).toLocaleString()} {t('common.currency')}
+                    </Td>
+                    <Td>
+                      {Number(item.total).toLocaleString()} {t('common.currency')}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Paged>
         <TotalRow>
           <span style={{ fontWeight: 600 }}>{t('common.total')}:</span>
           <span style={{ fontWeight: 700, fontSize: '18px', color: '#0891b2' }}>
@@ -432,7 +478,9 @@ export function AppointmentDetails() {
           {appointment.diagnosis && <NoteText>{appointment.diagnosis}</NoteText>}
           {appointment.prescription && (
             <>
-              <SectionTitle style={{ marginTop: '16px' }}>{t('appointments.prescription')}</SectionTitle>
+              <SectionTitle style={{ marginTop: '16px' }}>
+                {t('appointments.prescription')}
+              </SectionTitle>
               <NoteText>{appointment.prescription}</NoteText>
             </>
           )}

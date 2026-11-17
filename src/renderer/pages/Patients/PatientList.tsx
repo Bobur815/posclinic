@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +50,10 @@ const SearchInput = styled.input`
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
   width: 280px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const SearchIcon = styled.span`
@@ -73,7 +77,9 @@ const AddBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const TableWrapper = styled.div`
@@ -107,8 +113,12 @@ const Td = styled.td`
 `;
 
 const Tr = styled.tr`
-  &:last-child td { border-bottom: none; }
-  &:hover td { background: ${({ theme }) => theme.colors.background}; }
+  &:last-child td {
+    border-bottom: none;
+  }
+  &:hover td {
+    background: ${({ theme }) => theme.colors.background};
+  }
   cursor: pointer;
 `;
 
@@ -119,7 +129,10 @@ const ActionBtn = styled.button`
   padding: 4px;
   border-radius: 4px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  &:hover { color: ${({ theme }) => theme.colors.primary}; background: ${({ theme }) => theme.colors.background}; }
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const EmptyState = styled.div`
@@ -171,7 +184,9 @@ export function PatientList() {
         <Title>{t('patients.title')}</Title>
         <Controls>
           <SearchWrapper>
-            <SearchIcon><Search size={14} /></SearchIcon>
+            <SearchIcon>
+              <Search size={14} />
+            </SearchIcon>
             <SearchInput
               type="text"
               placeholder={t('patients.searchPlaceholder')}
@@ -192,37 +207,58 @@ export function PatientList() {
         ) : patients.length === 0 ? (
           <EmptyState>{t('patients.noPatients')}</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('patients.patientCode')}</Th>
-                <Th>{t('patients.fullName')}</Th>
-                <Th>{t('patients.phone')}</Th>
-                <Th>{t('patients.birthDate')}</Th>
-                <Th>{t('patients.gender')}</Th>
-                <Th>{t('common.actions')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((patient) => (
-                <Tr key={patient.id}>
-                  <Td>{patient.patientCode}</Td>
-                  <Td>{patient.fullName}</Td>
-                  <Td>{patient.phone}</Td>
-                  <Td>{patient.birthDate ? format(new Date(patient.birthDate), 'dd.MM.yyyy') : '—'}</Td>
-                  <Td>{patient.gender ? t(`common.${patient.gender.toLowerCase()}`, patient.gender) : '—'}</Td>
-                  <Td>
-                    <ActionBtn onClick={() => navigate(`/patients/${patient.id}`)} title={t('common.actions')}>
-                      <Eye size={15} />
-                    </ActionBtn>
-                    <ActionBtn onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}/edit`); }} title={t('common.edit')}>
-                      <Edit2 size={15} />
-                    </ActionBtn>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <Paged rows={patients} resetKey={searchQuery}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('patients.patientCode')}</Th>
+                    <Th>{t('patients.fullName')}</Th>
+                    <Th>{t('patients.phone')}</Th>
+                    <Th>{t('patients.birthDate')}</Th>
+                    <Th>{t('patients.gender')}</Th>
+                    <Th>{t('common.actions')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((patient) => (
+                    <Tr key={patient.id}>
+                      <Td>{patient.patientCode}</Td>
+                      <Td>{patient.fullName}</Td>
+                      <Td>{patient.phone}</Td>
+                      <Td>
+                        {patient.birthDate
+                          ? format(new Date(patient.birthDate), 'dd.MM.yyyy')
+                          : '—'}
+                      </Td>
+                      <Td>
+                        {patient.gender
+                          ? t(`common.${patient.gender.toLowerCase()}`, patient.gender)
+                          : '—'}
+                      </Td>
+                      <Td>
+                        <ActionBtn
+                          onClick={() => navigate(`/patients/${patient.id}`)}
+                          title={t('common.actions')}
+                        >
+                          <Eye size={15} />
+                        </ActionBtn>
+                        <ActionBtn
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/patients/${patient.id}/edit`);
+                          }}
+                          title={t('common.edit')}
+                        >
+                          <Edit2 size={15} />
+                        </ActionBtn>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         )}
       </TableWrapper>
     </Page>

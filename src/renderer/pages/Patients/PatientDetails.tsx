@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { AddressText } from '../../components/address/AddressText';
@@ -84,7 +85,9 @@ const EditBtn = styled.button`
   border-radius: ${({ theme }) => theme.borderRadius};
   font-size: 13px;
   cursor: pointer;
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const Grid = styled.div`
@@ -106,7 +109,9 @@ const InfoRow = styled.div`
   align-items: flex-start;
   padding: 8px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const InfoLabel = styled.div`
@@ -199,11 +204,15 @@ export function PatientDetails() {
           </InfoRow>
           <InfoRow>
             <InfoLabel>{t('patients.birthDate')}</InfoLabel>
-            <InfoValue>{patient.birthDate ? format(new Date(patient.birthDate), 'dd.MM.yyyy') : '—'}</InfoValue>
+            <InfoValue>
+              {patient.birthDate ? format(new Date(patient.birthDate), 'dd.MM.yyyy') : '—'}
+            </InfoValue>
           </InfoRow>
           <InfoRow>
             <InfoLabel>{t('patients.gender')}</InfoLabel>
-            <InfoValue>{patient.gender ? t(`common.${patient.gender.toLowerCase()}`, patient.gender) : '—'}</InfoValue>
+            <InfoValue>
+              {patient.gender ? t(`common.${patient.gender.toLowerCase()}`, patient.gender) : '—'}
+            </InfoValue>
           </InfoRow>
           <InfoRow>
             <InfoLabel>{t('patients.bloodType')}</InfoLabel>
@@ -249,7 +258,11 @@ export function PatientDetails() {
         <InfoCard>
           <SectionTitle>{t('care.cases')}</SectionTitle>
           {patient.cases.map((c) => (
-            <InfoRow key={c.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/cases/${c.id}`)}>
+            <InfoRow
+              key={c.id}
+              style={{ cursor: 'pointer' }}
+              onClick={() => navigate(`/cases/${c.id}`)}
+            >
               <InfoLabel>
                 {c.caseNumber} · {format(new Date(c.openedAt), 'dd.MM.yyyy')}
               </InfoLabel>
@@ -267,39 +280,45 @@ export function PatientDetails() {
           <Calendar size={18} />
           {t('patients.patientHistory')} ({patient.appointments?.length ?? 0})
         </SectionTitle>
-        <Table>
-          <thead>
-            <tr>
-              <Th>{t('appointments.appointmentNumber')}</Th>
-              <Th>{t('appointments.doctor')}</Th>
-              <Th>{t('common.date')}</Th>
-              <Th>{t('appointments.status')}</Th>
-              <Th>{t('appointments.totalAmount')}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {(patient.appointments ?? []).map((appt) => (
-              <tr
-                key={appt.id}
-                style={{ cursor: 'pointer' }}
-                onClick={() => navigate(`/appointments/${appt.id}`)}
-              >
-                <Td>{appt.appointmentNumber}</Td>
-                <Td>{appt.doctor?.fullName || '—'}</Td>
-                <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
-                <Td>{t(`appointments.statuses.${appt.status}`, appt.status)}</Td>
-                <Td>{Number(appt.totalAmount).toLocaleString()} {t('common.currency')}</Td>
-              </tr>
-            ))}
-            {(patient.appointments ?? []).length === 0 && (
-              <tr>
-                <Td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
-                  {t('appointments.noAppointments')}
-                </Td>
-              </tr>
-            )}
-          </tbody>
-        </Table>
+        <Paged rows={patient.appointments ?? []}>
+          {(pageRows) => (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>{t('appointments.appointmentNumber')}</Th>
+                  <Th>{t('appointments.doctor')}</Th>
+                  <Th>{t('common.date')}</Th>
+                  <Th>{t('appointments.status')}</Th>
+                  <Th>{t('appointments.totalAmount')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((appt) => (
+                  <tr
+                    key={appt.id}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/appointments/${appt.id}`)}
+                  >
+                    <Td>{appt.appointmentNumber}</Td>
+                    <Td>{appt.doctor?.fullName || '—'}</Td>
+                    <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
+                    <Td>{t(`appointments.statuses.${appt.status}`, appt.status)}</Td>
+                    <Td>
+                      {Number(appt.totalAmount).toLocaleString()} {t('common.currency')}
+                    </Td>
+                  </tr>
+                ))}
+                {(patient.appointments ?? []).length === 0 && (
+                  <tr>
+                    <Td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
+                      {t('appointments.noAppointments')}
+                    </Td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          )}
+        </Paged>
       </InfoCard>
     </Page>
   );

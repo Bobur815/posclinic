@@ -5,7 +5,7 @@ import { formatPhone } from '../../../shared/phone';
 import { Save, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useAuthStore } from '../../store/auth-store';
-import { UiScaleSetting } from '../../components/common/UiScaleSetting';
+import { UiScaleSetting } from './UiScaleSetting';
 
 const Page = styled.div`
   max-width: 640px;
@@ -66,7 +66,10 @@ const Input = styled.input`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 14px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const ToggleBtn = styled.button`
@@ -95,8 +98,13 @@ const SaveBtn = styled.button`
   font-weight: 500;
   cursor: pointer;
   margin-top: ${({ theme }) => theme.spacing.lg};
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const ProfileCard = styled.div`
@@ -113,7 +121,9 @@ const ProfileRow = styled.div`
   justify-content: space-between;
   padding: 8px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 const ProfileLabel = styled.span`

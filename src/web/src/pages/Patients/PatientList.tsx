@@ -22,20 +22,19 @@ import {
   Tr,
 } from '../../components/ui';
 
-const PAGE_SIZE = 25;
-
 export function PatientList() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const q = useDebounced(search.trim());
 
   useEffect(() => setPage(1), [q]);
 
   const { data, loading, error, reload } = useAsync(
-    () => patientsApi.list({ search: q, page, pageSize: PAGE_SIZE }),
-    [q, page],
+    () => patientsApi.list({ search: q, page, pageSize }),
+    [q, page, pageSize],
   );
 
   return (
@@ -86,7 +85,12 @@ export function PatientList() {
             </thead>
             <tbody>
               {data?.items.map((p) => (
-                <Tr key={p.id} $clickable $dim={!p.active} onClick={() => navigate(`/patients/${p.id}`)}>
+                <Tr
+                  key={p.id}
+                  $clickable
+                  $dim={!p.active}
+                  onClick={() => navigate(`/patients/${p.id}`)}
+                >
                   <Td $muted $nowrap>
                     {p.patientCode}
                   </Td>
@@ -101,7 +105,18 @@ export function PatientList() {
               ))}
             </tbody>
           </Table>
-          {data && <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} />}
+          {data && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={data.total}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          )}
         </DataState>
       </TableWrap>
     </Page>

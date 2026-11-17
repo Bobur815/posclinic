@@ -1103,5 +1103,11 @@
     "zSales": "Cheklar",
     "zRefunds": "Qaytarishlar",
     "sendingStarted": "Cheklar VCR ga yuborilmoqda. Natija qabul sahifasida ko'rinadi"
+  },
+  "pagination": {
+    "showing": "{{from}}–{{to}}, jami {{total}}",
+    "prev": "Oldingi sahifa",
+    "next": "Keyingi sahifa",
+    "rowsPerPage": "Sahifada:"
   }
 }

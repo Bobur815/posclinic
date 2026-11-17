@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
@@ -121,7 +122,9 @@ const ActionBtn = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: opacity 0.15s;
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const Table = styled.table`
@@ -152,18 +155,26 @@ const StatusBadge = styled.span<{ $status: string }>`
   font-weight: 600;
   background: ${({ $status, theme }) => {
     switch ($status) {
-      case 'COMPLETED': return theme.colors.success + '20';
-      case 'SCHEDULED': return theme.colors.info + '20';
-      case 'CANCELLED': return theme.colors.error + '20';
-      default: return theme.colors.warning + '20';
+      case 'COMPLETED':
+        return theme.colors.success + '20';
+      case 'SCHEDULED':
+        return theme.colors.info + '20';
+      case 'CANCELLED':
+        return theme.colors.error + '20';
+      default:
+        return theme.colors.warning + '20';
     }
   }};
   color: ${({ $status, theme }) => {
     switch ($status) {
-      case 'COMPLETED': return theme.colors.success;
-      case 'SCHEDULED': return theme.colors.info;
-      case 'CANCELLED': return theme.colors.error;
-      default: return theme.colors.warning;
+      case 'COMPLETED':
+        return theme.colors.success;
+      case 'SCHEDULED':
+        return theme.colors.info;
+      case 'CANCELLED':
+        return theme.colors.error;
+      default:
+        return theme.colors.warning;
     }
   }};
 `;
@@ -197,8 +208,7 @@ export function DashboardPage() {
     }
   };
 
-  const formatCurrency = (amount: number) =>
-    `${amount.toLocaleString()} ${t('common.currency')}`;
+  const formatCurrency = (amount: number) => `${amount.toLocaleString()} ${t('common.currency')}`;
 
   return (
     <Page>
@@ -206,28 +216,36 @@ export function DashboardPage() {
 
       <StatsGrid>
         <StatCard $color="#0891b2">
-          <StatIcon $color="#0891b2"><Calendar size={22} /></StatIcon>
+          <StatIcon $color="#0891b2">
+            <Calendar size={22} />
+          </StatIcon>
           <StatInfo>
             <StatValue>{summary?.total ?? 0}</StatValue>
             <StatLabel>{t('dashboard.todayAppointments')}</StatLabel>
           </StatInfo>
         </StatCard>
         <StatCard $color="#22c55e">
-          <StatIcon $color="#22c55e"><DollarSign size={22} /></StatIcon>
+          <StatIcon $color="#22c55e">
+            <DollarSign size={22} />
+          </StatIcon>
           <StatInfo>
             <StatValue>{formatCurrency(summary?.revenue ?? 0)}</StatValue>
             <StatLabel>{t('dashboard.todayRevenue')}</StatLabel>
           </StatInfo>
         </StatCard>
         <StatCard $color="#8b5cf6">
-          <StatIcon $color="#8b5cf6"><Users size={22} /></StatIcon>
+          <StatIcon $color="#8b5cf6">
+            <Users size={22} />
+          </StatIcon>
           <StatInfo>
             <StatValue>{summary?.completed ?? 0}</StatValue>
             <StatLabel>{t('appointments.todaySummary.completed')}</StatLabel>
           </StatInfo>
         </StatCard>
         <StatCard $color="#f59e0b">
-          <StatIcon $color="#f59e0b"><Clock size={22} /></StatIcon>
+          <StatIcon $color="#f59e0b">
+            <Clock size={22} />
+          </StatIcon>
           <StatInfo>
             <StatValue>{summary?.pending ?? 0}</StatValue>
             <StatLabel>{t('dashboard.pendingPayments')}</StatLabel>
@@ -259,38 +277,42 @@ export function DashboardPage() {
         ) : (summary?.recentAppointments?.length ?? 0) === 0 ? (
           <EmptyState>{t('appointments.noAppointments')}</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('appointments.appointmentNumber')}</Th>
-                <Th>{t('appointments.patient')}</Th>
-                <Th>{t('appointments.doctor')}</Th>
-                <Th>{t('common.date')}</Th>
-                <Th>{t('appointments.status')}</Th>
-                <Th>{t('appointments.totalAmount')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary?.recentAppointments?.map((appt) => (
-                <tr
-                  key={appt.id}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/appointments/${appt.id}`)}
-                >
-                  <Td>{appt.appointmentNumber}</Td>
-                  <Td>{appt.patient.fullName}</Td>
-                  <Td>{appt.doctor?.fullName ?? '—'}</Td>
-                  <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
-                  <Td>
-                    <StatusBadge $status={appt.status}>
-                      {t(`appointments.statuses.${appt.status}`, appt.status)}
-                    </StatusBadge>
-                  </Td>
-                  <Td>{formatCurrency(Number(appt.totalAmount))}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+          <Paged rows={summary?.recentAppointments ?? []}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('appointments.appointmentNumber')}</Th>
+                    <Th>{t('appointments.patient')}</Th>
+                    <Th>{t('appointments.doctor')}</Th>
+                    <Th>{t('common.date')}</Th>
+                    <Th>{t('appointments.status')}</Th>
+                    <Th>{t('appointments.totalAmount')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((appt) => (
+                    <tr
+                      key={appt.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/appointments/${appt.id}`)}
+                    >
+                      <Td>{appt.appointmentNumber}</Td>
+                      <Td>{appt.patient.fullName}</Td>
+                      <Td>{appt.doctor?.fullName ?? '—'}</Td>
+                      <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
+                      <Td>
+                        <StatusBadge $status={appt.status}>
+                          {t(`appointments.statuses.${appt.status}`, appt.status)}
+                        </StatusBadge>
+                      </Td>
+                      <Td>{formatCurrency(Number(appt.totalAmount))}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         )}
       </Section>
     </Page>

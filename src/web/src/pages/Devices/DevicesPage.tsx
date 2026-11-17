@@ -1,3 +1,4 @@
+import { Paged } from '../../components/ui';
 import { useTranslation } from 'react-i18next';
 import { MonitorSmartphone, RefreshCw } from 'lucide-react';
 import { formatDistanceToNowStrict, parseISO } from 'date-fns';
@@ -73,38 +74,44 @@ export function DevicesPage() {
                 empty={!terminals.length}
                 emptyText={t('devices.none')}
               >
-                <Table>
-                  <thead>
-                    <tr>
-                      <Th>{t('devices.terminalId')}</Th>
-                      <Th>{t('devices.lastSync')}</Th>
-                      <Th>{t('devices.version')}</Th>
-                      <Th>{t('common.status')}</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {terminals.map((d) => {
-                      const online =
-                        Boolean(d.lastSyncAt) &&
-                        Date.now() - new Date(d.lastSyncAt as string).getTime() < ONLINE_MS;
-                      return (
-                        <Tr key={d.terminalId}>
-                          <Td style={{ fontFamily: 'monospace' }}>{d.terminalId}</Td>
-                          <Td $nowrap>
-                            {formatDateTime(d.lastSyncAt)}
-                            <div style={{ fontSize: 12, opacity: 0.7 }}>{ago(d.lastSyncAt)}</div>
-                          </Td>
-                          <Td>{d.appVersion ?? '—'}</Td>
-                          <Td>
-                            <Badge $tone={online ? 'success' : 'muted'}>
-                              {online ? t('devices.online') : t('devices.offline')}
-                            </Badge>
-                          </Td>
-                        </Tr>
-                      );
-                    })}
-                  </tbody>
-                </Table>
+                <Paged rows={terminals}>
+                  {(pageRows) => (
+                    <Table>
+                      <thead>
+                        <tr>
+                          <Th>{t('devices.terminalId')}</Th>
+                          <Th>{t('devices.lastSync')}</Th>
+                          <Th>{t('devices.version')}</Th>
+                          <Th>{t('common.status')}</Th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((d) => {
+                          const online =
+                            Boolean(d.lastSyncAt) &&
+                            Date.now() - new Date(d.lastSyncAt as string).getTime() < ONLINE_MS;
+                          return (
+                            <Tr key={d.terminalId}>
+                              <Td style={{ fontFamily: 'monospace' }}>{d.terminalId}</Td>
+                              <Td $nowrap>
+                                {formatDateTime(d.lastSyncAt)}
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                                  {ago(d.lastSyncAt)}
+                                </div>
+                              </Td>
+                              <Td>{d.appVersion ?? '—'}</Td>
+                              <Td>
+                                <Badge $tone={online ? 'success' : 'muted'}>
+                                  {online ? t('devices.online') : t('devices.offline')}
+                                </Badge>
+                              </Td>
+                            </Tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  )}
+                </Paged>
               </DataState>
             </TableWrap>
           </>

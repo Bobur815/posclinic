@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +51,10 @@ const SearchInput = styled.input`
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
   width: 260px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const SearchIcon = styled.span`
@@ -74,7 +78,9 @@ const AddBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const FilterTabs = styled.div`
@@ -92,7 +98,8 @@ const FilterTab = styled.button<{ $active: boolean }>`
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.textSecondary)};
   cursor: pointer;
-  border-bottom: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary : 'transparent')};
+  border-bottom: 2px solid
+    ${({ $active, theme }) => ($active ? theme.colors.primary : 'transparent')};
   margin-bottom: -1px;
   transition: all 0.15s;
 `;
@@ -128,8 +135,12 @@ const Td = styled.td`
 `;
 
 const Tr = styled.tr`
-  &:last-child td { border-bottom: none; }
-  &:hover td { background: ${({ theme }) => theme.colors.background}; }
+  &:last-child td {
+    border-bottom: none;
+  }
+  &:hover td {
+    background: ${({ theme }) => theme.colors.background};
+  }
   cursor: pointer;
 `;
 
@@ -150,7 +161,10 @@ const ActionBtn = styled.button`
   border-radius: 4px;
   color: ${({ theme }) => theme.colors.textSecondary};
   margin-right: 4px;
-  &:hover { color: ${({ theme }) => theme.colors.primary}; background: ${({ theme }) => theme.colors.background}; }
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const EmptyState = styled.div`
@@ -193,26 +207,35 @@ export function AppointmentList() {
     ? appointments.filter(
         (a) =>
           a.appointmentNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          a.patient.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+          a.patient.fullName.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : appointments;
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'COMPLETED': return '#22c55e';
-      case 'SCHEDULED': return '#0891b2';
-      case 'CANCELLED': return '#ef4444';
-      case 'NO_SHOW': return '#f59e0b';
-      default: return '#6b7280';
+      case 'COMPLETED':
+        return '#22c55e';
+      case 'SCHEDULED':
+        return '#0891b2';
+      case 'CANCELLED':
+        return '#ef4444';
+      case 'NO_SHOW':
+        return '#f59e0b';
+      default:
+        return '#6b7280';
     }
   };
 
   const getPaymentColor = (status: string) => {
     switch (status) {
-      case 'PAID': return '#22c55e';
-      case 'PARTIAL': return '#f59e0b';
-      case 'PENDING': return '#ef4444';
-      default: return '#6b7280';
+      case 'PAID':
+        return '#22c55e';
+      case 'PARTIAL':
+        return '#f59e0b';
+      case 'PENDING':
+        return '#ef4444';
+      default:
+        return '#6b7280';
     }
   };
 
@@ -222,7 +245,9 @@ export function AppointmentList() {
         <Title>{t('appointments.title')}</Title>
         <Controls>
           <SearchWrapper>
-            <SearchIcon><Search size={14} /></SearchIcon>
+            <SearchIcon>
+              <Search size={14} />
+            </SearchIcon>
             <SearchInput
               placeholder={t('appointments.searchPlaceholder')}
               value={searchQuery}
@@ -250,51 +275,70 @@ export function AppointmentList() {
         ) : filteredAppointments.length === 0 ? (
           <EmptyState>{t('appointments.noAppointments')}</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('appointments.appointmentNumber')}</Th>
-                <Th>{t('appointments.patient')}</Th>
-                <Th>{t('appointments.doctor')}</Th>
-                <Th>{t('appointments.appointmentDate')}</Th>
-                <Th>{t('appointments.status')}</Th>
-                <Th>{t('appointments.paymentStatus')}</Th>
-                <Th>{t('appointments.totalAmount')}</Th>
-                <Th>{t('common.actions')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAppointments.map((appt) => (
-                <Tr key={appt.id} onClick={() => navigate(`/appointments/${appt.id}`)}>
-                  <Td>{appt.appointmentNumber}</Td>
-                  <Td>{appt.patient.fullName}</Td>
-                  <Td>{appt.doctor?.fullName ?? '—'}</Td>
-                  <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
-                  <Td>
-                    <Badge $color={getStatusColor(appt.status)}>
-                      {t(`appointments.statuses.${appt.status}`, appt.status)}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <Badge $color={getPaymentColor(appt.paymentStatus)}>
-                      {t(`appointments.paymentStatuses.${appt.paymentStatus}`, appt.paymentStatus)}
-                    </Badge>
-                  </Td>
-                  <Td>{Number(appt.totalAmount).toLocaleString()} {t('common.currency')}</Td>
-                  <Td>
-                    <ActionBtn onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${appt.id}`); }}>
-                      <Eye size={15} />
-                    </ActionBtn>
-                    {appt.paymentStatus !== 'PAID' && appt.status !== 'CANCELLED' && (
-                      <ActionBtn onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${appt.id}/checkout`); }}>
-                        <CreditCard size={15} />
-                      </ActionBtn>
-                    )}
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <Paged rows={filteredAppointments} resetKey={`${filter}|${searchQuery}`}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('appointments.appointmentNumber')}</Th>
+                    <Th>{t('appointments.patient')}</Th>
+                    <Th>{t('appointments.doctor')}</Th>
+                    <Th>{t('appointments.appointmentDate')}</Th>
+                    <Th>{t('appointments.status')}</Th>
+                    <Th>{t('appointments.paymentStatus')}</Th>
+                    <Th>{t('appointments.totalAmount')}</Th>
+                    <Th>{t('common.actions')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((appt) => (
+                    <Tr key={appt.id} onClick={() => navigate(`/appointments/${appt.id}`)}>
+                      <Td>{appt.appointmentNumber}</Td>
+                      <Td>{appt.patient.fullName}</Td>
+                      <Td>{appt.doctor?.fullName ?? '—'}</Td>
+                      <Td>{format(new Date(appt.appointmentDate), 'dd.MM.yyyy HH:mm')}</Td>
+                      <Td>
+                        <Badge $color={getStatusColor(appt.status)}>
+                          {t(`appointments.statuses.${appt.status}`, appt.status)}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <Badge $color={getPaymentColor(appt.paymentStatus)}>
+                          {t(
+                            `appointments.paymentStatuses.${appt.paymentStatus}`,
+                            appt.paymentStatus,
+                          )}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        {Number(appt.totalAmount).toLocaleString()} {t('common.currency')}
+                      </Td>
+                      <Td>
+                        <ActionBtn
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/appointments/${appt.id}`);
+                          }}
+                        >
+                          <Eye size={15} />
+                        </ActionBtn>
+                        {appt.paymentStatus !== 'PAID' && appt.status !== 'CANCELLED' && (
+                          <ActionBtn
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/appointments/${appt.id}/checkout`);
+                            }}
+                          >
+                            <CreditCard size={15} />
+                          </ActionBtn>
+                        )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         )}
       </TableWrapper>
     </Page>

@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import { ArrowDownCircle, ArrowUpCircle, Lock, Trash2, Unlock, Wallet } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +51,7 @@ export function ShiftsPage() {
 
   const load = useCallback(async () => {
     try {
-      const list = await window.electronAPI.shifts.list(30);
+      const list = await window.electronAPI.shifts.list(200);
       setShifts(list);
       const open = list.find((s) => s.status === 'OPEN');
       setSummary(open ? await window.electronAPI.shifts.summary(open.id) : null);
@@ -140,22 +141,26 @@ export function ShiftsPage() {
           {summary.movements.length > 0 && (
             <>
               <h3>{t('shifts.movements')}</h3>
-              <Table>
-                <tbody>
-                  {summary.movements.map((m) => (
-                    <tr key={m.id}>
-                      <td>{when(m.createdAt)}</td>
-                      <td>{m.type === 'PAY_IN' ? t('shifts.payIn') : t('shifts.payOut')}</td>
-                      <Num $neg={m.type === 'PAY_OUT'}>
-                        {m.type === 'PAY_OUT' ? '−' : '+'}
-                        {fmt(m.amount)}
-                      </Num>
-                      <td>{m.note}</td>
-                      <td>{m.createdBy ?? ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+              <Paged rows={summary.movements}>
+                {(pageRows) => (
+                  <Table>
+                    <tbody>
+                      {pageRows.map((m) => (
+                        <tr key={m.id}>
+                          <td>{when(m.createdAt)}</td>
+                          <td>{m.type === 'PAY_IN' ? t('shifts.payIn') : t('shifts.payOut')}</td>
+                          <Num $neg={m.type === 'PAY_OUT'}>
+                            {m.type === 'PAY_OUT' ? '−' : '+'}
+                            {fmt(m.amount)}
+                          </Num>
+                          <td>{m.note}</td>
+                          <td>{m.createdBy ?? ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Paged>
             </>
           )}
         </Card>
@@ -169,49 +174,57 @@ export function ShiftsPage() {
 
       <Card>
         <h2>{t('shifts.history')}</h2>
-        <Table>
-          <thead>
-            <tr>
-              <th>{t('shifts.openedAt')}</th>
-              <th>{t('shifts.closedAt')}</th>
-              <th>{t('shifts.openingCash')}</th>
-              <th>{t('shifts.expectedCash')}</th>
-              <th>{t('shifts.countedCash')}</th>
-              <th>{t('shifts.difference')}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {shifts.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  {when(s.openedAt)}
-                  <Small>{s.openedBy}</Small>
-                </td>
-                <td>
-                  {s.status === 'OPEN' ? <Badge>{t('shifts.statusOpen')}</Badge> : when(s.closedAt)}
-                  <Small>{s.closedBy}</Small>
-                </td>
-                <td>{fmt(s.openingCash)}</td>
-                <td>{s.expectedCash === null ? '—' : fmt(s.expectedCash)}</td>
-                <td>{s.countedCash === null ? '—' : fmt(s.countedCash)}</td>
-                <Num $neg={(s.difference ?? 0) < 0}>
-                  {s.difference === null ? '—' : fmt(s.difference)}
-                </Num>
-                <td>
-                  {isAdmin && (
-                    <IconBtn
-                      title={t('shifts.delete')}
-                      onClick={() => setDialog({ kind: 'delete', shift: s })}
-                    >
-                      <Trash2 size={14} />
-                    </IconBtn>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <Paged rows={shifts}>
+          {(pageRows) => (
+            <Table>
+              <thead>
+                <tr>
+                  <th>{t('shifts.openedAt')}</th>
+                  <th>{t('shifts.closedAt')}</th>
+                  <th>{t('shifts.openingCash')}</th>
+                  <th>{t('shifts.expectedCash')}</th>
+                  <th>{t('shifts.countedCash')}</th>
+                  <th>{t('shifts.difference')}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      {when(s.openedAt)}
+                      <Small>{s.openedBy}</Small>
+                    </td>
+                    <td>
+                      {s.status === 'OPEN' ? (
+                        <Badge>{t('shifts.statusOpen')}</Badge>
+                      ) : (
+                        when(s.closedAt)
+                      )}
+                      <Small>{s.closedBy}</Small>
+                    </td>
+                    <td>{fmt(s.openingCash)}</td>
+                    <td>{s.expectedCash === null ? '—' : fmt(s.expectedCash)}</td>
+                    <td>{s.countedCash === null ? '—' : fmt(s.countedCash)}</td>
+                    <Num $neg={(s.difference ?? 0) < 0}>
+                      {s.difference === null ? '—' : fmt(s.difference)}
+                    </Num>
+                    <td>
+                      {isAdmin && (
+                        <IconBtn
+                          title={t('shifts.delete')}
+                          onClick={() => setDialog({ kind: 'delete', shift: s })}
+                        >
+                          <Trash2 size={14} />
+                        </IconBtn>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Paged>
       </Card>
 
       {dialog?.kind === 'open' && (

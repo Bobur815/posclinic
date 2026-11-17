@@ -2,20 +2,26 @@ import { useTranslation } from 'react-i18next';
 import type { Appointment } from '../../api/client';
 import { doctorName, useDoctors } from '../../hooks/useDoctors';
 import { formatDateTime, formatMoney } from '../../lib/format';
-import { PaymentBadge, StatusBadge, Table, Td, Th, Tr } from '../../components/ui';
+import { Paged, PaymentBadge, StatusBadge, Table, Td, Th, Tr } from '../../components/ui';
 
+/**
+ * Visits as a table. `paged`: pages its own rows (a patient's history); off where the list is
+ * already paged by the server (Appointments), or there would be two pagination bars.
+ */
 export function VisitsTable({
   rows,
   onOpen,
   showPatient = true,
+  paged = false,
 }: {
   rows: Appointment[];
   onOpen: (a: Appointment) => void;
   showPatient?: boolean;
+  paged?: boolean;
 }) {
   const { t } = useTranslation();
   const doctors = useDoctors();
-  return (
+  const table = (list: Appointment[]) => (
     <Table>
       <thead>
         <tr>
@@ -30,7 +36,7 @@ export function VisitsTable({
         </tr>
       </thead>
       <tbody>
-        {rows.map((a) => (
+        {list.map((a) => (
           <Tr key={a.id} $clickable onClick={() => onOpen(a)}>
             <Td $muted $nowrap>
               {a.appointmentNumber}
@@ -55,4 +61,5 @@ export function VisitsTable({
       </tbody>
     </Table>
   );
+  return paged ? <Paged rows={rows}>{table}</Paged> : table(rows);
 }

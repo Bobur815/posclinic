@@ -517,63 +517,8 @@ export function DataState({
 
 /* ─── Pagination ──────────────────────────────────────────────────────────── */
 
-const PagerRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing.md};
-  padding: 10px 14px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 13px;
-  flex-wrap: wrap;
-`;
-
-export function Pagination({
-  page,
-  pageSize,
-  total,
-  onPage,
-}: {
-  page: number;
-  pageSize: number;
-  total: number;
-  onPage: (p: number) => void;
-}) {
-  const { t } = useTranslation();
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (total === 0) return null;
-  const from = (page - 1) * pageSize + 1;
-  const to = Math.min(total, page * pageSize);
-  return (
-    <PagerRow>
-      <span>{t('common.shown', { from, to, total })}</span>
-      <Row>
-        <Button
-          $small
-          $variant="ghost"
-          disabled={page <= 1}
-          onClick={() => onPage(page - 1)}
-          aria-label={t('common.prev')}
-        >
-          <ChevronLeft />
-        </Button>
-        <span>
-          {page} / {pages}
-        </span>
-        <Button
-          $small
-          $variant="ghost"
-          disabled={page >= pages}
-          onClick={() => onPage(page + 1)}
-          aria-label={t('common.next')}
-        >
-          <ChevronRight />
-        </Button>
-      </Row>
-    </PagerRow>
-  );
-}
+// One pagination bar for the till and the web (src/renderer/components/common/Pagination.tsx).
+export { Paged, Pagination, usePagination } from '@components/common/Pagination';
 
 /* ─── Modal / drawer ──────────────────────────────────────────────────────── */
 

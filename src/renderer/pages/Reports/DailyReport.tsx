@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +48,10 @@ const DateInput = styled.input`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   font-size: 14px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const StatsGrid = styled.div`
@@ -133,8 +137,12 @@ const Td = styled.td`
 `;
 
 const Tr = styled.tr`
-  &:last-child td { border-bottom: none; }
-  &:hover td { background: ${({ theme }) => theme.colors.background}; }
+  &:last-child td {
+    border-bottom: none;
+  }
+  &:hover td {
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const Badge = styled.span<{ $color: string }>`
@@ -157,7 +165,11 @@ export function DailyReport() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [summary, setSummary] = useState<DailySummary>({
-    total: 0, completed: 0, cancelled: 0, revenue: 0, paidAmount: 0,
+    total: 0,
+    completed: 0,
+    cancelled: 0,
+    revenue: 0,
+    paidAmount: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -189,18 +201,25 @@ export function DailyReport() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'COMPLETED': return '#22c55e';
-      case 'SCHEDULED': return '#0891b2';
-      case 'CANCELLED': return '#ef4444';
-      default: return '#f59e0b';
+      case 'COMPLETED':
+        return '#22c55e';
+      case 'SCHEDULED':
+        return '#0891b2';
+      case 'CANCELLED':
+        return '#ef4444';
+      default:
+        return '#f59e0b';
     }
   };
 
   const getPaymentColor = (status: string) => {
     switch (status) {
-      case 'PAID': return '#22c55e';
-      case 'PARTIAL': return '#f59e0b';
-      default: return '#ef4444';
+      case 'PAID':
+        return '#22c55e';
+      case 'PARTIAL':
+        return '#f59e0b';
+      default:
+        return '#ef4444';
     }
   };
 
@@ -217,21 +236,27 @@ export function DailyReport() {
 
       <StatsGrid>
         <StatCard>
-          <IconBox $color="#0891b2"><Users size={20} /></IconBox>
+          <IconBox $color="#0891b2">
+            <Users size={20} />
+          </IconBox>
           <StatInfo>
             <StatLabel>{t('dashboard.todayAppointments')}</StatLabel>
             <StatValue>{summary.total}</StatValue>
           </StatInfo>
         </StatCard>
         <StatCard>
-          <IconBox $color="#22c55e"><CheckCircle size={20} /></IconBox>
+          <IconBox $color="#22c55e">
+            <CheckCircle size={20} />
+          </IconBox>
           <StatInfo>
             <StatLabel>{t('appointments.todaySummary.completed')}</StatLabel>
             <StatValue>{summary.completed}</StatValue>
           </StatInfo>
         </StatCard>
         <StatCard>
-          <IconBox $color="#0891b2"><TrendingUp size={20} /></IconBox>
+          <IconBox $color="#0891b2">
+            <TrendingUp size={20} />
+          </IconBox>
           <StatInfo>
             <StatLabel>{t('reports.totalRevenue')}</StatLabel>
             <StatValue style={{ fontSize: '16px' }}>
@@ -240,7 +265,9 @@ export function DailyReport() {
           </StatInfo>
         </StatCard>
         <StatCard>
-          <IconBox $color="#22c55e"><BarChart2 size={20} /></IconBox>
+          <IconBox $color="#22c55e">
+            <BarChart2 size={20} />
+          </IconBox>
           <StatInfo>
             <StatLabel>{t('reports.collected')}</StatLabel>
             <StatValue style={{ fontSize: '16px' }}>
@@ -259,42 +286,55 @@ export function DailyReport() {
         ) : appointments.length === 0 ? (
           <EmptyState>{t('appointments.noAppointments')}</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('appointments.appointmentNumber')}</Th>
-                <Th>{t('appointments.patient')}</Th>
-                <Th>{t('appointments.doctor')}</Th>
-                <Th>{t('appointments.appointmentDate')}</Th>
-                <Th>{t('appointments.status')}</Th>
-                <Th>{t('appointments.paymentStatus')}</Th>
-                <Th>{t('appointments.totalAmount')}</Th>
-                <Th>{t('appointments.paidAmount')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((appt) => (
-                <Tr key={appt.id}>
-                  <Td style={{ color: '#0891b2', fontWeight: 500 }}>{appt.appointmentNumber}</Td>
-                  <Td>{appt.patient.fullName}</Td>
-                  <Td>{appt.doctor?.fullName ?? '—'}</Td>
-                  <Td>{format(new Date(appt.appointmentDate), 'HH:mm')}</Td>
-                  <Td>
-                    <Badge $color={getStatusColor(appt.status)}>
-                      {t(`appointments.statuses.${appt.status}`, appt.status)}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <Badge $color={getPaymentColor(appt.paymentStatus)}>
-                      {t(`appointments.paymentStatuses.${appt.paymentStatus}`, appt.paymentStatus)}
-                    </Badge>
-                  </Td>
-                  <Td>{Number(appt.totalAmount).toLocaleString()} {t('common.currency')}</Td>
-                  <Td>{Number(appt.paidAmount).toLocaleString()} {t('common.currency')}</Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <Paged rows={appointments} resetKey={selectedDate}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('appointments.appointmentNumber')}</Th>
+                    <Th>{t('appointments.patient')}</Th>
+                    <Th>{t('appointments.doctor')}</Th>
+                    <Th>{t('appointments.appointmentDate')}</Th>
+                    <Th>{t('appointments.status')}</Th>
+                    <Th>{t('appointments.paymentStatus')}</Th>
+                    <Th>{t('appointments.totalAmount')}</Th>
+                    <Th>{t('appointments.paidAmount')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((appt) => (
+                    <Tr key={appt.id}>
+                      <Td style={{ color: '#0891b2', fontWeight: 500 }}>
+                        {appt.appointmentNumber}
+                      </Td>
+                      <Td>{appt.patient.fullName}</Td>
+                      <Td>{appt.doctor?.fullName ?? '—'}</Td>
+                      <Td>{format(new Date(appt.appointmentDate), 'HH:mm')}</Td>
+                      <Td>
+                        <Badge $color={getStatusColor(appt.status)}>
+                          {t(`appointments.statuses.${appt.status}`, appt.status)}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <Badge $color={getPaymentColor(appt.paymentStatus)}>
+                          {t(
+                            `appointments.paymentStatuses.${appt.paymentStatus}`,
+                            appt.paymentStatus,
+                          )}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        {Number(appt.totalAmount).toLocaleString()} {t('common.currency')}
+                      </Td>
+                      <Td>
+                        {Number(appt.paidAmount).toLocaleString()} {t('common.currency')}
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         )}
       </Card>
     </Page>

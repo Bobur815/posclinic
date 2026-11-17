@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +59,10 @@ const SearchInput = styled.input`
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
   width: 240px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const AddBtn = styled.button`
@@ -73,7 +77,9 @@ const AddBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const TableWrapper = styled.div`
@@ -107,8 +113,12 @@ const Td = styled.td`
 `;
 
 const Tr = styled.tr`
-  &:last-child td { border-bottom: none; }
-  &:hover td { background: ${({ theme }) => theme.colors.background}; }
+  &:last-child td {
+    border-bottom: none;
+  }
+  &:hover td {
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const Badge = styled.span<{ $active: boolean }>`
@@ -127,7 +137,10 @@ const ActionBtn = styled.button`
   padding: 4px;
   border-radius: 4px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  &:hover { color: ${({ theme }) => theme.colors.primary}; background: ${({ theme }) => theme.colors.background}; }
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const EmptyState = styled.div`
@@ -140,7 +153,7 @@ const EmptyState = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,7 +190,9 @@ const CloseBtn = styled.button`
   padding: 4px;
   border-radius: 4px;
   display: flex;
-  &:hover { color: ${({ theme }) => theme.colors.text}; }
+  &:hover {
+    color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
 const FormGroup = styled.div`
@@ -205,7 +220,10 @@ const Input = styled.input`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const Select = styled.select`
@@ -215,7 +233,10 @@ const Select = styled.select`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const ModalFooter = styled.div`
@@ -246,8 +267,13 @@ const SaveBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const emptyForm: DoctorForm = { fullName: '', specialty: '', phone: '', active: true };
@@ -321,13 +347,15 @@ export function DoctorList() {
   }, []);
 
   const dataVersion = useDataVersion(['doctors']);
-  useEffect(() => { loadDoctors(); }, [loadDoctors, dataVersion]);
+  useEffect(() => {
+    loadDoctors();
+  }, [loadDoctors, dataVersion]);
 
   const filtered = searchQuery
     ? doctors.filter(
         (d) =>
           d.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (d.specialty || '').toLowerCase().includes(searchQuery.toLowerCase())
+          (d.specialty || '').toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : doctors;
 
@@ -375,25 +403,36 @@ export function DoctorList() {
     }
   };
 
-  const handleChange = (field: keyof DoctorForm) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const value = field === 'active' ? (e.target as HTMLSelectElement).value === 'true' : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleChange =
+    (field: keyof DoctorForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const value =
+        field === 'active' ? (e.target as HTMLSelectElement).value === 'true' : e.target.value;
+      setForm((prev) => ({ ...prev, [field]: value }));
+    };
 
   return (
     <Page>
       {showModal && (
-        <Overlay onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+        <Overlay
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false);
+          }}
+        >
           <Modal>
             <ModalHeader>
-              <ModalTitle>{editingDoctor ? t('doctors.editDoctor') : t('doctors.newDoctor')}</ModalTitle>
-              <CloseBtn onClick={() => setShowModal(false)}><X size={18} /></CloseBtn>
+              <ModalTitle>
+                {editingDoctor ? t('doctors.editDoctor') : t('doctors.newDoctor')}
+              </ModalTitle>
+              <CloseBtn onClick={() => setShowModal(false)}>
+                <X size={18} />
+              </CloseBtn>
             </ModalHeader>
 
             <FormGroup>
-              <Label>{t('doctors.fullName')}<Required>*</Required></Label>
+              <Label>
+                {t('doctors.fullName')}
+                <Required>*</Required>
+              </Label>
               <Input value={form.fullName} onChange={handleChange('fullName')} required />
             </FormGroup>
             <FormGroup>
@@ -430,18 +469,32 @@ export function DoctorList() {
       )}
 
       {loginFor && (
-        <Overlay onClick={(e) => { if (e.target === e.currentTarget) setLoginFor(null); }}>
+        <Overlay
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setLoginFor(null);
+          }}
+        >
           <Modal>
             <ModalHeader>
-              <ModalTitle>{t('doctors.createLogin')}: {loginFor.fullName}</ModalTitle>
-              <CloseBtn onClick={() => setLoginFor(null)}><X size={18} /></CloseBtn>
+              <ModalTitle>
+                {t('doctors.createLogin')}: {loginFor.fullName}
+              </ModalTitle>
+              <CloseBtn onClick={() => setLoginFor(null)}>
+                <X size={18} />
+              </CloseBtn>
             </ModalHeader>
             <FormGroup>
-              <Label>{t('auth.phone')}<Required>*</Required></Label>
+              <Label>
+                {t('auth.phone')}
+                <Required>*</Required>
+              </Label>
               <PhoneInput value={login.phone} onChange={(phone) => setLogin({ ...login, phone })} />
             </FormGroup>
             <FormGroup>
-              <Label>{t('auth.password')}<Required>*</Required></Label>
+              <Label>
+                {t('auth.password')}
+                <Required>*</Required>
+              </Label>
               <Input
                 type="password"
                 value={login.password}
@@ -450,7 +503,10 @@ export function DoctorList() {
             </FormGroup>
             <ModalFooter>
               <CancelBtn onClick={() => setLoginFor(null)}>{t('common.cancel')}</CancelBtn>
-              <SaveBtn onClick={handleCreateLogin} disabled={isSaving || !login.phone || login.password.length < 6}>
+              <SaveBtn
+                onClick={handleCreateLogin}
+                disabled={isSaving || !login.phone || login.password.length < 6}
+              >
                 <KeyRound size={14} />
                 {isSaving ? t('common.processing') : t('doctors.createLogin')}
               </SaveBtn>
@@ -460,11 +516,19 @@ export function DoctorList() {
       )}
 
       {linkFor && (
-        <Overlay onClick={(e) => { if (e.target === e.currentTarget) setLinkFor(null); }}>
+        <Overlay
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setLinkFor(null);
+          }}
+        >
           <Modal>
             <ModalHeader>
-              <ModalTitle>{t('doctors.linkLogin')}: {linkFor.fullName}</ModalTitle>
-              <CloseBtn onClick={() => setLinkFor(null)}><X size={18} /></CloseBtn>
+              <ModalTitle>
+                {t('doctors.linkLogin')}: {linkFor.fullName}
+              </ModalTitle>
+              <CloseBtn onClick={() => setLinkFor(null)}>
+                <X size={18} />
+              </CloseBtn>
             </ModalHeader>
             <FormGroup>
               <Label>{t('doctors.chooseLogin')}</Label>
@@ -482,7 +546,9 @@ export function DoctorList() {
               <CancelBtn onClick={() => setLinkFor(null)}>{t('common.cancel')}</CancelBtn>
               <SaveBtn
                 disabled={isSaving || !linkUserId}
-                onClick={() => runDoctor(() => window.electronAPI.doctors.linkUser(linkFor.id, linkUserId))}
+                onClick={() =>
+                  runDoctor(() => window.electronAPI.doctors.linkUser(linkFor.id, linkUserId))
+                }
               >
                 <Link2 size={14} />
                 {t('doctors.linkLogin')}
@@ -496,7 +562,9 @@ export function DoctorList() {
         <Title>{t('doctors.title')}</Title>
         <Controls>
           <SearchWrapper>
-            <SearchIcon><Search size={14} /></SearchIcon>
+            <SearchIcon>
+              <Search size={14} />
+            </SearchIcon>
             <SearchInput
               placeholder={t('doctors.searchPlaceholder')}
               value={searchQuery}
@@ -516,66 +584,72 @@ export function DoctorList() {
         ) : filtered.length === 0 ? (
           <EmptyState>{t('doctors.noDoctors')}</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('doctors.fullName')}</Th>
-                <Th>{t('doctors.specialty')}</Th>
-                <Th>{t('patients.phone')}</Th>
-                <Th>{t('doctors.login')}</Th>
-                <Th>{t('common.status')}</Th>
-                <Th>{t('common.actions')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((doc) => (
-                <Tr key={doc.id}>
-                  <Td style={{ fontWeight: 500 }}>{doc.fullName}</Td>
-                  <Td>{doc.specialty || '—'}</Td>
-                  <Td>{doc.phone || '—'}</Td>
-                  <Td>
-                    {doc.user ? (
-                      <>
-                        {doc.user.phone}{' '}
-                        <ActionBtn
-                          title={t('doctors.unlinkLogin')}
-                          disabled={isSaving}
-                          onClick={() => runDoctor(() => window.electronAPI.doctors.unlinkUser(doc.id))}
-                        >
-                          <Unlink size={14} />
+          <Paged rows={filtered} resetKey={searchQuery}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('doctors.fullName')}</Th>
+                    <Th>{t('doctors.specialty')}</Th>
+                    <Th>{t('patients.phone')}</Th>
+                    <Th>{t('doctors.login')}</Th>
+                    <Th>{t('common.status')}</Th>
+                    <Th>{t('common.actions')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((doc) => (
+                    <Tr key={doc.id}>
+                      <Td style={{ fontWeight: 500 }}>{doc.fullName}</Td>
+                      <Td>{doc.specialty || '—'}</Td>
+                      <Td>{doc.phone || '—'}</Td>
+                      <Td>
+                        {doc.user ? (
+                          <>
+                            {doc.user.phone}{' '}
+                            <ActionBtn
+                              title={t('doctors.unlinkLogin')}
+                              disabled={isSaving}
+                              onClick={() =>
+                                runDoctor(() => window.electronAPI.doctors.unlinkUser(doc.id))
+                              }
+                            >
+                              <Unlink size={14} />
+                            </ActionBtn>
+                          </>
+                        ) : (
+                          <>
+                            <ActionBtn
+                              title={t('doctors.createLogin')}
+                              onClick={() => {
+                                setLogin({ phone: doc.phone ?? '', password: '' });
+                                setLoginFor(doc);
+                              }}
+                            >
+                              <KeyRound size={14} />
+                            </ActionBtn>
+                            <ActionBtn title={t('doctors.linkLogin')} onClick={() => openLink(doc)}>
+                              <Link2 size={14} />
+                            </ActionBtn>
+                          </>
+                        )}
+                      </Td>
+                      <Td>
+                        <Badge $active={doc.active}>
+                          {doc.active ? t('common.active') : t('common.inactive')}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <ActionBtn onClick={() => openEdit(doc)}>
+                          <Edit2 size={14} />
                         </ActionBtn>
-                      </>
-                    ) : (
-                      <>
-                        <ActionBtn
-                          title={t('doctors.createLogin')}
-                          onClick={() => {
-                            setLogin({ phone: doc.phone ?? '', password: '' });
-                            setLoginFor(doc);
-                          }}
-                        >
-                          <KeyRound size={14} />
-                        </ActionBtn>
-                        <ActionBtn title={t('doctors.linkLogin')} onClick={() => openLink(doc)}>
-                          <Link2 size={14} />
-                        </ActionBtn>
-                      </>
-                    )}
-                  </Td>
-                  <Td>
-                    <Badge $active={doc.active}>
-                      {doc.active ? t('common.active') : t('common.inactive')}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <ActionBtn onClick={() => openEdit(doc)}>
-                      <Edit2 size={14} />
-                    </ActionBtn>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         )}
       </TableWrapper>
     </Page>

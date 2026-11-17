@@ -1,3 +1,4 @@
+import { Paged } from '../../components/ui';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appointmentsApi, type Appointment } from '../../api/client';
@@ -88,37 +89,41 @@ export function AppointmentDetailsModal({
             <div>
               <CardTitle>{t('appointments.services')}</CardTitle>
               <div style={{ overflowX: 'auto' }}>
-                <Table>
-                  <thead>
-                    <tr>
-                      <Th>{t('appointments.service')}</Th>
-                      <Th $right>{t('appointments.quantity')}</Th>
-                      <Th $right>{t('appointments.unitPrice')}</Th>
-                      <Th $right>{t('common.total')}</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(a.items ?? []).map((i) => (
-                      <Tr key={i.id}>
-                        <Td>{i.serviceName}</Td>
-                        <Td $right>{formatNumber(i.quantity)}</Td>
-                        <Td $right $nowrap>
-                          {formatMoney(i.unitPrice)}
-                        </Td>
-                        <Td $right $nowrap>
-                          {formatMoney(i.total)}
-                        </Td>
-                      </Tr>
-                    ))}
-                    {!a.items?.length && (
-                      <Tr>
-                        <Td colSpan={4} $muted>
-                          {t('appointments.noItems')}
-                        </Td>
-                      </Tr>
-                    )}
-                  </tbody>
-                </Table>
+                <Paged rows={a.items ?? []}>
+                  {(pageRows) => (
+                    <Table>
+                      <thead>
+                        <tr>
+                          <Th>{t('appointments.service')}</Th>
+                          <Th $right>{t('appointments.quantity')}</Th>
+                          <Th $right>{t('appointments.unitPrice')}</Th>
+                          <Th $right>{t('common.total')}</Th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((i) => (
+                          <Tr key={i.id}>
+                            <Td>{i.serviceName}</Td>
+                            <Td $right>{formatNumber(i.quantity)}</Td>
+                            <Td $right $nowrap>
+                              {formatMoney(i.unitPrice)}
+                            </Td>
+                            <Td $right $nowrap>
+                              {formatMoney(i.total)}
+                            </Td>
+                          </Tr>
+                        ))}
+                        {!a.items?.length && (
+                          <Tr>
+                            <Td colSpan={4} $muted>
+                              {t('appointments.noItems')}
+                            </Td>
+                          </Tr>
+                        )}
+                      </tbody>
+                    </Table>
+                  )}
+                </Paged>
               </div>
             </div>
 

@@ -1,3 +1,4 @@
+import { Paged } from '../../components/ui';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Stethoscope, Plus, Pencil, RefreshCw, Search } from 'lucide-react';
@@ -75,43 +76,69 @@ export function DoctorList() {
       <FilterBar>
         <Field label={t('common.search')}>
           <div style={{ position: 'relative' }}>
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('doctors.searchPlaceholder')} style={{ paddingLeft: 32 }} />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('doctors.searchPlaceholder')}
+              style={{ paddingLeft: 32 }}
+            />
             <Search size={16} style={{ position: 'absolute', left: 10, top: 11, opacity: 0.5 }} />
           </div>
         </Field>
-        <Checkbox label={t('common.showInactive')} checked={showInactive} onChange={setShowInactive} />
+        <Checkbox
+          label={t('common.showInactive')}
+          checked={showInactive}
+          onChange={setShowInactive}
+        />
       </FilterBar>
 
       <TableWrap>
-        <DataState loading={loading && !data} error={error} onRetry={reload} empty={rows.length === 0} emptyText={t('doctors.noDoctors')}>
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('doctors.fullName')}</Th>
-                <Th>{t('doctors.specialty')}</Th>
-                <Th>{t('doctors.phone')}</Th>
-                <Th>{t('doctors.licenseNo')}</Th>
-                <Th>{t('common.status')}</Th>
-                <Th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((d) => (
-                <Tr key={d.id} $dim={!d.active}>
-                  <Td>{d.fullName}</Td>
-                  <Td>{d.specialty || '—'}</Td>
-                  <Td $nowrap>{showPhone(d.phone)}</Td>
-                  <Td $muted>{d.licenseNo || '—'}</Td>
-                  <Td><ActiveBadge active={d.active} /></Td>
-                  <Td $right>
-                    <Button $small $variant="ghost" onClick={() => setEditing(d)} aria-label={t('common.edit')}>
-                      <Pencil />
-                    </Button>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+        <DataState
+          loading={loading && !data}
+          error={error}
+          onRetry={reload}
+          empty={rows.length === 0}
+          emptyText={t('doctors.noDoctors')}
+        >
+          <Paged rows={rows} resetKey={`${q}|${showInactive}`}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('doctors.fullName')}</Th>
+                    <Th>{t('doctors.specialty')}</Th>
+                    <Th>{t('doctors.phone')}</Th>
+                    <Th>{t('doctors.licenseNo')}</Th>
+                    <Th>{t('common.status')}</Th>
+                    <Th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((d) => (
+                    <Tr key={d.id} $dim={!d.active}>
+                      <Td>{d.fullName}</Td>
+                      <Td>{d.specialty || '—'}</Td>
+                      <Td $nowrap>{showPhone(d.phone)}</Td>
+                      <Td $muted>{d.licenseNo || '—'}</Td>
+                      <Td>
+                        <ActiveBadge active={d.active} />
+                      </Td>
+                      <Td $right>
+                        <Button
+                          $small
+                          $variant="ghost"
+                          onClick={() => setEditing(d)}
+                          aria-label={t('common.edit')}
+                        >
+                          <Pencil />
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         </DataState>
       </TableWrap>
 
@@ -130,7 +157,15 @@ export function DoctorList() {
   );
 }
 
-function DoctorForm({ doctor, onClose, onSaved }: { doctor: Doctor | null; onClose: () => void; onSaved: () => void }) {
+function DoctorForm({
+  doctor,
+  onClose,
+  onSaved,
+}: {
+  doctor: Doctor | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const [fullName, setFullName] = useState(doctor?.fullName ?? '');
@@ -184,17 +219,31 @@ function DoctorForm({ doctor, onClose, onSaved }: { doctor: Doctor | null; onClo
       <form onSubmit={save} style={{ display: 'contents' }}>
         {err && <ErrorBanner>{err}</ErrorBanner>}
         <Field label={t('doctors.fullName')}>
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={200} autoFocus required />
+          <Input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            maxLength={200}
+            autoFocus
+            required
+          />
         </Field>
         <FormGrid>
           <Field label={t('doctors.specialty')}>
-            <Input value={specialty} onChange={(e) => setSpecialty(e.target.value)} maxLength={200} />
+            <Input
+              value={specialty}
+              onChange={(e) => setSpecialty(e.target.value)}
+              maxLength={200}
+            />
           </Field>
           <Field label={t('doctors.phone')} error={phoneBad ? t('errors.invalid_phone') : null}>
             <PhoneInput value={phone} onChange={setPhone} invalid={!!phoneBad} />
           </Field>
           <Field label={t('doctors.licenseNo')}>
-            <Input value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} maxLength={100} />
+            <Input
+              value={licenseNo}
+              onChange={(e) => setLicenseNo(e.target.value)}
+              maxLength={100}
+            />
           </Field>
         </FormGrid>
         <Checkbox label={t('common.active')} checked={active} onChange={setActive} />

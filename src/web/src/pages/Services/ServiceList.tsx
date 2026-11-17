@@ -1,3 +1,4 @@
+import { Paged } from '../../components/ui';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Layers, Plus, Pencil, RefreshCw, Search } from 'lucide-react';
@@ -82,52 +83,89 @@ export function ServiceList() {
       <FilterBar>
         <Field label={t('common.search')}>
           <div style={{ position: 'relative' }}>
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('services.searchPlaceholder')} style={{ paddingLeft: 32 }} />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('services.searchPlaceholder')}
+              style={{ paddingLeft: 32 }}
+            />
             <Search size={16} style={{ position: 'absolute', left: 10, top: 11, opacity: 0.5 }} />
           </div>
         </Field>
-        <Checkbox label={t('common.showInactive')} checked={showInactive} onChange={setShowInactive} />
+        <Checkbox
+          label={t('common.showInactive')}
+          checked={showInactive}
+          onChange={setShowInactive}
+        />
       </FilterBar>
 
       <TableWrap>
-        <DataState loading={loading && !data} error={error} onRetry={reload} empty={rows.length === 0} emptyText={t('services.noServices')}>
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('services.code')}</Th>
-                <Th>{t('services.name')}</Th>
-                <Th>{t('services.kind')}</Th>
-                <Th $right>{t('services.price')}</Th>
-                <Th title={t('services.mxikHint')}>{t('services.mxik')}</Th>
-                <Th $right>{t('services.duration')}</Th>
-                <Th>{t('common.status')}</Th>
-                <Th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((s) => (
-                <Tr key={s.id} $dim={!s.active}>
-                  <Td $muted $nowrap>{s.code}</Td>
-                  <Td>
-                    {s.name}
-                    {s.description && <div style={{ fontSize: 12, opacity: 0.7 }}>{s.description}</div>}
-                  </Td>
-                  <Td $nowrap>
-                    {types.serviceType(s.serviceTypeId)?.name ?? t(`services.kinds.${s.kind ?? 'PROCEDURE'}`)}
-                  </Td>
-                  <Td $right $nowrap>{formatMoney(s.price)}</Td>
-                  <Td $muted $nowrap>{s.mxik ?? '—'}</Td>
-                  <Td $right $nowrap>{formatNumber(s.duration)} {t('common.minutes')}</Td>
-                  <Td><ActiveBadge active={s.active} /></Td>
-                  <Td $right>
-                    <Button $small $variant="ghost" onClick={() => setEditing(s)} aria-label={t('common.edit')}>
-                      <Pencil />
-                    </Button>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+        <DataState
+          loading={loading && !data}
+          error={error}
+          onRetry={reload}
+          empty={rows.length === 0}
+          emptyText={t('services.noServices')}
+        >
+          <Paged rows={rows} resetKey={`${q}|${showInactive}`}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('services.code')}</Th>
+                    <Th>{t('services.name')}</Th>
+                    <Th>{t('services.kind')}</Th>
+                    <Th $right>{t('services.price')}</Th>
+                    <Th title={t('services.mxikHint')}>{t('services.mxik')}</Th>
+                    <Th $right>{t('services.duration')}</Th>
+                    <Th>{t('common.status')}</Th>
+                    <Th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((s) => (
+                    <Tr key={s.id} $dim={!s.active}>
+                      <Td $muted $nowrap>
+                        {s.code}
+                      </Td>
+                      <Td>
+                        {s.name}
+                        {s.description && (
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>{s.description}</div>
+                        )}
+                      </Td>
+                      <Td $nowrap>
+                        {types.serviceType(s.serviceTypeId)?.name ??
+                          t(`services.kinds.${s.kind ?? 'PROCEDURE'}`)}
+                      </Td>
+                      <Td $right $nowrap>
+                        {formatMoney(s.price)}
+                      </Td>
+                      <Td $muted $nowrap>
+                        {s.mxik ?? '—'}
+                      </Td>
+                      <Td $right $nowrap>
+                        {formatNumber(s.duration)} {t('common.minutes')}
+                      </Td>
+                      <Td>
+                        <ActiveBadge active={s.active} />
+                      </Td>
+                      <Td $right>
+                        <Button
+                          $small
+                          $variant="ghost"
+                          onClick={() => setEditing(s)}
+                          aria-label={t('common.edit')}
+                        >
+                          <Pencil />
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         </DataState>
       </TableWrap>
 
@@ -145,7 +183,15 @@ export function ServiceList() {
   );
 }
 
-function ServiceForm({ service, onClose, onSaved }: { service: Service | null; onClose: () => void; onSaved: () => void }) {
+function ServiceForm({
+  service,
+  onClose,
+  onSaved,
+}: {
+  service: Service | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState<ServiceInput>(
@@ -165,7 +211,8 @@ function ServiceForm({ service, onClose, onSaved }: { service: Service | null; o
   );
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const set = <K extends keyof ServiceInput>(k: K, v: ServiceInput[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof ServiceInput>(k: K, v: ServiceInput[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
 
   const valid = form.code.trim() && form.name.trim() && form.price >= 0 && form.duration > 0;
 
@@ -210,16 +257,41 @@ function ServiceForm({ service, onClose, onSaved }: { service: Service | null; o
         {err && <ErrorBanner>{err}</ErrorBanner>}
         <FormGrid>
           <Field label={t('services.code')}>
-            <Input value={form.code} onChange={(e) => set('code', e.target.value)} maxLength={32} autoFocus required />
+            <Input
+              value={form.code}
+              onChange={(e) => set('code', e.target.value)}
+              maxLength={32}
+              autoFocus
+              required
+            />
           </Field>
           <Field label={t('services.name')}>
-            <Input value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={200} required />
+            <Input
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
+              maxLength={200}
+              required
+            />
           </Field>
           <Field label={`${t('services.price')} (${t('common.currency')})`}>
-            <Input type="number" min={0} step={1000} value={form.price} onChange={(e) => set('price', Number(e.target.value))} required />
+            <Input
+              type="number"
+              min={0}
+              step={1000}
+              value={form.price}
+              onChange={(e) => set('price', Number(e.target.value))}
+              required
+            />
           </Field>
           <Field label={t('services.durationMin')}>
-            <Input type="number" min={1} step={5} value={form.duration} onChange={(e) => set('duration', Number(e.target.value))} required />
+            <Input
+              type="number"
+              min={1}
+              step={5}
+              value={form.duration}
+              onChange={(e) => set('duration', Number(e.target.value))}
+              required
+            />
           </Field>
         </FormGrid>
         <FormGrid>
@@ -258,9 +330,17 @@ function ServiceForm({ service, onClose, onSaved }: { service: Service | null; o
           />
         )}
         <Field label={t('services.description')}>
-          <Textarea value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} maxLength={1000} />
+          <Textarea
+            value={form.description ?? ''}
+            onChange={(e) => set('description', e.target.value)}
+            maxLength={1000}
+          />
         </Field>
-        <Checkbox label={t('common.active')} checked={form.active} onChange={(v) => set('active', v)} />
+        <Checkbox
+          label={t('common.active')}
+          checked={form.active}
+          onChange={(v) => set('active', v)}
+        />
         <button type="submit" hidden />
       </form>
     </Modal>

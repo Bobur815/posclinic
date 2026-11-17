@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import { format } from 'date-fns';
 import { ArrowLeft, Plus, Search, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
@@ -213,7 +214,11 @@ export function RegisterVisitPage() {
             caseId: caseId || null,
             items: lines.map(({ key: _k, ...l }) => {
               const full = l.fullCourse === true && discountAllowed({ key: _k, ...l });
-              return { ...l, fullCourse: full, discountPercent: full ? (l.discountPercent ?? 0) : 0 };
+              return {
+                ...l,
+                fullCourse: full,
+                discountPercent: full ? (l.discountPercent ?? 0) : 0,
+              };
             }),
             approval,
           }
@@ -541,122 +546,133 @@ export function RegisterVisitPage() {
             {lines.length === 0 ? (
               <Empty>{t('appointments.noItemsAdded')}</Empty>
             ) : (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>{t('services.name')}</Th>
-                    <Th>{t('appointments.doctor')}</Th>
-                    <Th>{t('appointments.quantity')}</Th>
-                    <Th>{t('register.discount')}</Th>
-                    <Th style={{ textAlign: 'right' }}>{t('appointments.subtotal')}</Th>
-                    <Th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.map((l) => {
-                    const s = serviceById.get(l.serviceId);
-                    const ql = quoted(l.key);
-                    const course = discountAllowed(l);
-                    return (
-                      <tr key={l.key}>
-                        <Td>
-                          <WithThumb>
-                            {s?.image && <ServiceThumb src={s.image} alt="" $size={28} />}
-                            <span>{s?.name ?? '—'}</span>
-                          </WithThumb>
-                          <Muted>
-                            {s ? typeOf(s).label : ''}
-                            {l.referralId ? ` · ${t('register.fromReferral')}` : ''}
-                          </Muted>
-                        </Td>
-                        <Td>
-                          {s?.kind === 'CONSULTATION' ? (
-                            <Select
-                              value={l.doctorId ?? ''}
-                              onChange={(e) => patch(l.key, { doctorId: e.target.value || null })}
-                            >
-                              <option value="">{t('appointments.selectDoctor')}</option>
-                              {doctors.map((d) => (
-                                <option key={d.id} value={d.id}>
-                                  {d.fullName}
-                                </option>
-                              ))}
-                            </Select>
-                          ) : (
-                            <Muted>{t('register.noDoctor')}</Muted>
-                          )}
-                        </Td>
-                        <Td>
-                          <Qty
-                            type="number"
-                            min={1}
-                            value={l.quantity}
-                            onChange={(e) =>
-                              patch(l.key, {
-                                quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
-                              })
-                            }
-                          />
-                        </Td>
-                        <Td>
-                          {course ? (
-                            <CourseCell>
-                              <label>
-                                <input
-                                  type="checkbox"
-                                  checked={l.fullCourse === true}
-                                  onChange={(e) => patch(l.key, { fullCourse: e.target.checked })}
-                                />{' '}
-                                {t('register.paidUpfront')}
-                              </label>
-                              {l.fullCourse && (
-                                <span>
-                                  <Qty
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    value={l.discountPercent ?? 0}
-                                    onChange={(e) =>
-                                      patch(l.key, {
-                                        discountPercent: Math.min(
-                                          100,
-                                          Math.max(0, Number(e.target.value) || 0),
-                                        ),
-                                      })
-                                    }
-                                  />{' '}
-                                  %
-                                </span>
-                              )}
-                            </CourseCell>
-                          ) : (
-                            <Muted>—</Muted>
-                          )}
-                        </Td>
-                        <Td style={{ textAlign: 'right' }}>
-                          {ql ? (
-                            <>
-                              {ql.unitPrice === 0 && s?.isFollowUp ? (
-                                <FreeHint>{t('register.free')}</FreeHint>
-                              ) : (
-                                money(ql.total)
-                              )}
-                              {ql.discount > 0 && <Muted>−{money(ql.discount)}</Muted>}
-                            </>
-                          ) : (
-                            '…'
-                          )}
-                        </Td>
-                        <Td>
-                          <IconBtn onClick={() => remove(l.key)} aria-label={t('common.delete')}>
-                            <Trash2 size={14} />
-                          </IconBtn>
-                        </Td>
+              <Paged rows={lines}>
+                {(pageRows) => (
+                  <Table>
+                    <thead>
+                      <tr>
+                        <Th>{t('services.name')}</Th>
+                        <Th>{t('appointments.doctor')}</Th>
+                        <Th>{t('appointments.quantity')}</Th>
+                        <Th>{t('register.discount')}</Th>
+                        <Th style={{ textAlign: 'right' }}>{t('appointments.subtotal')}</Th>
+                        <Th />
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((l) => {
+                        const s = serviceById.get(l.serviceId);
+                        const ql = quoted(l.key);
+                        const course = discountAllowed(l);
+                        return (
+                          <tr key={l.key}>
+                            <Td>
+                              <WithThumb>
+                                {s?.image && <ServiceThumb src={s.image} alt="" $size={28} />}
+                                <span>{s?.name ?? '—'}</span>
+                              </WithThumb>
+                              <Muted>
+                                {s ? typeOf(s).label : ''}
+                                {l.referralId ? ` · ${t('register.fromReferral')}` : ''}
+                              </Muted>
+                            </Td>
+                            <Td>
+                              {s?.kind === 'CONSULTATION' ? (
+                                <Select
+                                  value={l.doctorId ?? ''}
+                                  onChange={(e) =>
+                                    patch(l.key, { doctorId: e.target.value || null })
+                                  }
+                                >
+                                  <option value="">{t('appointments.selectDoctor')}</option>
+                                  {doctors.map((d) => (
+                                    <option key={d.id} value={d.id}>
+                                      {d.fullName}
+                                    </option>
+                                  ))}
+                                </Select>
+                              ) : (
+                                <Muted>{t('register.noDoctor')}</Muted>
+                              )}
+                            </Td>
+                            <Td>
+                              <Qty
+                                type="number"
+                                min={1}
+                                value={l.quantity}
+                                onChange={(e) =>
+                                  patch(l.key, {
+                                    quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                                  })
+                                }
+                              />
+                            </Td>
+                            <Td>
+                              {course ? (
+                                <CourseCell>
+                                  <label>
+                                    <input
+                                      type="checkbox"
+                                      checked={l.fullCourse === true}
+                                      onChange={(e) =>
+                                        patch(l.key, { fullCourse: e.target.checked })
+                                      }
+                                    />{' '}
+                                    {t('register.paidUpfront')}
+                                  </label>
+                                  {l.fullCourse && (
+                                    <span>
+                                      <Qty
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        value={l.discountPercent ?? 0}
+                                        onChange={(e) =>
+                                          patch(l.key, {
+                                            discountPercent: Math.min(
+                                              100,
+                                              Math.max(0, Number(e.target.value) || 0),
+                                            ),
+                                          })
+                                        }
+                                      />{' '}
+                                      %
+                                    </span>
+                                  )}
+                                </CourseCell>
+                              ) : (
+                                <Muted>—</Muted>
+                              )}
+                            </Td>
+                            <Td style={{ textAlign: 'right' }}>
+                              {ql ? (
+                                <>
+                                  {ql.unitPrice === 0 && s?.isFollowUp ? (
+                                    <FreeHint>{t('register.free')}</FreeHint>
+                                  ) : (
+                                    money(ql.total)
+                                  )}
+                                  {ql.discount > 0 && <Muted>−{money(ql.discount)}</Muted>}
+                                </>
+                              ) : (
+                                '…'
+                              )}
+                            </Td>
+                            <Td>
+                              <IconBtn
+                                onClick={() => remove(l.key)}
+                                aria-label={t('common.delete')}
+                              >
+                                <Trash2 size={14} />
+                              </IconBtn>
+                            </Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </Table>
+                )}
+              </Paged>
             )}
 
             {quoteError && (

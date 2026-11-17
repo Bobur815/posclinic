@@ -138,7 +138,7 @@ export function PatientDetails() {
               </div>
               <DataState loading={false} error={null} empty={!visits.length} emptyText={t('appointments.noAppointments')}>
                 <div style={{ overflowX: 'auto' }}>
-                  <VisitsTable rows={visits} onOpen={setOpen} showPatient={false} />
+                  <VisitsTable rows={visits} onOpen={setOpen} showPatient={false} paged />
                 </div>
               </DataState>
             </Card>

@@ -20,8 +20,13 @@ import {
 import { VisitsTable } from './VisitsTable';
 import { AppointmentDetailsModal } from './AppointmentDetailsModal';
 
-const PAGE_SIZE = 25;
-const STATUSES: AppointmentStatus[] = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+const STATUSES: AppointmentStatus[] = [
+  'SCHEDULED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+  'NO_SHOW',
+];
 
 export function AppointmentList() {
   const { t } = useTranslation();
@@ -31,6 +36,7 @@ export function AppointmentList() {
   const [status, setStatus] = useState('');
   const [doctorId, setDoctorId] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [open, setOpen] = useState<Appointment | null>(null);
 
   useEffect(() => setPage(1), [from, to, status, doctorId]);
@@ -43,9 +49,9 @@ export function AppointmentList() {
         status,
         doctorId,
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
       }),
-    [from, to, status, doctorId, page],
+    [from, to, status, doctorId, page, pageSize],
   );
 
   const reset = () => {
@@ -70,10 +76,20 @@ export function AppointmentList() {
 
       <FilterBar>
         <Field label={t('common.from')}>
-          <Input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+          <Input
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => setFrom(e.target.value)}
+          />
         </Field>
         <Field label={t('common.to')}>
-          <Input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+          <Input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => setTo(e.target.value)}
+          />
         </Field>
         <Field label={t('appointments.status')}>
           <Select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -109,11 +125,24 @@ export function AppointmentList() {
           emptyText={t('appointments.noAppointments')}
         >
           {data && <VisitsTable rows={data.items} onOpen={setOpen} />}
-          {data && <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} />}
+          {data && (
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={data.total}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          )}
         </DataState>
       </TableWrap>
 
-      {open && <AppointmentDetailsModal id={open.id} initial={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <AppointmentDetailsModal id={open.id} initial={open} onClose={() => setOpen(null)} />
+      )}
     </Page>
   );
 }

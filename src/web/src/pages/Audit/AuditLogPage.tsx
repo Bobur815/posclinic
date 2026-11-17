@@ -19,12 +19,14 @@ import {
   Tr,
 } from '../../components/ui';
 
-const PAGE_SIZE = 50;
-
 export function AuditLogPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
-  const { data, loading, error, reload } = useAsync(() => auditApi.list(page, PAGE_SIZE), [page]);
+  const [pageSize, setPageSize] = useState(50);
+  const { data, loading, error, reload } = useAsync(
+    () => auditApi.list(page, pageSize),
+    [page, pageSize],
+  );
 
   return (
     <Page>
@@ -78,7 +80,16 @@ export function AuditLogPage() {
             </tbody>
           </Table>
           {data && (
-            <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPage={setPage} />
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={data.total}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
           )}
         </DataState>
       </TableWrap>

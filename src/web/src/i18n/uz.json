@@ -372,5 +372,11 @@
     "toDark": "Tungi rejimga oʻtish",
     "toLight": "Kunduzgi rejimga oʻtish",
     "value": "Klinikangiz har doim nazoratda"
+  },
+  "pagination": {
+    "showing": "{{from}}–{{to}}, jami {{total}}",
+    "prev": "Oldingi sahifa",
+    "next": "Keyingi sahifa",
+    "rowsPerPage": "Sahifada:"
   }
 }

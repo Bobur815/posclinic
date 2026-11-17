@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
@@ -128,7 +129,10 @@ const SearchInput = styled.input`
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
   width: 240px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const AddBtn = styled.button`
@@ -143,7 +147,9 @@ const AddBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const TableWrapper = styled.div`
@@ -177,8 +183,12 @@ const Td = styled.td`
 `;
 
 const Tr = styled.tr`
-  &:last-child td { border-bottom: none; }
-  &:hover td { background: ${({ theme }) => theme.colors.background}; }
+  &:last-child td {
+    border-bottom: none;
+  }
+  &:hover td {
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const Badge = styled.span<{ $active: boolean }>`
@@ -197,7 +207,10 @@ const ActionBtn = styled.button`
   padding: 4px;
   border-radius: 4px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  &:hover { color: ${({ theme }) => theme.colors.primary}; background: ${({ theme }) => theme.colors.background}; }
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const EmptyState = styled.div`
@@ -210,7 +223,7 @@ const EmptyState = styled.div`
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -247,7 +260,9 @@ const CloseBtn = styled.button`
   padding: 4px;
   border-radius: 4px;
   display: flex;
-  &:hover { color: ${({ theme }) => theme.colors.text}; }
+  &:hover {
+    color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
 const FormGrid = styled.div`
@@ -279,7 +294,10 @@ const Input = styled.input`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const Select = styled.select`
@@ -289,7 +307,10 @@ const Select = styled.select`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 13px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const ModalFooter = styled.div`
@@ -321,8 +342,13 @@ const SaveBtn = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const emptyForm: ServiceForm = {
@@ -346,7 +372,9 @@ export function ServiceList() {
   const { t } = useTranslation();
   const toast = useToast();
   // Main refuses services:create/update for other roles; this only hides the controls.
-  const canEdit = useAuthStore((s) => s.user?.role === 'CLINIC_ADMIN' || s.user?.role === 'SUPER_ADMIN');
+  const canEdit = useAuthStore(
+    (s) => s.user?.role === 'CLINIC_ADMIN' || s.user?.role === 'SUPER_ADMIN',
+  );
   const { serviceTypes } = useCustomTypes();
   const typeName = useTypeName();
   const typeOf = useServiceTypeLabel(serviceTypes);
@@ -371,7 +399,9 @@ export function ServiceList() {
   }, []);
 
   const dataVersion = useDataVersion(['services']);
-  useEffect(() => { loadServices(); }, [loadServices, dataVersion]);
+  useEffect(() => {
+    loadServices();
+  }, [loadServices, dataVersion]);
 
   // Filtered here, not with services:search: that one lists active services only (the visit
   // picker), and an admin must find an inactive service to switch it back on.
@@ -447,24 +477,31 @@ export function ServiceList() {
     }
   };
 
-  const handleChange = (field: keyof ServiceForm) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const value =
-      field === 'active' || field === 'isFollowUp'
-        ? (e.target as HTMLSelectElement).value === 'true'
-        : e.target.value;
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleChange =
+    (field: keyof ServiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const value =
+        field === 'active' || field === 'isFollowUp'
+          ? (e.target as HTMLSelectElement).value === 'true'
+          : e.target.value;
+      setForm((prev) => ({ ...prev, [field]: value }));
+    };
 
   return (
     <Page>
       {showModal && (
-        <Overlay onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+        <Overlay
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false);
+          }}
+        >
           <Modal>
             <ModalHeader>
-              <ModalTitle>{editingService ? t('services.editService') : t('services.newService')}</ModalTitle>
-              <CloseBtn onClick={() => setShowModal(false)}><X size={18} /></CloseBtn>
+              <ModalTitle>
+                {editingService ? t('services.editService') : t('services.newService')}
+              </ModalTitle>
+              <CloseBtn onClick={() => setShowModal(false)}>
+                <X size={18} />
+              </CloseBtn>
             </ModalHeader>
             <FormGrid>
               <FormGroup>
@@ -473,15 +510,30 @@ export function ServiceList() {
               </FormGroup>
               <FormGroup>
                 <Label>{t('services.price')}</Label>
-                <Input type="number" min={0} value={form.price} onChange={handleChange('price')} placeholder="0" required />
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.price}
+                  onChange={handleChange('price')}
+                  placeholder="0"
+                  required
+                />
               </FormGroup>
               <FullWidth>
                 <Label>{t('services.name')}</Label>
                 <Input value={form.name} onChange={handleChange('name')} required />
               </FullWidth>
               <FormGroup>
-                <Label>{t('services.duration')} ({t('common.minutes')})</Label>
-                <Input type="number" min={0} value={form.duration} onChange={handleChange('duration')} placeholder="30" />
+                <Label>
+                  {t('services.duration')} ({t('common.minutes')})
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.duration}
+                  onChange={handleChange('duration')}
+                  placeholder="30"
+                />
               </FormGroup>
               <FormGroup>
                 <Label>{t('services.kind')}</Label>
@@ -491,9 +543,14 @@ export function ServiceList() {
                     const v = e.target.value;
                     if (v.startsWith('type:')) {
                       const type = serviceTypes.find((x) => x.id === v.slice(5));
-                      if (type) setForm((p) => ({ ...p, serviceTypeId: type.id, kind: type.behavior }));
+                      if (type)
+                        setForm((p) => ({ ...p, serviceTypeId: type.id, kind: type.behavior }));
                     } else {
-                      setForm((p) => ({ ...p, serviceTypeId: null, kind: v.slice(5) as ServiceKind }));
+                      setForm((p) => ({
+                        ...p,
+                        serviceTypeId: null,
+                        kind: v.slice(5) as ServiceKind,
+                      }));
                     }
                   }}
                 >
@@ -601,7 +658,11 @@ export function ServiceList() {
                   />
                 </SmallBtn>
                 {form.image && (
-                  <SmallBtn as="button" type="button" onClick={() => setForm((prev) => ({ ...prev, image: null }))}>
+                  <SmallBtn
+                    as="button"
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, image: null }))}
+                  >
                     <Trash2 size={14} />
                     {t('services.removeImage')}
                   </SmallBtn>
@@ -633,7 +694,9 @@ export function ServiceList() {
         <Title>{t('services.title')}</Title>
         <Controls>
           <SearchWrapper>
-            <SearchIcon><Search size={14} /></SearchIcon>
+            <SearchIcon>
+              <Search size={14} />
+            </SearchIcon>
             <SearchInput
               placeholder={t('services.searchPlaceholder')}
               value={searchQuery}
@@ -655,59 +718,65 @@ export function ServiceList() {
         ) : filtered.length === 0 ? (
           <EmptyState>{t('services.noServices')}</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th />
-                <Th>{t('services.code')}</Th>
-                <Th>{t('services.name')}</Th>
-                <Th>{t('services.kind')}</Th>
-                <Th>{t('services.price')}</Th>
-                <Th>{t('mxik.short')}</Th>
-                <Th>{t('services.duration')}</Th>
-                <Th>{t('common.status')}</Th>
-                <Th>{t('common.actions')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((svc) => (
-                <Tr key={svc.id}>
-                  <Td style={{ width: 52 }}>
-                    {svc.image ? (
-                      <Thumb $size={36} src={svc.image} alt="" />
-                    ) : (
-                      <ThumbEmpty $size={36}>
-                        <ImageIcon size={14} />
-                      </ThumbEmpty>
-                    )}
-                  </Td>
-                  <Td style={{ color: '#0891b2', fontWeight: 500 }}>{svc.code}</Td>
-                  <Td>{svc.name}</Td>
-                  <Td>
-                    {typeOf(svc).label}
-                    {svc.isFollowUp ? ` · ${t('services.followUpShort')}` : ''}
-                  </Td>
-                  <Td>{Number(svc.price).toLocaleString()} {t('common.currency')}</Td>
-                  <Td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>
-                    {svc.mxik ?? <span style={{ opacity: 0.5 }}>{t('mxik.byKind')}</span>}
-                  </Td>
-                  <Td>{svc.duration ? `${svc.duration} ${t('common.minutes')}` : '—'}</Td>
-                  <Td>
-                    <Badge $active={svc.active}>
-                      {svc.active ? t('common.active') : t('common.inactive')}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    {canEdit && (
-                      <ActionBtn onClick={() => openEdit(svc)}>
-                        <Edit2 size={14} />
-                      </ActionBtn>
-                    )}
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <Paged rows={filtered} resetKey={searchQuery}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th />
+                    <Th>{t('services.code')}</Th>
+                    <Th>{t('services.name')}</Th>
+                    <Th>{t('services.kind')}</Th>
+                    <Th>{t('services.price')}</Th>
+                    <Th>{t('mxik.short')}</Th>
+                    <Th>{t('services.duration')}</Th>
+                    <Th>{t('common.status')}</Th>
+                    <Th>{t('common.actions')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((svc) => (
+                    <Tr key={svc.id}>
+                      <Td style={{ width: 52 }}>
+                        {svc.image ? (
+                          <Thumb $size={36} src={svc.image} alt="" />
+                        ) : (
+                          <ThumbEmpty $size={36}>
+                            <ImageIcon size={14} />
+                          </ThumbEmpty>
+                        )}
+                      </Td>
+                      <Td style={{ color: '#0891b2', fontWeight: 500 }}>{svc.code}</Td>
+                      <Td>{svc.name}</Td>
+                      <Td>
+                        {typeOf(svc).label}
+                        {svc.isFollowUp ? ` · ${t('services.followUpShort')}` : ''}
+                      </Td>
+                      <Td>
+                        {Number(svc.price).toLocaleString()} {t('common.currency')}
+                      </Td>
+                      <Td style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>
+                        {svc.mxik ?? <span style={{ opacity: 0.5 }}>{t('mxik.byKind')}</span>}
+                      </Td>
+                      <Td>{svc.duration ? `${svc.duration} ${t('common.minutes')}` : '—'}</Td>
+                      <Td>
+                        <Badge $active={svc.active}>
+                          {svc.active ? t('common.active') : t('common.inactive')}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        {canEdit && (
+                          <ActionBtn onClick={() => openEdit(svc)}>
+                            <Edit2 size={14} />
+                          </ActionBtn>
+                        )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         )}
       </TableWrapper>
     </Page>

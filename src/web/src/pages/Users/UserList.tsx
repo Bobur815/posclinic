@@ -1,3 +1,4 @@
+import { Paged } from '../../components/ui';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserCog, Plus, Pencil, RefreshCw, KeyRound, Search } from 'lucide-react';
@@ -51,7 +52,12 @@ export function UserList() {
     () =>
       (data ?? [])
         .filter((u) => showInactive || u.active)
-        .filter((u) => !q || u.fullName.toLowerCase().includes(q) || u.phone.includes(q.replace(/\D/g, '') || q))
+        .filter(
+          (u) =>
+            !q ||
+            u.fullName.toLowerCase().includes(q) ||
+            u.phone.includes(q.replace(/\D/g, '') || q),
+        )
         .sort((a, b) => a.fullName.localeCompare(b.fullName)),
     [data, q, showInactive],
   );
@@ -78,54 +84,90 @@ export function UserList() {
       <FilterBar>
         <Field label={t('common.search')}>
           <div style={{ position: 'relative' }}>
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('staff.searchPlaceholder')} style={{ paddingLeft: 32 }} />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('staff.searchPlaceholder')}
+              style={{ paddingLeft: 32 }}
+            />
             <Search size={16} style={{ position: 'absolute', left: 10, top: 11, opacity: 0.5 }} />
           </div>
         </Field>
-        <Checkbox label={t('common.showInactive')} checked={showInactive} onChange={setShowInactive} />
+        <Checkbox
+          label={t('common.showInactive')}
+          checked={showInactive}
+          onChange={setShowInactive}
+        />
       </FilterBar>
 
       <TableWrap>
-        <DataState loading={loading && !data} error={error} onRetry={reload} empty={rows.length === 0} emptyText={t('staff.noUsers')}>
-          <Table>
-            <thead>
-              <tr>
-                <Th>{t('staff.fullName')}</Th>
-                <Th>{t('staff.phone')}</Th>
-                <Th>{t('staff.email')}</Th>
-                <Th>{t('staff.role')}</Th>
-                <Th>{t('common.status')}</Th>
-                <Th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((u) => (
-                <Tr key={u.id} $dim={!u.active}>
-                  <Td>
-                    {u.fullName}
-                    {u.id === me?.id && (
-                      <>
-                        {' '}
-                        <Badge $tone="muted">{t('staff.you')}</Badge>
-                      </>
-                    )}
-                  </Td>
-                  <Td $nowrap>{showPhone(u.phone)}</Td>
-                  <Td $muted>{u.email || '—'}</Td>
-                  <Td><Badge>{types.staffType(u.staffTypeId) ?? t(`roles.${u.role}`, u.role)}</Badge></Td>
-                  <Td><ActiveBadge active={u.active} /></Td>
-                  <Td $right $nowrap>
-                    <Button $small $variant="ghost" onClick={() => setResetting(u)} title={t('staff.resetPassword')} aria-label={t('staff.resetPassword')}>
-                      <KeyRound />
-                    </Button>
-                    <Button $small $variant="ghost" onClick={() => setEditing(u)} aria-label={t('common.edit')}>
-                      <Pencil />
-                    </Button>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+        <DataState
+          loading={loading && !data}
+          error={error}
+          onRetry={reload}
+          empty={rows.length === 0}
+          emptyText={t('staff.noUsers')}
+        >
+          <Paged rows={rows} resetKey={`${q}|${showInactive}`}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('staff.fullName')}</Th>
+                    <Th>{t('staff.phone')}</Th>
+                    <Th>{t('staff.email')}</Th>
+                    <Th>{t('staff.role')}</Th>
+                    <Th>{t('common.status')}</Th>
+                    <Th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((u) => (
+                    <Tr key={u.id} $dim={!u.active}>
+                      <Td>
+                        {u.fullName}
+                        {u.id === me?.id && (
+                          <>
+                            {' '}
+                            <Badge $tone="muted">{t('staff.you')}</Badge>
+                          </>
+                        )}
+                      </Td>
+                      <Td $nowrap>{showPhone(u.phone)}</Td>
+                      <Td $muted>{u.email || '—'}</Td>
+                      <Td>
+                        <Badge>
+                          {types.staffType(u.staffTypeId) ?? t(`roles.${u.role}`, u.role)}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <ActiveBadge active={u.active} />
+                      </Td>
+                      <Td $right $nowrap>
+                        <Button
+                          $small
+                          $variant="ghost"
+                          onClick={() => setResetting(u)}
+                          title={t('staff.resetPassword')}
+                          aria-label={t('staff.resetPassword')}
+                        >
+                          <KeyRound />
+                        </Button>
+                        <Button
+                          $small
+                          $variant="ghost"
+                          onClick={() => setEditing(u)}
+                          aria-label={t('common.edit')}
+                        >
+                          <Pencil />
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
         </DataState>
       </TableWrap>
 
@@ -211,7 +253,13 @@ function UserForm({
       <form onSubmit={save} style={{ display: 'contents' }}>
         {err && <ErrorBanner>{err}</ErrorBanner>}
         <Field label={t('staff.fullName')}>
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={200} autoFocus required />
+          <Input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            maxLength={200}
+            autoFocus
+            required
+          />
         </Field>
         <FormGrid>
           <Field
@@ -219,13 +267,25 @@ function UserForm({
             hint={t('staff.phoneHint')}
             error={phoneTouched && !phoneNorm ? t('errors.invalid_phone') : null}
           >
-            <PhoneInput value={phone} onChange={setPhone} invalid={phoneTouched && !phoneNorm} required />
+            <PhoneInput
+              value={phone}
+              onChange={setPhone}
+              invalid={phoneTouched && !phoneNorm}
+              required
+            />
           </Field>
-          <Field label={`${t('staff.email')} (${t('common.optional')})`} error={emailBad ? t('errors.invalid_email') : null}>
+          <Field
+            label={`${t('staff.email')} (${t('common.optional')})`}
+            error={emailBad ? t('errors.invalid_email') : null}
+          >
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <Field label={t('staff.role')} hint={isSelf ? t('staff.selfLocked') : undefined}>
-            <Select value={role} onChange={(e) => setRole(e.target.value as StaffRole)} disabled={isSelf}>
+            <Select
+              value={role}
+              onChange={(e) => setRole(e.target.value as StaffRole)}
+              disabled={isSelf}
+            >
               {roleOptions.map((r) => (
                 <option key={r} value={r}>
                   {t(`roles.${r}`)}
@@ -236,15 +296,32 @@ function UserForm({
           {!user && (
             <Field
               label={t('staff.password')}
-              error={password && passwordBad ? t('errors.password_too_short', { min: MIN_PASSWORD }) : null}
+              error={
+                password && passwordBad
+                  ? t('errors.password_too_short', { min: MIN_PASSWORD })
+                  : null
+              }
               hint={t('staff.passwordHint', { min: MIN_PASSWORD })}
             >
-              <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </Field>
           )}
         </FormGrid>
-        <Checkbox label={t('common.active')} checked={active} onChange={setActive} disabled={isSelf} />
-        {role !== 'CLINIC_ADMIN' && role !== 'SUPER_ADMIN' && <small style={{ opacity: 0.7 }}>{t('staff.tillOnlyHint')}</small>}
+        <Checkbox
+          label={t('common.active')}
+          checked={active}
+          onChange={setActive}
+          disabled={isSelf}
+        />
+        {role !== 'CLINIC_ADMIN' && role !== 'SUPER_ADMIN' && (
+          <small style={{ opacity: 0.7 }}>{t('staff.tillOnlyHint')}</small>
+        )}
         <button type="submit" hidden />
       </form>
     </Modal>
@@ -292,11 +369,28 @@ function ResetPasswordModal({ user, onClose }: { user: StaffUser; onClose: () =>
     >
       <form onSubmit={save} style={{ display: 'contents' }}>
         {err && <ErrorBanner>{err}</ErrorBanner>}
-        <Field label={t('settings.newPassword')} hint={t('staff.passwordHint', { min: MIN_PASSWORD })}>
-          <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+        <Field
+          label={t('settings.newPassword')}
+          hint={t('staff.passwordHint', { min: MIN_PASSWORD })}
+        >
+          <Input
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+          />
         </Field>
-        <Field label={t('settings.confirmPassword')} error={mismatch ? t('errors.password_mismatch') : null}>
-          <Input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <Field
+          label={t('settings.confirmPassword')}
+          error={mismatch ? t('errors.password_mismatch') : null}
+        >
+          <Input
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
         </Field>
         <small style={{ opacity: 0.7 }}>{t('staff.resetHint')}</small>
         <button type="submit" hidden />

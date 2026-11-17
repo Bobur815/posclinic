@@ -1,3 +1,4 @@
+import { Paged } from '../../components/common/Pagination';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -132,8 +133,10 @@ const PaymentMethodGrid = styled.div`
 const MethodBtn = styled.button<{ $active: boolean }>`
   padding: 14px;
   border-radius: ${({ theme }) => theme.borderRadius};
-  border: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
-  background: ${({ $active, theme }) => ($active ? `${theme.colors.primary}15` : theme.colors.background)};
+  border: 2px solid
+    ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  background: ${({ $active, theme }) =>
+    $active ? `${theme.colors.primary}15` : theme.colors.background};
   color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.text)};
   font-size: 14px;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
@@ -196,8 +199,13 @@ const ConfirmBtn = styled.button`
   align-items: center;
   justify-content: center;
   gap: 8px;
-  &:hover:not(:disabled) { opacity: 0.9; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 /** v2.6: money is taken inside an open cash shift only (main refuses otherwise). */
@@ -267,9 +275,12 @@ const ActionBtn = styled.button<{ $primary?: boolean }>`
   font-weight: 500;
   cursor: pointer;
   border: ${({ $primary, theme }) => ($primary ? 'none' : `1px solid ${theme.colors.border}`)};
-  background: ${({ $primary, theme }) => ($primary ? theme.colors.primary : theme.colors.background)};
+  background: ${({ $primary, theme }) =>
+    $primary ? theme.colors.primary : theme.colors.background};
   color: ${({ $primary }) => ($primary ? 'white' : 'inherit')};
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'INSURANCE';
@@ -350,9 +361,13 @@ export function CheckoutPage() {
       <Page>
         <Card>
           <SuccessCard>
-            <SuccessIcon><CheckCircle size={64} /></SuccessIcon>
+            <SuccessIcon>
+              <CheckCircle size={64} />
+            </SuccessIcon>
             <SuccessTitle>{t('checkout.paymentSuccess')}</SuccessTitle>
-            <SuccessSubtitle>{appointment.appointmentNumber} — {appointment.patient.fullName}</SuccessSubtitle>
+            <SuccessSubtitle>
+              {appointment.appointmentNumber} — {appointment.patient.fullName}
+            </SuccessSubtitle>
             <SuccessActions>
               <ActionBtn $primary onClick={handlePrint}>
                 <Printer size={15} />
@@ -361,9 +376,7 @@ export function CheckoutPage() {
               <ActionBtn onClick={() => navigate(`/appointments/${id}`)}>
                 {t('appointments.viewDetails')}
               </ActionBtn>
-              <ActionBtn onClick={() => navigate('/appointments')}>
-                {t('common.back')}
-              </ActionBtn>
+              <ActionBtn onClick={() => navigate('/appointments')}>{t('common.back')}</ActionBtn>
             </SuccessActions>
           </SuccessCard>
         </Card>
@@ -378,107 +391,121 @@ export function CheckoutPage() {
         {t('common.back')}
       </BackBtn>
 
-      <Title>{t('appointments.checkout')} — {appointment.appointmentNumber}</Title>
+      <Title>
+        {t('appointments.checkout')} — {appointment.appointmentNumber}
+      </Title>
 
       <Columns>
-      <Card>
-        <SectionTitle>{t('appointments.services')}</SectionTitle>
-        <Table>
-          <thead>
-            <tr>
-              <Th>{t('services.name')}</Th>
-              <Th>{t('appointments.quantity')}</Th>
-              <Th>{t('appointments.unitPrice')}</Th>
-              <Th>{t('appointments.subtotal')}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {appointment.items.map((item) => (
-              <tr key={item.id}>
-                <Td>{item.serviceName}</Td>
-                <Td>{item.quantity}</Td>
-                <Td>{Number(item.unitPrice).toLocaleString()} {t('common.currency')}</Td>
-                <Td>{Number(item.total).toLocaleString()} {t('common.currency')}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        <TotalSection>
-          <TotalRow>
-            <TotalLabel>{t('common.total')}</TotalLabel>
-            <TotalValue $highlight>
-              {Number(appointment.totalAmount).toLocaleString()} {t('common.currency')}
-            </TotalValue>
-          </TotalRow>
-          {Number(appointment.paidAmount) > 0 && (
+        <Card>
+          <SectionTitle>{t('appointments.services')}</SectionTitle>
+          <Paged rows={appointment.items}>
+            {(pageRows) => (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('services.name')}</Th>
+                    <Th>{t('appointments.quantity')}</Th>
+                    <Th>{t('appointments.unitPrice')}</Th>
+                    <Th>{t('appointments.subtotal')}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((item) => (
+                    <tr key={item.id}>
+                      <Td>{item.serviceName}</Td>
+                      <Td>{item.quantity}</Td>
+                      <Td>
+                        {Number(item.unitPrice).toLocaleString()} {t('common.currency')}
+                      </Td>
+                      <Td>
+                        {Number(item.total).toLocaleString()} {t('common.currency')}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Paged>
+          <TotalSection>
             <TotalRow>
-              <TotalLabel>{t('appointments.paidAmount')}</TotalLabel>
-              <TotalValue style={{ color: '#22c55e' }}>
-                {Number(appointment.paidAmount).toLocaleString()} {t('common.currency')}
-              </TotalValue>
-            </TotalRow>
-          )}
-          {remaining < Number(appointment.totalAmount) && (
-            <TotalRow>
-              <TotalLabel style={{ fontWeight: 600 }}>{t('checkout.remaining')}</TotalLabel>
+              <TotalLabel>{t('common.total')}</TotalLabel>
               <TotalValue $highlight>
-                {remaining.toLocaleString()} {t('common.currency')}
+                {Number(appointment.totalAmount).toLocaleString()} {t('common.currency')}
               </TotalValue>
             </TotalRow>
+            {Number(appointment.paidAmount) > 0 && (
+              <TotalRow>
+                <TotalLabel>{t('appointments.paidAmount')}</TotalLabel>
+                <TotalValue style={{ color: '#22c55e' }}>
+                  {Number(appointment.paidAmount).toLocaleString()} {t('common.currency')}
+                </TotalValue>
+              </TotalRow>
+            )}
+            {remaining < Number(appointment.totalAmount) && (
+              <TotalRow>
+                <TotalLabel style={{ fontWeight: 600 }}>{t('checkout.remaining')}</TotalLabel>
+                <TotalValue $highlight>
+                  {remaining.toLocaleString()} {t('common.currency')}
+                </TotalValue>
+              </TotalRow>
+            )}
+          </TotalSection>
+        </Card>
+
+        <PayColumn>
+          <Card>
+            <SectionTitle>{t('checkout.selectPaymentMethod')}</SectionTitle>
+            <PaymentMethodGrid>
+              {(['CASH', 'CARD', 'TRANSFER', 'INSURANCE'] as PaymentMethod[]).map((m) => (
+                <MethodBtn
+                  key={m}
+                  $active={paymentMethod === m}
+                  onClick={() => setPaymentMethod(m)}
+                >
+                  {t(`appointments.paymentMethods.${m}`, m)}
+                </MethodBtn>
+              ))}
+            </PaymentMethodGrid>
+          </Card>
+
+          {shiftOpen === false && (
+            <ShiftNotice>
+              <span>{t('shifts.neededForPayment')}</span>
+              <button type="button" onClick={() => navigate('/shifts')}>
+                <Wallet size={14} />
+                {t('shifts.open')}
+              </button>
+            </ShiftNotice>
           )}
-        </TotalSection>
-      </Card>
 
-      <PayColumn>
-      <Card>
-        <SectionTitle>{t('checkout.selectPaymentMethod')}</SectionTitle>
-        <PaymentMethodGrid>
-          {(['CASH', 'CARD', 'TRANSFER', 'INSURANCE'] as PaymentMethod[]).map((m) => (
-            <MethodBtn key={m} $active={paymentMethod === m} onClick={() => setPaymentMethod(m)}>
-              {t(`appointments.paymentMethods.${m}`, m)}
-            </MethodBtn>
-          ))}
-        </PaymentMethodGrid>
-      </Card>
+          <Card>
+            <InputGroup>
+              <Label>{t('checkout.enterAmount')}</Label>
+              <Input
+                type="number"
+                min={0}
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value)}
+                placeholder="0"
+              />
+              {amountStr && enteredAmount > 0 && (
+                <ChangeDisplay $positive={change >= 0}>
+                  {change >= 0
+                    ? `${t('checkout.change')}: ${change.toLocaleString()} ${t('common.currency')}`
+                    : `${t('checkout.shortfall')}: ${Math.abs(change).toLocaleString()} ${t('common.currency')}`}
+                </ChangeDisplay>
+              )}
+            </InputGroup>
 
-      {shiftOpen === false && (
-        <ShiftNotice>
-          <span>{t('shifts.neededForPayment')}</span>
-          <button type="button" onClick={() => navigate('/shifts')}>
-            <Wallet size={14} />
-            {t('shifts.open')}
-          </button>
-        </ShiftNotice>
-      )}
-
-      <Card>
-        <InputGroup>
-          <Label>{t('checkout.enterAmount')}</Label>
-          <Input
-            type="number"
-            min={0}
-            value={amountStr}
-            onChange={(e) => setAmountStr(e.target.value)}
-            placeholder="0"
-          />
-          {amountStr && enteredAmount > 0 && (
-            <ChangeDisplay $positive={change >= 0}>
-              {change >= 0
-                ? `${t('checkout.change')}: ${change.toLocaleString()} ${t('common.currency')}`
-                : `${t('checkout.shortfall')}: ${Math.abs(change).toLocaleString()} ${t('common.currency')}`}
-            </ChangeDisplay>
-          )}
-        </InputGroup>
-
-        <ConfirmBtn
-          onClick={handleConfirm}
-          disabled={isProcessing || enteredAmount <= 0 || shiftOpen === false}
-        >
-          <CheckCircle size={18} />
-          {isProcessing ? t('common.processing') : t('checkout.confirmPayment')}
-        </ConfirmBtn>
-      </Card>
-      </PayColumn>
+            <ConfirmBtn
+              onClick={handleConfirm}
+              disabled={isProcessing || enteredAmount <= 0 || shiftOpen === false}
+            >
+              <CheckCircle size={18} />
+              {isProcessing ? t('common.processing') : t('checkout.confirmPayment')}
+            </ConfirmBtn>
+          </Card>
+        </PayColumn>
       </Columns>
     </Page>
   );
