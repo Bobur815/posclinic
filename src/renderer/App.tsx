@@ -26,7 +26,7 @@ import { ServiceList } from './pages/Services/ServiceList';
 import { DoctorList } from './pages/Doctors/DoctorList';
 import { DailyReport } from './pages/Reports/DailyReport';
 import { ShiftsPage } from './pages/Shifts/ShiftsPage';
-import { SettingsPage } from './pages/Settings/SettingsPage';
+import { SettingsPage, SettingsSectionPage } from './pages/Settings/SettingsPage';
 import { UserSettingsPage } from './pages/Settings/UserSettingsPage';
 
 /** Home: doctors and nurses work from their queue; everyone else gets the dashboard. */
@@ -131,6 +131,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="settings/:section"
+            element={
+              <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLINIC_ADMIN']}>
+                <SettingsSectionPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Static, so it wins over settings/:section: every role's own account. */}
           <Route path="settings/user" element={<UserSettingsPage />} />
         </Route>
 

@@ -1,262 +1,149 @@
-import React, { useState, useEffect } from 'react';
+import { ArrowLeft, KeyRound, UserCog } from 'lucide-react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { ClinicWorkflowSection } from './ClinicWorkflowSection';
-import { TypesSection } from './TypesSection';
-import { FiscalSection } from './FiscalSection';
-import { CloudSyncSection } from './CloudSyncSection';
-import { LanSection } from './LanSection';
 import { followLan, useIsSatellite } from '../../store/lan-store';
-import { SubscriptionSection } from './SubscriptionSection';
-import { UpdateSection } from './UpdateSection';
-import { Sun, Moon, Globe, Monitor, Info } from 'lucide-react';
-import { useTheme } from '../../theme/ThemeProvider';
+import { SETTINGS_SECTIONS } from './settings-sections';
 
-interface LocalConfig {
-  clinicId: string;
-  clinicName: string;
-  terminalId: string;
-  apiUrl: string;
+/**
+ * Settings, divided into sections as posgro: a grid of tiles, each opening its own page
+ * (/settings/<section>, SettingsSectionPage). Staff and the signed-in person's own account keep
+ * their own pages. Admins only (route-guarded in App.tsx; main enforces every change).
+ */
+export function SettingsPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const isSatellite = useIsSatellite();
+  useEffect(() => {
+    followLan();
+  }, []);
+
+  const tiles = [
+    ...SETTINGS_SECTIONS.filter((s) => !(s.mainOnly && isSatellite)).map((s) => ({
+      key: s.key,
+      icon: s.icon,
+      title: t(s.title),
+      description: t(s.description),
+      path: `/settings/${s.key}`,
+    })),
+    {
+      key: 'users',
+      icon: <UserCog size={30} />,
+      title: t('nav.users'),
+      description: t('settings.tiles.users'),
+      path: '/users',
+    },
+    {
+      key: 'account',
+      icon: <KeyRound size={30} />,
+      title: t('nav.myAccount'),
+      description: t('settings.tiles.account'),
+      path: '/settings/user',
+    },
+  ];
+
+  return (
+    <Page>
+      <Title>{t('settings.title')}</Title>
+      <Grid>
+        {tiles.map((tile) => (
+          <Tile key={tile.key} type="button" onClick={() => navigate(tile.path)}>
+            <Icon>{tile.icon}</Icon>
+            <TileTitle>{tile.title}</TileTitle>
+            <TileDesc>{tile.description}</TileDesc>
+          </Tile>
+        ))}
+      </Grid>
+    </Page>
+  );
+}
+
+/** One settings section on its own page, with the way back to the tiles. */
+export function SettingsSectionPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { section } = useParams<{ section: string }>();
+  const isSatellite = useIsSatellite();
+  useEffect(() => {
+    followLan();
+  }, []);
+
+  const found = SETTINGS_SECTIONS.find((s) => s.key === section);
+  if (!found || (found.mainOnly && isSatellite)) return <Navigate to="/settings" replace />;
+  const Section = found.component;
+
+  return (
+    <SectionPage>
+      <Back type="button" onClick={() => navigate('/settings')}>
+        <ArrowLeft size={14} />
+        {t('settings.title')}
+      </Back>
+      <Section />
+    </SectionPage>
+  );
 }
 
 const Page = styled.div`
-  max-width: 720px;
+  max-width: 1100px;
 `;
-
+const SectionPage = styled.div`
+  max-width: 760px;
+`;
 const Title = styled.h1`
   font-size: 22px;
   font-weight: 700;
   color: ${({ theme }) => theme.colors.text};
   margin-bottom: ${({ theme }) => theme.spacing.lg};
 `;
-
-const Section = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: ${({ theme }) => theme.spacing.md};
 `;
-
-const SectionTitle = styled.h2`
-  font-size: 14px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const Card = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+const Tile = styled.button`
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: ${({ theme }) => theme.spacing.lg};
+  text-align: left;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.borderRadius};
-  overflow: hidden;
+  background: ${({ theme }) => theme.colors.surface};
   box-shadow: ${({ theme }) => theme.shadows.sm};
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: ${({ theme }) => theme.shadows.md};
+    border-color: ${({ theme }) => theme.colors.primary};
+    outline: none;
+  }
 `;
-
-const SettingRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  &:last-child { border-bottom: none; }
+const Icon = styled.div`
+  color: ${({ theme }) => theme.colors.primary};
+  margin-bottom: 6px;
 `;
-
-const SettingInfo = styled.div``;
-
-const SettingLabel = styled.div`
-  font-size: 14px;
-  font-weight: 500;
+const TileTitle = styled.span`
+  font-size: 15px;
+  font-weight: 600;
   color: ${({ theme }) => theme.colors.text};
-  margin-bottom: 2px;
 `;
-
-const SettingDesc = styled.div`
-  font-size: 12px;
+const TileDesc = styled.span`
+  font-size: 13px;
+  line-height: 1.4;
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
-
-const ToggleGroup = styled.div`
-  display: flex;
-  gap: 4px;
-`;
-
-const ToggleBtn = styled.button<{ $active: boolean }>`
-  padding: 6px 14px;
-  border-radius: ${({ theme }) => theme.borderRadius};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary : 'transparent')};
-  color: ${({ $active }) => ($active ? 'white' : 'inherit')};
+const Back = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  padding: 0;
+  border: 0;
+  background: none;
+  color: ${({ theme }) => theme.colors.primary};
   font-size: 13px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s;
 `;
-
-const InfoItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  &:last-child { border-bottom: none; }
-`;
-
-const InfoLabel = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
-
-const InfoValue = styled.span`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 500;
-`;
-
-const Input = styled.input`
-  padding: 8px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 13px;
-  width: 280px;
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.primary}; }
-`;
-
-export function SettingsPage() {
-  const { t, i18n } = useTranslation();
-  const { mode, toggleTheme } = useTheme();
-
-  const setMode = (newMode: 'light' | 'dark') => {
-    if (newMode !== mode) toggleTheme();
-  };
-  const [localConfig, setLocalConfig] = useState<LocalConfig | null>(null);
-  const [appVersion, setAppVersion] = useState('');
-  const isSatellite = useIsSatellite();
-  useEffect(() => {
-    followLan();
-    window.electronAPI.config.getLocalConfig().then((cfg) => setLocalConfig(cfg as LocalConfig));
-    window.electronAPI.app.getVersion().then(setAppVersion);
-  }, []);
-
-  const handleLangChange = (lang: string) => {
-    i18n.changeLanguage(lang);
-    localStorage.setItem('language', lang);
-  };
-
-  return (
-    <Page>
-      <Title>{t('settings.title')}</Title>
-
-      {/* Appearance */}
-      <Section>
-        <SectionTitle>
-          <Monitor size={15} />
-          {t('settings.appearance')}
-        </SectionTitle>
-        <Card>
-          <SettingRow>
-            <SettingInfo>
-              <SettingLabel>{t('settings.theme')}</SettingLabel>
-              <SettingDesc>{t('settings.themeDesc')}</SettingDesc>
-            </SettingInfo>
-            <ToggleGroup>
-              <ToggleBtn $active={mode === 'light'} onClick={() => setMode('light')}>
-                <Sun size={14} />
-                {t('settings.light')}
-              </ToggleBtn>
-              <ToggleBtn $active={mode === 'dark'} onClick={() => setMode('dark')}>
-                <Moon size={14} />
-                {t('settings.dark')}
-              </ToggleBtn>
-            </ToggleGroup>
-          </SettingRow>
-          <SettingRow>
-            <SettingInfo>
-              <SettingLabel>{t('settings.language')}</SettingLabel>
-              <SettingDesc>{t('settings.languageDesc')}</SettingDesc>
-            </SettingInfo>
-            <ToggleGroup>
-              <ToggleBtn $active={i18n.language === 'uz'} onClick={() => handleLangChange('uz')}>
-                <Globe size={14} />
-                UZ
-              </ToggleBtn>
-              <ToggleBtn $active={i18n.language === 'ru'} onClick={() => handleLangChange('ru')}>
-                <Globe size={14} />
-                RU
-              </ToggleBtn>
-            </ToggleGroup>
-          </SettingRow>
-        </Card>
-      </Section>
-
-      {/* Clinic Info */}
-      {localConfig && (
-        <Section>
-          <SectionTitle>
-            <Info size={15} />
-            {t('settings.clinicInfo')}
-          </SectionTitle>
-          <Card>
-            <InfoItem>
-              <InfoLabel>{t('settings.clinicName')}</InfoLabel>
-              <InfoValue>{localConfig.clinicName}</InfoValue>
-            </InfoItem>
-            <InfoItem>
-              <InfoLabel>{t('settings.clinicId')}</InfoLabel>
-              <InfoValue>{localConfig.clinicId}</InfoValue>
-            </InfoItem>
-            <InfoItem>
-              <InfoLabel>{t('settings.terminalId')}</InfoLabel>
-              <InfoValue>{localConfig.terminalId}</InfoValue>
-            </InfoItem>
-            <InfoItem>
-              <InfoLabel>{t('settings.licenseServer')}</InfoLabel>
-              <InfoValue style={{ fontSize: '12px' }}>{localConfig.apiUrl}</InfoValue>
-            </InfoItem>
-          </Card>
-        </Section>
-      )}
-
-      {/* The licence and the cloud sync belong to the main till; a satellite shows its link. */}
-      <ClinicWorkflowSection />
-
-      <TypesSection />
-
-      {!isSatellite && <FiscalSection />}
-
-      {!isSatellite && <SubscriptionSection />}
-
-      {!isSatellite && <CloudSyncSection />}
-
-      <LanSection />
-
-      <UpdateSection />
-
-      {/* About */}
-      <Section>
-        <SectionTitle>
-          <Info size={15} />
-          {t('settings.about')}
-        </SectionTitle>
-        <Card>
-          <InfoItem>
-            <InfoLabel>{t('settings.appName')}</InfoLabel>
-            <InfoValue>POSCLINIC</InfoValue>
-          </InfoItem>
-          <InfoItem>
-            <InfoLabel>{t('settings.version')}</InfoLabel>
-            <InfoValue>v{appVersion}</InfoValue>
-          </InfoItem>
-          <InfoItem>
-            <InfoLabel>{t('settings.developer')}</InfoLabel>
-            <InfoValue>Bobur Ergashev</InfoValue>
-          </InfoItem>
-        </Card>
-      </Section>
-    </Page>
-  );
-}

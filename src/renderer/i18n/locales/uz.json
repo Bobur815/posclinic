@@ -325,7 +325,20 @@
     "appName": "Dastur nomi",
     "developer": "Ishlab chiquvchi",
     "userSettings": "Foydalanuvchi sozlamalari",
-    "licenseServer": "Litsenziya serveri"
+    "licenseServer": "Litsenziya serveri",
+    "general": "Umumiy",
+    "tiles": {
+      "general": "Mavzu, til, klinika va dastur haqida",
+      "clinic": "Qayta qabul, chegirma chegarasi, chipta va parolni saqlash",
+      "types": "Klinikaning o'z buyurtma va xodim turlari",
+      "fiscal": "REGOS:VCR, kassir logini, QQS va MXIK kodlari",
+      "subscription": "Tarif, muddat va litsenziyani tekshirish",
+      "sync": "Bulut bilan sinxronlash va veb-panel",
+      "lan": "Qo'shimcha kassalarni ulash",
+      "update": "Dasturning yangi versiyasi",
+      "users": "Xodimlar, rollar va kirish",
+      "account": "Ismingiz va parolingiz"
+    }
   },
   "print": {
     "receipt": "Chek",
