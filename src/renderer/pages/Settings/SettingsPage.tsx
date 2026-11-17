@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { ClinicWorkflowSection } from './ClinicWorkflowSection';
 import { TypesSection } from './TypesSection';
+import { FiscalSection } from './FiscalSection';
 import { CloudSyncSection } from './CloudSyncSection';
 import { LanSection } from './LanSection';
 import { followLan, useIsSatellite } from '../../store/lan-store';
@@ -224,6 +225,8 @@ export function SettingsPage() {
       <ClinicWorkflowSection />
 
       <TypesSection />
+
+      {!isSatellite && <FiscalSection />}
 
       {!isSatellite && <SubscriptionSection />}
 

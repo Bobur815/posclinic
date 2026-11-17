@@ -150,7 +150,6 @@ describe('cash shifts', () => {
     assert.equal(r.shift.expectedCash, 295_000);
     assert.equal(r.shift.countedCash, 290_000);
     assert.equal(r.shift.difference, -5_000);
-    assert.equal(r.fiscalProblem, null);
     await refusedWith(
       as(desk)('shifts:close', { shiftId: shift.id, countedCash: 0 }),
       'errors.shiftClosed',

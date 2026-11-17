@@ -9,6 +9,8 @@ import {
 } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { money, PAYMENT_METHODS, requireOpenShiftId } from '../clinic/shifts';
+import { fiscalStatusAtPayment } from '../fiscal/fiscal-service';
+import { getFiscalService } from '../fiscal/registry';
 import { getAppConfig } from '../config/app-config';
 import { log } from '../logger';
 import { type RegisterInput, registerOrder } from '../clinic/register-order';
@@ -333,6 +335,8 @@ export function setupAppointmentHandlers(): void {
             include: { patient: true, doctor: true, items: true },
           });
           if (paymentStatus === 'PAID') {
+            // v2.6: with fiscal receipts on, a visit fully paid in cash / card waits for VCR.
+            await fiscalStatusAtPayment(tx, id);
             await completeOrderIfDone(tx, id);
             return tx.appointment.findUniqueOrThrow({
               where: { id },
@@ -342,6 +346,8 @@ export function setupAppointmentHandlers(): void {
           return paid;
         });
 
+        // After commit: VCR is asked in the background; the payment never waits for it.
+        if (updated.paymentStatus === 'PAID') getFiscalService()?.kick();
         return ipcSafe(updated);
       } catch (error) {
         log.error('[appointments:checkout]', errorSummary(error));

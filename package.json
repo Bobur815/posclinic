@@ -10,6 +10,7 @@
     "dev:pos:doctor": "cross-env NODE_ENV=development POSCLINIC_PROFILE=doctor electron .",
     "dev:pos:nurse": "cross-env NODE_ENV=development POSCLINIC_PROFILE=nurse electron .",
     "dev:pos:admin": "cross-env NODE_ENV=development POSCLINIC_PROFILE=admin electron .",
+    "dev:fake-vcr": "tsx scripts/fake-vcr.ts",
     "dev:server": "nest start --watch",
     "build:pos": "cross-env APP_MODE=pos electron-vite build && electron-builder --config electron-builder.config.js",
     "build:server": "nest build",

@@ -264,7 +264,6 @@ export function ShiftsPage() {
               toast.success(
                 diff === 0 ? t('shifts.closedEven') : t('shifts.closedDiff', { amount: fmt(diff) }),
               );
-              if (r.fiscalProblem) toast.error(t(r.fiscalProblem, r.fiscalProblem));
             })
           }
         />

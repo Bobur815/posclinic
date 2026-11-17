@@ -5,6 +5,11 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { UpdateStatusDto } from '../shared/update';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
+  FiscalConfigDto,
+  FiscalConfigInput,
+  FiscalConnectionDto,
+  FiscalStatusDto,
+  FiscalZReportDto,
   MxikHitDto,
   MxikPackageDto,
   TasnifLang,
@@ -160,6 +165,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sessions: {
     tick: (sessionId: string, undo?: boolean) =>
       ipcRenderer.invoke('sessions:tick', sessionId, undo === true),
+  },
+  fiscal: {
+    status: () => ipcRenderer.invoke('fiscal:status'),
+    getConfig: () => ipcRenderer.invoke('fiscal:getConfig'),
+    setConfig: (data: FiscalConfigInput) => ipcRenderer.invoke('fiscal:setConfig', data),
+    test: () => ipcRenderer.invoke('fiscal:test'),
+    retry: (appointmentId: string) => ipcRenderer.invoke('fiscal:retry', appointmentId),
+    retryAll: () => ipcRenderer.invoke('fiscal:retryAll'),
+    duplicate: (appointmentId: string) => ipcRenderer.invoke('fiscal:duplicate', appointmentId),
+    zReport: () => ipcRenderer.invoke('fiscal:zReport'),
+    zOpen: () => ipcRenderer.invoke('fiscal:zOpen'),
+    zClose: () => ipcRenderer.invoke('fiscal:zClose'),
   },
   shifts: {
     getOpen: () => ipcRenderer.invoke('shifts:getOpen'),
@@ -375,6 +392,18 @@ declare global {
       };
       sessions: {
         tick: (sessionId: string, undo?: boolean) => Promise<unknown>;
+      };
+      fiscal: {
+        status: () => Promise<FiscalStatusDto>;
+        getConfig: () => Promise<FiscalConfigDto>;
+        setConfig: (data: FiscalConfigInput) => Promise<FiscalConfigDto>;
+        test: () => Promise<FiscalConnectionDto>;
+        retry: (appointmentId: string) => Promise<'sent' | 'pending' | 'failed' | 'skipped'>;
+        retryAll: () => Promise<true>;
+        duplicate: (appointmentId: string) => Promise<boolean>;
+        zReport: () => Promise<FiscalZReportDto | null>;
+        zOpen: () => Promise<FiscalZReportDto>;
+        zClose: () => Promise<FiscalZReportDto>;
       };
       shifts: {
         getOpen: () => Promise<ShiftDto | null>;

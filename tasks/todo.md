@@ -263,7 +263,7 @@ Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (
 - [x] Sync + server migration (types tables, type ids, DIRECT_SALE, STAFF) + web shows type names.
 - [x] Tests, i18n uz/ru, check + builds.
 
-## v2.6 Fiscal receipts through REGOS:VCR (plan 2026-11-16, waiting for approval)
+## v2.6 Fiscal receipts through REGOS:VCR (approved 2026-11-16, built 2026-11-17)
 
 Copies SavdoChef F18 (`restaurant-app/src/main/fiscal/`: `vcr-client.ts`, `fiscal-service.ts`, `config.ts`, `order-status.ts`, `ofd-link.ts`, `shared/utils/fiscal-receipt.ts`, `test-utils/fake-vcr.ts`, `renderer/views/settings/fiscal-section.ts`) and posgro's tasnif lookups (`posgro/src/main/fiscal/tasnif.ts`). Same rules:
 - REGOS:VCR runs on the **main till's** PC (`http://127.0.0.1:22298/`, JSON-RPC, login `cassir`). Satellites forward every call, so only the main till talks to VCR.
@@ -283,71 +283,71 @@ Copies SavdoChef F18 (`restaurant-app/src/main/fiscal/`: `vcr-client.ts`, `fisca
 Each MXIK has its own package code: the package is always taken from the same MXIK, never mixed.
 
 ### SQLite (in-place, additive: `schema.ts` ADD COLUMN + `schema.sqlite.prisma`)
-- [ ] `services`: `mxik TEXT`, `package_code TEXT` (null = the settings default for its kind).
-- [ ] `appointments`:
+- [x] `services`: `mxik TEXT`, `package_code TEXT` (null = the settings default for its kind).
+- [x] `appointments`:
   - `fiscal_status`: null = fiscal off when paid or never sent; otherwise `PENDING | FISCALIZED | FAILED | SKIPPED`.
   - `fiscal_error`, `fiscal_attempts INT DEFAULT 0`.
   - `fiscal_receipt_id`, `fiscal_receipt_no`, `fiscal_sign`, `fiscal_qr_url`, `fiscal_terminal_id`, `fiscal_at`.
   - Index on `fiscal_status`.
-- [ ] Settings keys `fiscal_*` (as SavdoChef): enabled, host, port, login, password (encrypted), VAT mode, default MXIK + package per kind (consultation / analysis / procedure / direct sale), code prefix.
-- [ ] One-time data upgrade: fill the seeded parasitology services' MXIK + package from the table above, only where empty (Q7).
+- [x] Settings keys `fiscal_*` (as SavdoChef): enabled, host, port, login, password (encrypted), VAT mode, default MXIK + package per kind (consultation / analysis / procedure / direct sale), code prefix.
+- [x] One-time data upgrade: fill the seeded parasitology services' MXIK + package from the table above, only where empty (Q7).
 
 ### Main
-- [ ] `src/main/fiscal/`:
+- [x] `src/main/fiscal/`:
   - `vcr-client.ts` and `ofd-link.ts`: copied.
   - `config.ts`: settings keys, per-kind defaults.
   - `fiscal-service.ts`: send, retry, look up by code, adopt, Z-report open and close, duplicate. No shifts, no debts, no edits.
-- [ ] `src/shared/fiscal-receipt.ts`: a pure builder. One position per paid line:
+- [x] `src/shared/fiscal-receipt.ts`: a pure builder. One position per paid line:
   - `amount` = line `total` in tiyin; `quantity` x 1000;
   - `discount` = line discount in tiyin (the course discount);
   - `icps` / `package_code` from the service, or its kind's default;
   - `barcode` = service code; `vat_value` per VAT mode (Q3).
   - Payments per Q2. Throws on a missing MXIK, or when positions ≠ payments.
-- [ ] `src/main/fiscal/tasnif.ts`:
+- [x] `src/main/fiscal/tasnif.ts`:
   - `searchServices(text, lang)` (by-params) and `packagesFor(mxik)`.
   - 8 s timeout, called from main (no CORS).
   - Answers mapped to `{ code, name, className, packages }`.
-- [ ] `appointments:checkout`: when the visit becomes PAID (Q1) and fiscal is on, set `fiscal_status = PENDING` in the same transaction; after commit, `fiscal.kick()`.
-- [ ] Visit cancel and edit: refused on a FISCALIZED visit (Q5).
-- [ ] IPC, all through `handle()`:
+- [x] `appointments:checkout`: when the visit becomes PAID (Q1) and fiscal is on, set `fiscal_status = PENDING` in the same transaction; after commit, `fiscal.kick()`.
+- [x] Visit cancel and edit: refused on a FISCALIZED visit (Q5).
+- [x] IPC, all through `handle()`:
   - Admin: `fiscal:getConfig`, `fiscal:setConfig`, `fiscal:test`, `fiscal:zReport`, `fiscal:zOpen`, `fiscal:zClose`, `fiscal:searchMxik`, `fiscal:packages`.
   - Reception + admin: `fiscal:retry`, `fiscal:retryAll`.
   - Also: `fiscal:status`, `fiscal:duplicate`.
   - Host allow-list as SavdoChef (`isAllowedVcrHost`); `redirect: 'error'`.
-- [ ] `index.ts`: create the FiscalService on the main till only; `start()` sends what is waiting once after start. `POSCLINIC_VCR_URL` override, unpackaged builds only.
-- [ ] LAN: satellites forward `fiscal:*` like every channel; the password never travels (only `hasPassword`).
+- [x] `index.ts`: create the FiscalService on the main till only; `start()` sends what is waiting once after start. `POSCLINIC_VCR_URL` override, unpackaged builds only.
+- [x] LAN: satellites forward `fiscal:*` like every channel; the password never travels (only `hasPassword`).
 
 ### Renderer
-- [ ] Settings → **Fiscal receipt** (admin):
+- [x] Settings → **Fiscal receipt** (admin):
   - on/off; VCR host, port, login, password; test connection; VAT mode;
   - default MXIK + package per kind, each with the tasnif search;
   - Z-report state with Open / Close buttons;
   - "waiting / failed" counters with "Send again".
-- [ ] Services form: an MXIK field with **Search tasnif**.
+- [x] Services form: an MXIK field with **Search tasnif**.
   - Type words → a list of `code — name`; pick one.
   - The package list is filled from tasnif, and the single `xizmat (marta)` is picked automatically.
   - Validation: 17 digits.
-- [ ] Visit details and list:
+- [x] Visit details and list:
   - a fiscal badge (Sent / Waiting / Failed with the reason);
   - "Send again"; "Print copy" (`Receipt.Duplicate`).
-- [ ] i18n uz + ru for all of it; VCR error texts from SavdoChef (`describeVcrError`).
+- [x] i18n uz + ru for all of it; VCR error texts from SavdoChef (`describeVcrError`).
 
 ### Licence, sync, version
-- [ ] Licence: no new plan feature in v1 (every plan may fiscalise). The gate still applies: read-only mode refuses `fiscal:*` writes, except a retry of a visit already paid.
-- [ ] Sync: `services.mxik` / `package_code` synced (server column + migration + **SyncPushDto** + `sync.dto.test.ts`, lesson 2026-11-16). Fiscal receipt fields stay on the till in v1 (Q7).
-- [ ] Version 2.5.0 → **2.6.0**.
+- [x] Licence: no new plan feature in v1 (every plan may fiscalise). The gate still applies: read-only mode refuses `fiscal:*` writes, except a retry of a visit already paid.
+- [x] Sync: `services.mxik` / `package_code` synced (server column + migration + **SyncPushDto** + `sync.dto.test.ts`, lesson 2026-11-16). Fiscal receipt fields stay on the till in v1 (Q7).
+- [x] Version 2.5.0 → **2.6.0**.
 
 ### Tests and verification
-- [ ] `fiscal-receipt.test.ts`: tiyin/milli rounding, course discount, VAT modes, per-kind defaults, missing MXIK, unbalanced, payment mapping.
-- [ ] `vcr-client.test.ts` + `fiscal-service.test.ts` against a local fake VCR (copy `fake-vcr.ts`):
+- [x] `fiscal-receipt.test.ts`: tiyin/milli rounding, course discount, VAT modes, per-kind defaults, missing MXIK, unbalanced, payment mapping.
+- [x] `vcr-client.test.ts` + `fiscal-service.test.ts` against a local fake VCR (copy `fake-vcr.ts`):
   - a sale;
   - a lost answer adopted by code;
   - busy retry;
   - an environment error keeps PENDING without counting an attempt;
   - a data refusal → FAILED;
   - Z-report auto-open on 704010.
-- [ ] `tasnif.test.ts` against a fake HTTP server (answer shapes from the live calls above).
-- [ ] `npm test`, typecheck, till build. One end-to-end pass: dev till → fake VCR (`POSCLINIC_VCR_URL`) → a paid visit → FISCALIZED with a receipt number.
+- [x] `tasnif.test.ts` against a fake HTTP server (answer shapes from the live calls above).
+- [x] `npm test`, typecheck, till build. One end-to-end pass: dev till → fake VCR (`POSCLINIC_VCR_URL`) → a paid visit → FISCALIZED with a receipt number.
 - [ ] Not verified without you: a real REGOS:VCR + fiscal module on the clinic PC.
 
 **Owner decisions (2026-11-16): all R, except 6: shifts like SavdoChef.** So:
@@ -365,3 +365,19 @@ Each MXIK has its own package code: the package is always taken from the same MX
 5. **Refunds:** v1: a fiscalised visit cannot be cancelled in the app, and refunds are done in the REGOS app (R)? Or build `Receipt.FullRefund` now (scan the paper receipt's QR, as SavdoChef)?
 6. **Z-report:** posclinic has no shifts. Open it automatically before the first receipt of the day and close it with a button in Settings → Fiscal receipt (R)? Or also close it automatically at a set time?
 7. **Codes:** prefill the seeded parasitology services with the MXIK/package codes above (R)? Sync MXIK/package to the server so the web shows them (R), with fiscal status staying on the till for now (R)?
+
+### Review (2026-11-17)
+- Three commits: (A) shifts + payment rows, (B) MXIK codes + tasnif search + server/web, (C) fiscal receipts.
+- Built as planned, with these differences:
+  - The Z-report follows the shift (owner: shifts like SavdoChef). Buttons on the Shifts page let an admin open or close it by hand.
+  - A visit paid partly before v2.6 (no payment rows) is SKIPPED, the same as one paid by transfer or insurance.
+  - VCR error texts are Uzbek only (SavdoChef's list).
+  - No refunds in v1: a paid visit already cannot be cancelled.
+  - Services get a stable 8-digit barcode (VCR wants one).
+- Verified:
+  - npm test: 221 pass, including the fiscal flow against a fake VCR (sale, lost answer, VCR trouble, refusal, transfer skipped, Z-report with the shift).
+  - Typecheck passes, and the till, server and web build.
+  - Migration and security reviews.
+  - The UI was not clicked through.
+- Not verified: a real REGOS:VCR and fiscal module. To try without one: npm run dev:fake-vcr (127.0.0.1:22298, cassir / pass).
+- Security review fixes: a saved VCR password is not reused when host, port or login change (it must be typed again). Closing a shift and "Send again for all" no longer wait for VCR, so a satellite call never times out; the result shows on the Z panel. The VCR timeout is 20 s. Errors are logged as their kind only. A reply that is not JSON is not echoed back. Left for later: clearing a saved VCR password without replacing it, and theme colours on the visit badge.

@@ -510,7 +510,14 @@
     "fiscalAfterClose": "Smena yopildi, lekin fiskal Z-hisobotni yopib bo'lmadi",
     "invalidMxik": "MXIK kodi 17 ta raqamdan iborat bo'lishi kerak",
     "invalidPackageCode": "Qadoq (o'lchov birligi) kodi noto'g'ri",
-    "tasnifUnavailable": "tasnif.soliq.uz bilan aloqa yo'q. Internetni tekshiring"
+    "tasnifUnavailable": "tasnif.soliq.uz bilan aloqa yo'q. Internetni tekshiring",
+    "fiscalOff": "Fiskal chek sozlamalarda o'chirilgan",
+    "fiscalNoPassword": "VCR paroli kiritilmagan (Sozlamalar → Fiskal chek)",
+    "fiscalNotSendable": "Bu qabulni VCR ga yuborib bo'lmaydi",
+    "fiscalNotFiscal": "Bu qabulning fiskal cheki yo'q",
+    "fiscalNotAllSent": "Hamma cheklar yuborilmadi: sababini qabul sahifasida ko'ring",
+    "invalidVcrHost": "Manzil: 127.0.0.1 yoki klinika tarmog'idagi kompyuter (192.168.x.x)",
+    "fiscalPasswordRequired": "VCR manzili, porti yoki logini o'zgardi: kassir parolini qayta kiriting"
   },
   "license": {
     "title": "Obuna",
@@ -1037,5 +1044,47 @@
     "noHits": "Hech narsa topilmadi. Boshqa so'z bilan urinib ko'ring (ruscha ham bo'ladi).",
     "packageCode": "Qadoq kodi",
     "packagePlaceholder": "Masalan: 1321927"
+  },
+  "fiscal": {
+    "title": "Fiskal chek (REGOS:VCR)",
+    "enabled": "To'langan qabullar uchun fiskal chek chiqarish",
+    "enabledHint": "To'liq naqd yoki karta bilan to'langan qabul VCR ga yuboriladi. O'tkazma yoki sug'urta bilan to'langan qabullar fiskallashtirilmaydi. To'lov VCR ni kutmaydi: aloqa bo'lmasa chek keyin yuboriladi.",
+    "host": "VCR manzili",
+    "port": "Port",
+    "login": "Kassir logini",
+    "password": "Kassir paroli",
+    "passwordKept": "Saqlangan (o'zgartirish uchun yangisini kiriting)",
+    "vatMode": "QQS",
+    "vat": {
+      "nonPayer": "QQSsiz (tibbiy xizmatlar QQSdan ozod)",
+      "vat12": "QQS 12 %"
+    },
+    "urlOverride": "Ishlab chiqish rejimi: VCR manzili POSCLINIC_VCR_URL dan olinadi.",
+    "defaultCodes": "Xizmat turi bo'yicha MXIK kodlari",
+    "defaultCodesHint": "O'z MXIK kodi kiritilmagan xizmat uchun ishlatiladi. Dorilar (to'g'ridan-to'g'ri sotuv) uchun har biriga o'z kodini kiriting.",
+    "test": "Aloqani tekshirish",
+    "testOk": "VCR bilan aloqa bor: terminal {{terminal}}, versiya {{version}}. Bo'sh Z-hisobotlar: {{z}}, yuborilmagan cheklar uchun joy: {{unsent}}.",
+    "receipt": "Fiskal chek",
+    "statuses": {
+      "PENDING": "Kutilmoqda",
+      "FISCALIZED": "Chiqarildi",
+      "FAILED": "Xato",
+      "SKIPPED": "Fiskal emas"
+    },
+    "sendAgain": "Qayta yuborish",
+    "sent": "Chek VCR ga yuborildi",
+    "allSent": "Kutilayotgan cheklar yuborildi",
+    "printCopy": "Fiskal nusxa",
+    "waiting": "VCR ga yuborilmagan cheklar: kutilmoqda {{pending}}, xato {{failed}}.",
+    "zTitle": "Z-hisobot (VCR)",
+    "zIsOpen": "Ochiq: № {{n}}, terminal {{terminal}}",
+    "zIsClosed": "Yopiq (terminal {{terminal}}). Smena ochilganda o'zi ochiladi.",
+    "zOpen": "Z-hisobotni ochish",
+    "zClose": "Z-hisobotni yopish",
+    "zCloseConfirm": "Z-hisobot smena yopilganda o'zi yopiladi. Hozir yopilsinmi?",
+    "zDone": "Bajarildi",
+    "zSales": "Cheklar",
+    "zRefunds": "Qaytarishlar",
+    "sendingStarted": "Cheklar VCR ga yuborilmoqda. Natija qabul sahifasida ko'rinadi"
   }
 }

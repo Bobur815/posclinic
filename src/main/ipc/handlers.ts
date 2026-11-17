@@ -11,6 +11,7 @@ import { setupServiceHandlers } from './service-handlers';
 import { setupAppointmentHandlers } from './appointment-handlers';
 import { setupPrintHandlers } from './print-handlers';
 import { setupShiftHandlers } from './shift-handlers';
+import { setupFiscalHandlers } from './fiscal-handlers';
 
 export function setupIpcHandlers(): void {
   setupAuthHandlers();
@@ -26,4 +27,5 @@ export function setupIpcHandlers(): void {
   setupTypesHandlers();
   setupPrintHandlers();
   setupShiftHandlers();
+  setupFiscalHandlers();
 }

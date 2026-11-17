@@ -116,14 +116,14 @@ export function setupShiftHandlers(): void {
       ): Promise<ShiftCloseResultDto> => {
         requireReception(ctx);
         const shift = await closeShift(getPrismaClient(), signedIn(ctx).id, input ?? {});
-        let fiscalProblem: string | null = null;
-        try {
-          fiscalProblem = await hooks.afterClose(shift.id);
-        } catch (e) {
-          log.warn('[shifts:close] after-close step failed', errorSummary(e));
-          fiscalProblem = 'errors.fiscalAfterClose';
-        }
-        return { shift, fiscalProblem };
+        // In the background: sending the waiting receipts and closing VCR's Z-report can take
+        // longer than a satellite's call may wait, and the shift is closed either way. What VCR
+        // could not do shows on the Z-report panel (waiting receipts, Z still open).
+        void hooks.afterClose(shift.id).then(
+          (problem) => problem && log.warn(`[shifts:close] fiscal: ${problem}`),
+          (e: unknown) => log.warn('[shifts:close] after-close step failed', errorSummary(e)),
+        );
+        return { shift };
       },
     ),
   );

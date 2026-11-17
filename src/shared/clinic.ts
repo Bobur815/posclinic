@@ -224,6 +224,11 @@ export interface AppointmentDto {
   prescription: string | null;
   notes: string | null;
   terminalId: string | null;
+  /** Fiscal receipt (v2.6); null = not sent (fiscal off when paid, free, or before v2.6). */
+  fiscalStatus: FiscalStatus | null;
+  fiscalError: string | null;
+  fiscalReceiptNo: string | null;
+  fiscalAt: string | null;
   createdAt: string;
   updatedAt: string;
   patient: PatientDto;
@@ -666,10 +671,9 @@ export interface ShiftSummaryDto {
   movements: CashMovementDto[];
 }
 
-/** What closing a shift returns: the shift and, with fiscal receipts on, what VCR could not do. */
+/** What closing a shift returns. VCR's Z-report closes after it, in the background (v2.6). */
 export interface ShiftCloseResultDto {
   shift: ShiftDto;
-  fiscalProblem: string | null;
 }
 
 /** A tasnif.soliq.uz search hit (v2.6). */
@@ -686,3 +690,66 @@ export interface MxikPackageDto {
 }
 
 export type TasnifLang = 'uz_latn' | 'uz_cyrl' | 'ru';
+
+// ── Fiscal receipts (v2.6, REGOS:VCR) ────────────────────────────────────────────────────────
+
+export type FiscalStatus = 'PENDING' | 'FISCALIZED' | 'FAILED' | 'SKIPPED';
+export type FiscalVatModeDto = 'nonPayer' | 'vat12';
+export type FiscalKindDto = 'CONSULTATION' | 'ANALYSIS' | 'PROCEDURE' | 'DIRECT_SALE';
+
+export interface FiscalConfigDto {
+  enabled: boolean;
+  host: string;
+  port: number;
+  login: string;
+  /** The password itself never leaves main. */
+  hasPassword: boolean;
+  vatMode: FiscalVatModeDto;
+  /** Default MXIK + package per service kind ('' = none). */
+  codes: Record<FiscalKindDto, { mxik: string; packageCode: string }>;
+  /** A development run talks to POSCLINIC_VCR_URL instead of host and port. */
+  urlOverride: boolean;
+}
+
+export interface FiscalConfigInput {
+  enabled: boolean;
+  host: string;
+  port: number;
+  login: string;
+  /** Empty or absent keeps the saved password. */
+  password?: string;
+  vatMode: FiscalVatModeDto;
+  codes: Record<FiscalKindDto, { mxik: string; packageCode: string }>;
+}
+
+export interface FiscalStatusDto {
+  enabled: boolean;
+  pending: number;
+  failed: number;
+}
+
+export interface FiscalConnectionDto {
+  terminalId: string;
+  appletVersion: string;
+  freeZReports: number;
+  freeUnsentReceipts: number;
+}
+
+export interface FiscalRetryAllDto {
+  sent: number;
+  failed: number;
+  pending: number;
+}
+
+export interface FiscalZReportDto {
+  open: boolean;
+  terminalId: string;
+  number: number;
+  openTime: string;
+  closeTime: string;
+  saleCount: number;
+  /** So'm. */
+  saleCash: number;
+  saleCard: number;
+  refundCount: number;
+}

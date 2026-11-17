@@ -73,6 +73,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     await addCustomTypesIfNeeded(prisma);
     await addShiftsIfNeeded(prisma);
     await addServiceFiscalCodesIfNeeded(prisma);
+    await addFiscalReceiptsIfNeeded(prisma);
     return;
   }
 
@@ -167,6 +168,7 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
   await addCustomTypesIfNeeded(prisma);
   await addShiftsIfNeeded(prisma);
   await addServiceFiscalCodesIfNeeded(prisma);
+  await addFiscalReceiptsIfNeeded(prisma);
 }
 
 /**
@@ -698,4 +700,26 @@ async function addShiftsIfNeeded(prisma: SchemaClient): Promise<void> {
 async function addServiceFiscalCodesIfNeeded(prisma: SchemaClient): Promise<void> {
   await addColumnIfMissing(prisma, 'services', 'mxik', 'TEXT');
   await addColumnIfMissing(prisma, 'services', 'package_code', 'TEXT');
+}
+
+/**
+ * v2.6.0: a visit's fiscal receipt (REGOS:VCR): its state and VCR's answer. Additive and
+ * idempotent; every visit paid before stays null (never sent).
+ */
+async function addFiscalReceiptsIfNeeded(prisma: SchemaClient): Promise<void> {
+  const columns: Array<[string, string]> = [
+    ['fiscal_status', 'TEXT'],
+    ['fiscal_error', 'TEXT'],
+    ['fiscal_attempts', 'INTEGER NOT NULL DEFAULT 0'],
+    ['fiscal_receipt_id', 'TEXT'],
+    ['fiscal_receipt_no', 'TEXT'],
+    ['fiscal_sign', 'TEXT'],
+    ['fiscal_qr_url', 'TEXT'],
+    ['fiscal_terminal_id', 'TEXT'],
+    ['fiscal_at', 'DATETIME'],
+  ];
+  for (const [column, ddl] of columns) await addColumnIfMissing(prisma, 'appointments', column, ddl);
+  await prisma.$executeRawUnsafe(
+    'CREATE INDEX IF NOT EXISTS idx_appointments_fiscal_status ON appointments(fiscal_status)',
+  );
 }

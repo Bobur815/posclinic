@@ -7,7 +7,14 @@ import { freshActor } from './ipc/auth-handlers';
 import { CredentialStore } from './ipc/credential-store';
 import { bindIpc, broadcast, sendToWindows } from './ipc/dispatch';
 import { setupIpcHandlers } from './ipc/handlers';
-import { configureHandlers, handle, hasHandler, invokeHandler } from './ipc/ipc-safe';
+import {
+  configureHandlers,
+  emitEvents,
+  errorSummary,
+  handle,
+  hasHandler,
+  invokeHandler,
+} from './ipc/ipc-safe';
 import { setupLanHandlers } from './ipc/lan-handlers';
 import { setupLicenseHandlers } from './ipc/license-handlers';
 import { type Cipher, plainCipher } from './lan/config';
@@ -17,6 +24,9 @@ import { setupUpdateHandlers } from './ipc/update-handlers';
 import { getLicenseService } from './license/license-service';
 import { log } from './logger';
 import { getCloudSync } from './sync/sync-service';
+import { FiscalService } from './fiscal/fiscal-service';
+import { setFiscalService } from './fiscal/registry';
+import { configureShiftHooks } from './ipc/shift-handlers';
 import { createSetupWindow, createWindow } from './window';
 
 try {
@@ -184,6 +194,34 @@ async function isSetUpAsMain(): Promise<boolean> {
   }
 }
 
+/**
+ * v2.6: fiscal receipts through REGOS:VCR, on the main till only (a satellite's calls go there).
+ * POSCLINIC_VCR_URL points a development build at a test VCR; an installed till ignores it.
+ */
+function startFiscal(): void {
+  const override = process.env.POSCLINIC_VCR_URL;
+  const fiscal = new FiscalService({
+    getDb: () => getPrismaClient(),
+    cipher: machineCipher(),
+    urlOverride: !app.isPackaged && override ? override : null,
+    onChange: () => emitEvents([{ type: 'data:changed', entity: 'appointments' }]),
+    // Under a satellite's 30 s call limit, so a forwarded "send again" gets its answer.
+    timeoutMs: 20_000,
+    // Errors as their kind only: a database error message can print a whole query.
+    log: {
+      info: (m) => log.info(m),
+      warn: (m, e) => (e === undefined ? log.warn(m) : log.warn(m, errorSummary(e))),
+      error: (m, e) => (e === undefined ? log.error(m) : log.error(m, errorSummary(e))),
+    },
+  });
+  setFiscalService(fiscal);
+  configureShiftHooks({
+    afterOpen: (id) => fiscal.afterShiftOpen(id),
+    afterClose: (id) => fiscal.afterShiftClose(id),
+  });
+  fiscal.start();
+}
+
 async function bootstrap() {
   try {
     await getLicenseService().init();
@@ -205,6 +243,7 @@ async function bootstrap() {
     bindIpc(lan);
     // A main till may serve satellites; a satellite starts following its main till.
     await lan.init();
+    if (!lan.isSatellite) startFiscal();
 
     process.on('unhandledRejection', (reason, promise) => {
       log.error('Unhandled Rejection at:', promise, 'reason:', reason);

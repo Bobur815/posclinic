@@ -253,6 +253,18 @@ model Appointment {
   prescription      String?
   notes             String?
   terminalId        String?       @map("terminal_id")
+  /// Fiscal receipt (v2.6, REGOS:VCR). Null = fiscal receipts were off when it was paid, or it
+  /// cost nothing: never sent. PENDING (waits / retried) | FISCALIZED | FAILED (VCR refused its
+  /// data: sent again by hand) | SKIPPED (paid partly by transfer / insurance, or before v2.6).
+  fiscalStatus      String?       @map("fiscal_status")
+  fiscalError       String?       @map("fiscal_error")
+  fiscalAttempts    Int           @default(0) @map("fiscal_attempts")
+  fiscalReceiptId   String?       @map("fiscal_receipt_id")
+  fiscalReceiptNo   String?       @map("fiscal_receipt_no")
+  fiscalSign        String?       @map("fiscal_sign")
+  fiscalQrUrl       String?       @map("fiscal_qr_url")
+  fiscalTerminalId  String?       @map("fiscal_terminal_id")
+  fiscalAt          DateTime?     @map("fiscal_at")
   synced            Boolean       @default(false)
   syncedAt          DateTime?     @map("synced_at")
   createdAt         DateTime      @default(now()) @map("created_at")
@@ -266,6 +278,7 @@ model Appointment {
   @@index([caseId])
   @@index([appointmentDate])
   @@index([synced])
+  @@index([fiscalStatus])
   @@map("appointments")
 }
 

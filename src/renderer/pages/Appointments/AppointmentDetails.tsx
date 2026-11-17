@@ -3,7 +3,9 @@ import { useDataVersion } from '../../hooks/useDataVersion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { ArrowLeft, CreditCard, Printer, XCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, Printer, Receipt, RefreshCw, XCircle } from 'lucide-react';
+import type { FiscalStatus } from '../../../shared/clinic';
+import { ipcErrorText } from '../../store/lan-store';
 import { format } from 'date-fns';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
@@ -21,6 +23,10 @@ interface AppointmentData {
   prescription: string | null;
   notes: string | null;
   caseId: string | null;
+  /** Fiscal receipt (v2.6); null = not sent. */
+  fiscalStatus: FiscalStatus | null;
+  fiscalError: string | null;
+  fiscalReceiptNo: string | null;
   patient: { id: string; fullName: string; phone: string; patientCode: string };
   doctor: { fullName: string; specialty: string | null } | null;
   items: Array<{
@@ -206,6 +212,21 @@ export function AppointmentDetails() {
     toast.success(t('common.success'));
   };
 
+  const [fiscalBusy, setFiscalBusy] = useState(false);
+  const fiscalAction = async (fn: () => Promise<unknown>, done: string) => {
+    setFiscalBusy(true);
+    try {
+      await fn();
+      toast.success(done);
+    } catch (e) {
+      toast.error(ipcErrorText(e, t));
+    } finally {
+      setFiscalBusy(false);
+    }
+  };
+  const fiscalColor = (s: FiscalStatus) =>
+    s === 'FISCALIZED' ? '#22c55e' : s === 'FAILED' ? '#ef4444' : s === 'PENDING' ? '#f59e0b' : '#94a3b8';
+
   const handlePrintPrescription = async () => {
     if (!id) return;
     await window.electronAPI.print.prescription(id);
@@ -271,6 +292,31 @@ export function AppointmentDetails() {
             <Printer size={15} />
             {t('appointments.printReceipt')}
           </Btn>
+          {id && (appointment.fiscalStatus === 'PENDING' || appointment.fiscalStatus === 'FAILED') && (
+            <Btn
+              $variant="secondary"
+              disabled={fiscalBusy}
+              onClick={() =>
+                fiscalAction(async () => {
+                  const r = await window.electronAPI.fiscal.retry(id);
+                  if (r !== 'sent') throw new Error('errors.fiscalNotAllSent');
+                }, t('fiscal.sent'))
+              }
+            >
+              <RefreshCw size={15} />
+              {t('fiscal.sendAgain')}
+            </Btn>
+          )}
+          {id && appointment.fiscalStatus === 'FISCALIZED' && (
+            <Btn
+              $variant="secondary"
+              disabled={fiscalBusy}
+              onClick={() => fiscalAction(() => window.electronAPI.fiscal.duplicate(id), t('common.success'))}
+            >
+              <Receipt size={15} />
+              {t('fiscal.printCopy')}
+            </Btn>
+          )}
           <Btn $variant="secondary" onClick={handlePrintPrescription}>
             <Printer size={15} />
             {t('appointments.printPrescription')}
@@ -319,6 +365,20 @@ export function AppointmentDetails() {
               {t(`appointments.paymentStatuses.${appointment.paymentStatus}`, appointment.paymentStatus)}
             </Badge>
           </InfoItem>
+          {appointment.fiscalStatus && (
+            <InfoItem>
+              <InfoLabel>{t('fiscal.receipt')}</InfoLabel>
+              <Badge $color={fiscalColor(appointment.fiscalStatus)} title={appointment.fiscalError ?? undefined}>
+                {t(`fiscal.statuses.${appointment.fiscalStatus}`)}
+                {appointment.fiscalReceiptNo && appointment.fiscalStatus === 'FISCALIZED'
+                  ? ` № ${appointment.fiscalReceiptNo}`
+                  : ''}
+              </Badge>
+              {appointment.fiscalError && appointment.fiscalStatus !== 'FISCALIZED' && (
+                <InfoValue style={{ fontSize: '12px', opacity: 0.8 }}>{appointment.fiscalError}</InfoValue>
+              )}
+            </InfoItem>
+          )}
           {appointment.paymentMethod && (
             <InfoItem>
               <InfoLabel>{t('checkout.selectPaymentMethod')}</InfoLabel>

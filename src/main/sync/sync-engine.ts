@@ -149,7 +149,9 @@ export function toWire(entity: PushEntity, row: Record<string, unknown>): Record
       return dates({ ...rest, passwordHash: password });
     }
     case 'appointments': {
-      const { items, synced: _s, syncedAt: _sa, ...rest } = row;
+      const { items, synced: _s, syncedAt: _sa, ...all } = row;
+      // The fiscal receipt's state (v2.6) is the till's own: never sent.
+      const rest = Object.fromEntries(Object.entries(all).filter(([k]) => !k.startsWith('fiscal')));
       const list = (items as Record<string, unknown>[] | undefined) ?? [];
       return dates({
         ...rest,
