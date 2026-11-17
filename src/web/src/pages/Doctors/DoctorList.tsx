@@ -116,14 +116,18 @@ export function DoctorList() {
                 <tbody>
                   {pageRows.map((d) => (
                     <Tr key={d.id} $dim={!d.active}>
-                      <Td>{d.fullName}</Td>
-                      <Td>{d.specialty || '—'}</Td>
-                      <Td $nowrap>{showPhone(d.phone)}</Td>
-                      <Td $muted>{d.licenseNo || '—'}</Td>
-                      <Td>
+                      <Td $title>{d.fullName}</Td>
+                      <Td data-label={t('doctors.specialty')}>{d.specialty || '—'}</Td>
+                      <Td $nowrap data-label={t('doctors.phone')}>
+                        {showPhone(d.phone)}
+                      </Td>
+                      <Td $muted data-label={t('doctors.licenseNo')}>
+                        {d.licenseNo || '—'}
+                      </Td>
+                      <Td data-label={t('common.status')}>
                         <ActiveBadge active={d.active} />
                       </Td>
-                      <Td $right>
+                      <Td $right $actions>
                         <Button
                           $small
                           $variant="ghost"

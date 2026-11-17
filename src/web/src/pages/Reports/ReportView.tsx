@@ -71,18 +71,22 @@ export function ReportView({ report }: { report: Report }) {
                   <tbody>
                     {pageRows.map((d) => (
                       <Tr key={d.date}>
-                        <Td $nowrap>{formatDate(d.date)}</Td>
-                        <Td $right>{formatNumber(d.visits)}</Td>
-                        <Td $right $nowrap>
+                        <Td $nowrap $title>
+                          {formatDate(d.date)}
+                        </Td>
+                        <Td $right data-label={t('reports.visits')}>
+                          {formatNumber(d.visits)}
+                        </Td>
+                        <Td $right $nowrap data-label={t('reports.revenue')}>
                           {formatMoney(d.revenue)}
                         </Td>
                         {d.paid !== undefined && (
-                          <Td $right $nowrap>
+                          <Td $right $nowrap data-label={t('reports.paid')}>
                             {formatMoney(d.paid)}
                           </Td>
                         )}
                         {d.debt !== undefined && (
-                          <Td $right $nowrap>
+                          <Td $right $nowrap data-label={t('reports.debt')}>
                             {formatMoney(d.debt)}
                           </Td>
                         )}

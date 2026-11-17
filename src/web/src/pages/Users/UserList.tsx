@@ -124,7 +124,7 @@ export function UserList() {
                 <tbody>
                   {pageRows.map((u) => (
                     <Tr key={u.id} $dim={!u.active}>
-                      <Td>
+                      <Td $title>
                         {u.fullName}
                         {u.id === me?.id && (
                           <>
@@ -133,17 +133,21 @@ export function UserList() {
                           </>
                         )}
                       </Td>
-                      <Td $nowrap>{showPhone(u.phone)}</Td>
-                      <Td $muted>{u.email || '—'}</Td>
-                      <Td>
+                      <Td $nowrap data-label={t('staff.phone')}>
+                        {showPhone(u.phone)}
+                      </Td>
+                      <Td $muted data-label={t('staff.email')}>
+                        {u.email || '—'}
+                      </Td>
+                      <Td data-label={t('staff.role')}>
                         <Badge>
                           {types.staffType(u.staffTypeId) ?? t(`roles.${u.role}`, u.role)}
                         </Badge>
                       </Td>
-                      <Td>
+                      <Td data-label={t('common.status')}>
                         <ActiveBadge active={u.active} />
                       </Td>
-                      <Td $right $nowrap>
+                      <Td $right $nowrap $actions>
                         <Button
                           $small
                           $variant="ghost"

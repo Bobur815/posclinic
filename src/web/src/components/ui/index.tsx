@@ -3,6 +3,10 @@ import styled, { css } from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 
+/** Phone layout below this width (the sidebar becomes the bottom bar there too). */
+export const MOBILE_MAX = 767;
+const mobile = `@media (max-width: ${MOBILE_MAX}px)`;
+
 /* ─── Page frame ──────────────────────────────────────────────────────────── */
 
 export const Page = styled.div`
@@ -53,6 +57,16 @@ export const Row = styled.div<{ $gap?: 'sm' | 'md'; $wrap?: boolean }>`
   flex-wrap: ${({ $wrap }) => ($wrap === false ? 'nowrap' : 'wrap')};
 `;
 
+/** On a phone the header's buttons take a full line under the title. */
+const Actions = styled(Row)`
+  ${mobile} {
+    width: 100%;
+    > * {
+      flex: 1 1 auto;
+    }
+  }
+`;
+
 export function PageHeader({
   icon,
   title,
@@ -73,7 +87,7 @@ export function PageHeader({
         </TitleText>
         {subtitle && <Subtitle>{subtitle}</Subtitle>}
       </div>
-      {actions && <Row>{actions}</Row>}
+      {actions && <Actions>{actions}</Actions>}
     </HeaderRow>
   );
 }
@@ -94,10 +108,20 @@ export const CardTitle = styled.h2`
   color: ${({ theme }) => theme.colors.text};
 `;
 
+/**
+ * Columns at least `$min` px wide, never wider than the screen (a 360 px column on a 375 px
+ * phone overflowed). On a phone, small tiles (stats, $min ≤ 200) go two to a row.
+ */
 export const Grid = styled.div<{ $min?: number }>`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(${({ $min }) => $min ?? 200}px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(${({ $min }) => $min ?? 200}px, 100%), 1fr));
   gap: ${({ theme }) => theme.spacing.md};
+
+  ${mobile} {
+    gap: ${({ theme }) => theme.spacing.sm};
+    ${({ $min = 200 }) =>
+      $min <= 200 && 'grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));'}
+  }
 `;
 
 /* ─── Stats ───────────────────────────────────────────────────────────────── */
@@ -301,6 +325,14 @@ export const FilterBar = styled(Card)`
   > label {
     flex: 0 1 200px;
   }
+
+  ${mobile} {
+    gap: ${({ theme }) => theme.spacing.sm};
+    > label,
+    > div {
+      flex: 1 1 100%;
+    }
+  }
 `;
 
 const CheckWrap = styled.label`
@@ -343,17 +375,43 @@ export function Checkbox({
 
 /* ─── Tables ──────────────────────────────────────────────────────────────── */
 
+/**
+ * Tables become cards on a phone (below MOBILE_MAX): the header row is hidden, each row is a
+ * card, each cell a "label … value" line. A cell's label is its `data-label` (the column's
+ * heading); `$title` makes a cell the card's heading (first, bold, no label) and `$actions`
+ * puts a cell's buttons at the card's foot. Wider screens show the plain table.
+ */
+
 export const TableWrap = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.borderRadius};
   box-shadow: ${({ theme }) => theme.shadows.sm};
   overflow-x: auto;
+
+  ${mobile} {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
 `;
 
 export const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
+
+  ${mobile} {
+    display: block;
+    thead {
+      display: none;
+    }
+    tbody {
+      display: flex;
+      flex-direction: column;
+      gap: ${({ theme }) => theme.spacing.sm};
+    }
+  }
 `;
 
 export const Th = styled.th<{ $right?: boolean }>`
@@ -369,7 +427,15 @@ export const Th = styled.th<{ $right?: boolean }>`
   white-space: nowrap;
 `;
 
-export const Td = styled.td<{ $right?: boolean; $muted?: boolean; $nowrap?: boolean }>`
+export const Td = styled.td<{
+  $right?: boolean;
+  $muted?: boolean;
+  $nowrap?: boolean;
+  /** Phone card: the card's heading. */
+  $title?: boolean;
+  /** Phone card: the buttons at the card's foot. */
+  $actions?: boolean;
+}>`
   padding: 10px 14px;
   font-size: 14px;
   text-align: ${({ $right }) => ($right ? 'right' : 'left')};
@@ -377,6 +443,69 @@ export const Td = styled.td<{ $right?: boolean; $muted?: boolean; $nowrap?: bool
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   white-space: ${({ $nowrap }) => ($nowrap ? 'nowrap' : 'normal')};
   font-variant-numeric: tabular-nums;
+
+  ${mobile} {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: ${({ theme }) => theme.spacing.md};
+    padding: 4px 0;
+    border-bottom: none;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-width: 0;
+
+    &[data-label]::before {
+      content: attr(data-label);
+      flex-shrink: 0;
+      max-width: 45%;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: ${({ theme }) => theme.colors.textSecondary};
+    }
+    &:empty {
+      display: none;
+    }
+
+    ${({ $title, theme }) =>
+      $title &&
+      css`
+        order: -1;
+        display: block;
+        text-align: left;
+        font-size: 15px;
+        font-weight: 600;
+        color: ${theme.colors.text};
+        padding-bottom: 6px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid ${theme.colors.border};
+        &[data-label]::before {
+          content: none;
+        }
+      `}
+
+    ${({ $actions, theme }) =>
+      $actions &&
+      css`
+        order: 1;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        padding-top: 8px;
+        margin-top: 4px;
+        border-top: 1px solid ${theme.colors.border};
+        &[data-label]::before {
+          content: none;
+        }
+      `}
+
+    /* A cell spanning every column (an empty or loading row) is just text. */
+    &[colspan] {
+      display: block;
+      text-align: center;
+    }
+  }
 `;
 
 export const Tr = styled.tr<{ $clickable?: boolean; $dim?: boolean }>`
@@ -391,6 +520,26 @@ export const Tr = styled.tr<{ $clickable?: boolean; $dim?: boolean }>`
     `}
   &:last-child td {
     border-bottom: none;
+  }
+
+  ${mobile} {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    background: ${({ theme }) => theme.colors.surface};
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: ${({ theme }) => theme.borderRadius};
+    box-shadow: ${({ theme }) => theme.shadows.sm};
+    ${({ $clickable, theme }) =>
+      $clickable &&
+      css`
+        &:hover td {
+          background: transparent;
+        }
+        &:active {
+          border-color: ${theme.colors.primary};
+        }
+      `}
   }
 `;
 

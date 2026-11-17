@@ -26,18 +26,20 @@ export function RankTable({ rows, nameLabel }: { rows: ReportBreakdownRow[]; nam
             <tbody>
               {pageRows.map((r, i) => (
                 <Tr key={`${r.name}-${i}`}>
-                  <Td>{r.name}</Td>
-                  <Td $right>{formatNumber(r.count ?? r.visits ?? 0)}</Td>
-                  <Td $right $nowrap>
+                  <Td $title>{r.name}</Td>
+                  <Td $right data-label={t('reports.visits')}>
+                    {formatNumber(r.count ?? r.visits ?? 0)}
+                  </Td>
+                  <Td $right $nowrap data-label={t('reports.revenue')}>
                     {formatMoney(r.revenue)}
                   </Td>
                   {hasPaid && (
-                    <Td $right $nowrap>
+                    <Td $right $nowrap data-label={t('reports.paid')}>
                       {formatMoney(r.paid ?? 0)}
                     </Td>
                   )}
                   {hasDebt && (
-                    <Td $right $nowrap>
+                    <Td $right $nowrap data-label={t('reports.debt')}>
                       {formatMoney(r.debt ?? 0)}
                     </Td>
                   )}

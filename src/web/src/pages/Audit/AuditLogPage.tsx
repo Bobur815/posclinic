@@ -61,18 +61,24 @@ export function AuditLogPage() {
             <tbody>
               {data?.items.map((l) => (
                 <Tr key={l.id}>
-                  <Td $nowrap>{formatDateTime(l.createdAt)}</Td>
-                  <Td>{l.user?.fullName ?? l.userName ?? '—'}</Td>
-                  <Td>
+                  <Td $nowrap $title>
+                    {formatDateTime(l.createdAt)}
+                  </Td>
+                  <Td data-label={t('audit.user')}>{l.user?.fullName ?? l.userName ?? '—'}</Td>
+                  <Td data-label={t('audit.action')}>
                     <Badge>{t(`audit.actions.${l.action}`, l.action)}</Badge>
                   </Td>
-                  <Td $nowrap>
+                  <Td $nowrap data-label={t('audit.entity')}>
                     {t(`audit.entities.${l.entity}`, l.entity)}
                     <div style={{ fontSize: 11, opacity: 0.6, fontFamily: 'monospace' }}>
                       {l.entityId}
                     </div>
                   </Td>
-                  <Td $muted style={{ maxWidth: 420, wordBreak: 'break-word', fontSize: 12 }}>
+                  <Td
+                    $muted
+                    data-label={t('audit.details')}
+                    style={{ maxWidth: 420, wordBreak: 'break-word', fontSize: 12 }}
+                  >
                     {formatAuditDetails(l.details, t)}
                   </Td>
                 </Tr>

@@ -38,22 +38,24 @@ export function VisitsTable({
       <tbody>
         {list.map((a) => (
           <Tr key={a.id} $clickable onClick={() => onOpen(a)}>
-            <Td $muted $nowrap>
+            <Td $muted $nowrap data-label="№">
               {a.appointmentNumber}
             </Td>
-            <Td $nowrap>{formatDateTime(a.appointmentDate)}</Td>
-            {showPatient && <Td>{a.patient?.fullName ?? '—'}</Td>}
-            <Td>{doctorName(doctors, a)}</Td>
-            <Td>
+            <Td $nowrap $title={!showPatient} data-label={t('appointments.appointmentDate')}>
+              {formatDateTime(a.appointmentDate)}
+            </Td>
+            {showPatient && <Td $title>{a.patient?.fullName ?? '—'}</Td>}
+            <Td data-label={t('appointments.doctor')}>{doctorName(doctors, a)}</Td>
+            <Td data-label={t('appointments.status')}>
               <StatusBadge status={a.status} />
             </Td>
-            <Td $right $nowrap>
+            <Td $right $nowrap data-label={t('appointments.totalAmount')}>
               {formatMoney(a.totalAmount)}
             </Td>
-            <Td $right $nowrap>
+            <Td $right $nowrap data-label={t('appointments.paidAmount')}>
               {formatMoney(a.paidAmount)}
             </Td>
-            <Td>
+            <Td data-label={t('appointments.paymentStatus')}>
               <PaymentBadge status={a.paymentStatus} />
             </Td>
           </Tr>

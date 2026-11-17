@@ -125,32 +125,32 @@ export function ServiceList() {
                 <tbody>
                   {pageRows.map((s) => (
                     <Tr key={s.id} $dim={!s.active}>
-                      <Td $muted $nowrap>
+                      <Td $muted $nowrap data-label={t('services.code')}>
                         {s.code}
                       </Td>
-                      <Td>
+                      <Td $title>
                         {s.name}
                         {s.description && (
                           <div style={{ fontSize: 12, opacity: 0.7 }}>{s.description}</div>
                         )}
                       </Td>
-                      <Td $nowrap>
+                      <Td $nowrap data-label={t('services.kind')}>
                         {types.serviceType(s.serviceTypeId)?.name ??
                           t(`services.kinds.${s.kind ?? 'PROCEDURE'}`)}
                       </Td>
-                      <Td $right $nowrap>
+                      <Td $right $nowrap data-label={t('services.price')}>
                         {formatMoney(s.price)}
                       </Td>
-                      <Td $muted $nowrap>
+                      <Td $muted $nowrap data-label={t('services.mxik')}>
                         {s.mxik ?? '—'}
                       </Td>
-                      <Td $right $nowrap>
+                      <Td $right $nowrap data-label={t('services.duration')}>
                         {formatNumber(s.duration)} {t('common.minutes')}
                       </Td>
-                      <Td>
+                      <Td data-label={t('common.status')}>
                         <ActiveBadge active={s.active} />
                       </Td>
-                      <Td $right>
+                      <Td $right $actions>
                         <Button
                           $small
                           $variant="ghost"

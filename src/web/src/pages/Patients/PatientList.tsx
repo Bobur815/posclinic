@@ -91,14 +91,18 @@ export function PatientList() {
                   $dim={!p.active}
                   onClick={() => navigate(`/patients/${p.id}`)}
                 >
-                  <Td $muted $nowrap>
+                  <Td $muted $nowrap data-label={t('patients.patientCode')}>
                     {p.patientCode}
                   </Td>
-                  <Td>{p.fullName}</Td>
-                  <Td $nowrap>{showPhone(p.phone)}</Td>
-                  <Td $nowrap>{formatDate(p.birthDate)}</Td>
-                  <Td>{p.gender ? t(`patients.genders.${p.gender}`, p.gender) : '—'}</Td>
-                  <Td $muted $nowrap>
+                  <Td $title>{p.fullName}</Td>
+                  <Td $nowrap data-label={t('patients.phone')}>
+                    {showPhone(p.phone)}
+                  </Td>
+                  <Td $nowrap data-label={t('patients.birthDate')}>
+                    {formatDate(p.birthDate)}
+                  </Td>
+                  <Td data-label={t('patients.gender')}>{p.gender ? t(`patients.genders.${p.gender}`, p.gender) : '—'}</Td>
+                  <Td $muted $nowrap data-label={t('patients.registered')}>
                     {formatDate(p.createdAt)}
                   </Td>
                 </Tr>

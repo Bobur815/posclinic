@@ -92,15 +92,17 @@ export function DevicesPage() {
                             Date.now() - new Date(d.lastSyncAt as string).getTime() < ONLINE_MS;
                           return (
                             <Tr key={d.terminalId}>
-                              <Td style={{ fontFamily: 'monospace' }}>{d.terminalId}</Td>
-                              <Td $nowrap>
+                              <Td $title style={{ fontFamily: 'monospace' }}>
+                                {d.terminalId}
+                              </Td>
+                              <Td $nowrap data-label={t('devices.lastSync')}>
                                 {formatDateTime(d.lastSyncAt)}
                                 <div style={{ fontSize: 12, opacity: 0.7 }}>
                                   {ago(d.lastSyncAt)}
                                 </div>
                               </Td>
-                              <Td>{d.appVersion ?? '—'}</Td>
-                              <Td>
+                              <Td data-label={t('devices.version')}>{d.appVersion ?? '—'}</Td>
+                              <Td data-label={t('common.status')}>
                                 <Badge $tone={online ? 'success' : 'muted'}>
                                   {online ? t('devices.online') : t('devices.offline')}
                                 </Badge>

@@ -103,12 +103,14 @@ export function AppointmentDetailsModal({
                       <tbody>
                         {pageRows.map((i) => (
                           <Tr key={i.id}>
-                            <Td>{i.serviceName}</Td>
-                            <Td $right>{formatNumber(i.quantity)}</Td>
-                            <Td $right $nowrap>
+                            <Td $title>{i.serviceName}</Td>
+                            <Td $right data-label={t('appointments.quantity')}>
+                              {formatNumber(i.quantity)}
+                            </Td>
+                            <Td $right $nowrap data-label={t('appointments.unitPrice')}>
                               {formatMoney(i.unitPrice)}
                             </Td>
-                            <Td $right $nowrap>
+                            <Td $right $nowrap data-label={t('common.total')}>
                               {formatMoney(i.total)}
                             </Td>
                           </Tr>
