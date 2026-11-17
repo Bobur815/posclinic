@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -39,6 +39,33 @@ const SidebarWrapper = styled.nav<{ $collapsed: boolean }>`
   overflow: hidden;
   transition: width 0.2s ease;
   z-index: 100;
+`;
+
+/**
+ * The menu scrolls by itself when it is taller than the window (a small screen, a big UI scale);
+ * the bottom strip stays put. A thin scrollbar that shows on hover.
+ */
+const NavScroll = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  &:hover {
+    scrollbar-color: ${({ theme }) => theme.colors.border} transparent;
+  }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+  }
 `;
 
 const NavSection = styled.div`
@@ -119,7 +146,7 @@ const ItemLabel = styled.span<{ $collapsed: boolean }>`
 `;
 
 const BottomSection = styled.div`
-  margin-top: auto;
+  flex-shrink: 0;
   padding: 8px;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
@@ -146,6 +173,13 @@ export function Sidebar() {
   const { isCollapsed } = useSidebar();
   const { user } = useAuthStore();
   const location = useLocation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // The page's item is always in sight: after a navigation it is scrolled into view if hidden.
+  useEffect(() => {
+    const active = scrollRef.current?.querySelector<HTMLElement>('a.active');
+    active?.scrollIntoView({ block: 'nearest' });
+  }, [location.pathname]);
 
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'CLINIC_ADMIN';
   // Doctors and nurses work from their queue; registration and money are reception's.
@@ -213,6 +247,7 @@ export function Sidebar() {
 
   return (
     <SidebarWrapper $collapsed={isCollapsed}>
+      <NavScroll ref={scrollRef}>
       <NavSection>
         <SectionLabel $collapsed={isCollapsed}>{t('nav.main')}</SectionLabel>
         {mainItems.map(renderItem)}
@@ -246,6 +281,8 @@ export function Sidebar() {
           {adminItems.map(renderItem)}
         </NavSection>
       )}
+
+      </NavScroll>
 
       <BottomSection>
         <VersionText $collapsed={isCollapsed}>v1.0.0</VersionText>
