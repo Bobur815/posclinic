@@ -1,15 +1,16 @@
 name: Deploy POSCLINIC Production
 
 # clinic.posgro.uz on the posgro Contabo VPS (Germany), beside staging (owner decision
-# 2026-11-18; it moves to an Uzbekistan VPS later). Push to main deploys; dev deploys staging.
+# 2026-11-18; it moves to an Uzbekistan VPS later). Like posgro production: main deploys nightly
+# at 23:30 Tashkent, after clinic hours, not on push (push to dev deploys staging at once).
+# Half an hour after posgro's 23:00 deploy, so the two never build on the shared VPS together.
 # Secrets: the same SSH_* / GH_PAT as staging, plus ENV_FILE_PROD (its own DB password and
 # JWT_SECRET: never the staging ENV_FILE).
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  schedule:
+    - cron: '30 18 * * *'  # 23:30 Tashkent (UTC+5); scheduled runs use the default branch, main
+  workflow_dispatch:  # manual trigger from GitHub Actions UI if needed
 
 concurrency:
   group: deploy-production
