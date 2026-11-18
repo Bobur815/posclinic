@@ -1,7 +1,7 @@
 name: Deploy POSCLINIC Staging
 
-# dev.clinic.posgro.uz on the posgro Contabo VPS (Germany). Production goes to an Uzbekistan
-# VPS later (patient data residency) and gets its own workflow then: none exists on purpose.
+# dev.clinic.posgro.uz on the posgro Contabo VPS (Germany). Production (clinic.posgro.uz, same
+# VPS for now) is deploy.yml, on push to main.
 
 on:
   push:

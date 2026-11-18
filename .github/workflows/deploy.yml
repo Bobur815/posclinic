@@ -1,0 +1,59 @@
+name: Deploy POSCLINIC Production
+
+# clinic.posgro.uz on the posgro Contabo VPS (Germany), beside staging (owner decision
+# 2026-11-18; it moves to an Uzbekistan VPS later). Push to main deploys; dev deploys staging.
+# Secrets: the same SSH_* / GH_PAT as staging, plus ENV_FILE_PROD (its own DB password and
+# JWT_SECRET: never the staging ENV_FILE).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm run prisma:generate:sqlite && npx prisma generate
+      - run: npx tsc --noEmit -p tsconfig.server.json
+      - run: npx tsx --test "src/server/**/*.test.ts"
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # GitHub environment "production": add required reviewers there to make deploys wait for a click.
+    environment: production
+    steps:
+      # Needed only for .github/actions/ssh-deploy: the deploy script itself is pulled on the
+      # VPS from the branch being deployed.
+      - uses: actions/checkout@v5
+
+      - name: Deploy to production
+        uses: ./.github/actions/ssh-deploy
+        with:
+          host:          ${{ secrets.SSH_HOST }}
+          username:      ${{ secrets.SSH_USER }}
+          key:           ${{ secrets.SSH_KEY }}
+          known_hosts:   ${{ secrets.SSH_KNOWN_HOSTS }}
+          env_file:      ${{ secrets.ENV_FILE_PROD }}
+          gh_pat:        ${{ secrets.GH_PAT }}
+          repo_owner:    Bobur815
+          repo_name:     posclinic
+          branch:        main
+          project_dir:   posclinic
+          deploy_script: scripts/deploy/production.sh

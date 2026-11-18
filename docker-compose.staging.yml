@@ -1,6 +1,6 @@
 # posclinic STAGING — dev.clinic.posgro.uz on the posgro Contabo VPS (Germany).
-# Run by scripts/deploy/staging.sh in ~/posclinic-staging. Production will live on an
-# Uzbekistan VPS (patient data residency) with its own compose file.
+# Run by scripts/deploy/staging.sh in ~/posclinic-staging. Production is docker-compose.yml
+# (same VPS for now; an Uzbekistan VPS later for patient data residency).
 #
 # Its own Postgres container and volume: clinic medical data never shares a database with posgro.
 # Both ports bind to 127.0.0.1 only (Docker bypasses UFW); nginx is the only public entry.

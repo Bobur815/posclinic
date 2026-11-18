@@ -1,0 +1,5 @@
+# Production hosts whose REAL config (with TLS) is installed; any other host in nginx/sites-prod/
+# gets an ACME stub. Add a host here only after its certificate exists on the VPS:
+#   sudo certbot certonly --webroot -w /var/www/certbot --cert-name clinic.posgro.uz -d clinic.posgro.uz
+# (certificate issued 2026-11-18)
+clinic.posgro.uz

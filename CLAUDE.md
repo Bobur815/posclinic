@@ -102,6 +102,7 @@ Renderer (React) → hooks → ipc-client.ts → preload.ts (contextBridge) → 
 - Native Prisma query engine binaries are bundled via `extraResources`
 - Release channel: `https://panel.posgro.uz/releases/posclinic/` (posgro VPS `/home/bobur/releases/posclinic`). Windows NSIS installer.
 - Release: `npm run release -- patch|minor|major` (bump + tag + build), then `npm run deploy:pos` (check → `dist:win` → `scripts/upload-release.mjs`; `--dry-run` to check only). The user runs deploys. A published version can't be re-uploaded: bump instead.
+- Server (`src/server` + `src/web`, one image): staging `dev.clinic.posgro.uz` (push to `dev`, `docker-compose.staging.yml`, `~/posclinic-staging`, port 3012) and production `clinic.posgro.uz` (push to `main`, `docker-compose.yml`, `~/posclinic`, port 3013), both on the posgro Contabo VPS for now. Steps in `scripts/deploy/lib.sh`; production also schedules `scripts/deploy/backup.sh` (nightly `pg_dump` to `~/backups/posclinic`). A host gets its TLS nginx config only once listed in `nginx/sites-live-*.txt`.
 - Updates: `src/main/updater/updater.ts` + `ipc/update-handlers.ts`. One quiet check 30 s after start; download/install are buttons in Settings → Update, clinic admins only.
 
 ---

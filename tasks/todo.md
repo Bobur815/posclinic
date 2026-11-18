@@ -96,9 +96,12 @@ Previous plan (posgro licensing, v2.0.0) is done and committed in `2856f9d`; its
 
 ## Phase 5 — deploy (posgro VPS)
 
-- [ ] `Dockerfile` + `docker-compose.yml` / `docker-compose.staging.yml` in posclinic: `posclinic-server` + its **own** `posclinic-postgres` (separate from posgro's database: medical data, own backups), not published publicly; `RUN_MIGRATIONS`.
-- [ ] GitHub Actions `deploy-staging.yml` (dev) / `deploy.yml` (main) modelled on posgro's (ENV_FILE secret, ssh to `posgro-vps`).
-- [ ] **User:** DNS for e.g. `clinic.posgro.uz` + `dev.clinic.posgro.uz`, nginx server blocks + TLS (certbot), GitHub secrets.
+- [x] `Dockerfile` + `docker-compose.yml` / `docker-compose.staging.yml` in posclinic: `posclinic-server` + its **own** `posclinic-postgres` (separate from posgro's database: medical data, own backups), not published publicly; `RUN_MIGRATIONS`.
+- [x] GitHub Actions `deploy-staging.yml` (dev) / `deploy.yml` (main) modelled on posgro's (`ENV_FILE` / `ENV_FILE_PROD` secrets, ssh to `posgro-vps`).
+- [x] Production (2026-11-18, owner: same Contabo VPS for now): `docker-compose.yml` (ports 3013/5443), `nginx/sites-prod/clinic.posgro.uz.conf` + `nginx/sites-live-prod.txt`, `scripts/deploy/production.sh` (shared steps in `lib.sh`), nightly `scripts/deploy/backup.sh` (14 days, never fewer than 7).
+- [x] posgro: branch `feat/posclinic-prod` sets `POSCLINIC_ENABLED` in posgro's production compose.
+- [x] **User (2026-11-18):** DNS `clinic.posgro.uz` → VPS; GitHub secret `ENV_FILE_PROD`; certificate issued; host listed in `nginx/sites-live-prod.txt`.
+- [ ] Push `main` (first production deploy); merge + deploy the posgro branch; run one backup by hand and check it restores.
 - [ ] Till: `POSCLINIC_SERVER_URL` compiled default (prod), dev override only when unpackaged (same rule as `POSCLINIC_API_URL`).
 
 ## Versioning

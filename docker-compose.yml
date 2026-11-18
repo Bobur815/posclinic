@@ -1,0 +1,63 @@
+# posclinic PRODUCTION — clinic.posgro.uz, for now on the posgro Contabo VPS (Germany), beside
+# staging (docker-compose.staging.yml). Run by scripts/deploy/production.sh in ~/posclinic.
+# Owner decision 2026-11-18: production starts here; it moves to an Uzbekistan VPS (patient data
+# residency) later.
+#
+# Its own Postgres container and volume: clinic medical data never shares a database with posgro
+# or with staging. Both ports bind to 127.0.0.1 only (Docker bypasses UFW); nginx is the only
+# public entry. Ports on this VPS: posgro 3001/3002 + 5432/5434, posclinic staging 3012 + 5442,
+# posclinic production 3013 + 5443.
+# Backups: scripts/deploy/backup.sh, nightly from cron, into ~/backups/posclinic.
+
+name: posclinic
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:?DB_USER is not set}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set}
+      POSTGRES_DB: posclinic
+    volumes:
+      - posclinic_pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5443:5432"
+    restart: unless-stopped
+    networks: [posclinic]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER:?DB_USER is not set}:${DB_PASSWORD:?DB_PASSWORD is not set}@postgres:5432/posclinic"
+      NODE_ENV: "production"
+      PORT: "3013"
+      RUN_MIGRATIONS: "true"
+      # Same-origin: the dashboard is served by this container at /web via nginx.
+      CORS: "https://clinic.posgro.uz"
+    ports:
+      - "127.0.0.1:3013:3013"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [posclinic]
+    logging: *logging
+
+volumes:
+  posclinic_pgdata:
+
+networks:
+  posclinic:
