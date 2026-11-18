@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios';
+import type { FinanceReportDto, ProductCategory } from '@shared/stock';
 
 /**
  * Typed client for the Dashboard section of `.claude/rules/server-api.md`.
@@ -405,6 +406,53 @@ export const usersApi = {
     put<StaffUser>(`/users/${encodeURIComponent(id)}`, body),
   resetPassword: (id: string, newPassword: string) =>
     post<unknown>(`/users/${encodeURIComponent(id)}/reset-password`, { newPassword }),
+};
+
+// ─── Stock and money (till v2.10, read-only here) ───────────────────────────
+
+export interface StockProduct {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  unit: string;
+  barcode: string | null;
+  minQty: number | null;
+  qtyOnHand: number;
+  avgCost: number;
+  serviceId: string | null;
+  active: boolean;
+  updatedAt: string;
+}
+
+export interface StockMovementRow {
+  id: string;
+  productId: string;
+  type: string;
+  qty: number;
+  unitCost: number;
+  note: string;
+  createdAt: string;
+  product?: { id: string; name: string; unit: string };
+}
+
+export interface ExpenseRow {
+  id: string;
+  category: string;
+  amount: number;
+  spentAt: string;
+  note: string;
+  paidFrom: string;
+  voidedAt: string | null;
+}
+
+export const stockApi = {
+  products: (includeInactive = false) =>
+    get<{ items: StockProduct[] }>('/stock/products', { includeInactive: includeInactive || undefined }),
+  movements: (q: { productId?: string; from?: string; to?: string; page?: number; pageSize?: number }) =>
+    get<Paged<StockMovementRow>>('/stock/movements', q),
+  expenses: (q: { from?: string; to?: string; page?: number; pageSize?: number }) =>
+    get<Paged<ExpenseRow>>('/expenses', q),
+  finance: (from: string, to: string) => get<FinanceReportDto>('/reports/finance', { from, to }),
 };
 
 export const auditApi = {

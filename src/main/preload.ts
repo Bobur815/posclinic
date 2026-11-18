@@ -5,6 +5,19 @@ import type { SyncStatusDto } from '../shared/sync';
 import type { PrinterConfig, PrintResult, TestPrintTarget } from '../shared/printing';
 import type { ReceiptLayout } from '../shared/receipt-html';
 import type { UpdateStatusDto } from '../shared/update';
+import type {
+  ExpenseDto,
+  ExpenseInput,
+  FinanceReportDto,
+  ProductDto,
+  ProductInput,
+  ReceiptInput,
+  ServiceSupplyDto,
+  StockMovementDto,
+  StockReceiptDto,
+  StocktakeInput,
+  WriteOffInput,
+} from '../shared/stock';
 import type { DataChangedEvent, LanJoinInput, LanLinkDto, LanStatusDto } from '../shared/lan';
 import type {
   FiscalConfigDto,
@@ -33,6 +46,8 @@ import type {
   CaseDetailDto,
   CaseUpdateInput,
   QueueItemDto,
+  RecommendationDto,
+  RecommendationInput,
   ReferralDto,
   ReferralInput,
   VitalsDto,
@@ -150,6 +165,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     addReferral: (caseId: string, data: ReferralInput) =>
       ipcRenderer.invoke('cases:addReferral', caseId, data),
     cancelReferral: (referralId: string) => ipcRenderer.invoke('cases:cancelReferral', referralId),
+    addRecommendation: (caseId: string, data: RecommendationInput) =>
+      ipcRenderer.invoke('cases:addRecommendation', caseId, data),
+    removeRecommendation: (id: string) => ipcRenderer.invoke('cases:removeRecommendation', id),
   },
   queue: {
     listMine: () => ipcRenderer.invoke('queue:listMine'),
@@ -190,6 +208,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
     close: (data: { shiftId: string; countedCash: number }) =>
       ipcRenderer.invoke('shifts:close', data),
     delete: (id: string) => ipcRenderer.invoke('shifts:delete', id),
+  },
+  // v2.10: stock, expenses, the money report
+  stock: {
+    listProducts: (filter?: { includeInactive?: boolean }) =>
+      ipcRenderer.invoke('stock:listProducts', filter),
+    saveProduct: (id: string | null, data: ProductInput) =>
+      ipcRenderer.invoke('stock:saveProduct', id, data),
+    movements: (productId: string) => ipcRenderer.invoke('stock:movements', productId),
+    listReceipts: () => ipcRenderer.invoke('stock:listReceipts'),
+    receive: (data: ReceiptInput) => ipcRenderer.invoke('stock:receive', data),
+    voidReceipt: (id: string) => ipcRenderer.invoke('stock:voidReceipt', id),
+    writeOff: (data: WriteOffInput) => ipcRenderer.invoke('stock:writeOff', data),
+    count: (data: StocktakeInput) => ipcRenderer.invoke('stock:count', data),
+    getSupplies: (serviceId: string) => ipcRenderer.invoke('stock:getSupplies', serviceId),
+    setSupplies: (serviceId: string, list: Array<{ productId: string; qty: number }>) =>
+      ipcRenderer.invoke('stock:setSupplies', serviceId, list),
+  },
+  expenses: {
+    list: (filter: { from: string; to: string }) => ipcRenderer.invoke('expenses:list', filter),
+    create: (data: ExpenseInput) => ipcRenderer.invoke('expenses:create', data),
+    void: (id: string) => ipcRenderer.invoke('expenses:void', id),
+  },
+  finance: {
+    report: (filter: { from: string; to: string }) =>
+      ipcRenderer.invoke('finance:report', filter),
   },
   types: {
     list: () => ipcRenderer.invoke('types:list'),
@@ -397,6 +440,8 @@ declare global {
         recordVitals: (data: VitalsInput) => Promise<VitalsDto>;
         addReferral: (caseId: string, data: ReferralInput) => Promise<ReferralDto>;
         cancelReferral: (referralId: string) => Promise<ReferralDto>;
+        addRecommendation: (caseId: string, data: RecommendationInput) => Promise<RecommendationDto>;
+        removeRecommendation: (id: string) => Promise<RecommendationDto>;
       };
       queue: {
         listMine: () => Promise<QueueItemDto[]>;
@@ -438,6 +483,29 @@ declare global {
         }) => Promise<CashMovementDto>;
         close: (data: { shiftId: string; countedCash: number }) => Promise<ShiftCloseResultDto>;
         delete: (id: string) => Promise<boolean>;
+      };
+      stock: {
+        listProducts: (filter?: { includeInactive?: boolean }) => Promise<ProductDto[]>;
+        saveProduct: (id: string | null, data: ProductInput) => Promise<ProductDto>;
+        movements: (productId: string) => Promise<StockMovementDto[]>;
+        listReceipts: () => Promise<StockReceiptDto[]>;
+        receive: (data: ReceiptInput) => Promise<StockReceiptDto>;
+        voidReceipt: (id: string) => Promise<StockReceiptDto>;
+        writeOff: (data: WriteOffInput) => Promise<StockMovementDto>;
+        count: (data: StocktakeInput) => Promise<StockMovementDto[]>;
+        getSupplies: (serviceId: string) => Promise<ServiceSupplyDto[]>;
+        setSupplies: (
+          serviceId: string,
+          list: Array<{ productId: string; qty: number }>,
+        ) => Promise<ServiceSupplyDto[]>;
+      };
+      expenses: {
+        list: (filter: { from: string; to: string }) => Promise<ExpenseDto[]>;
+        create: (data: ExpenseInput) => Promise<ExpenseDto>;
+        void: (id: string) => Promise<ExpenseDto>;
+      };
+      finance: {
+        report: (filter: { from: string; to: string }) => Promise<FinanceReportDto>;
       };
       types: {
         list: () => Promise<{ serviceTypes: ServiceTypeDto[]; staffTypes: StaffTypeDto[] }>;

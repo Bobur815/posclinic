@@ -171,9 +171,19 @@ export function writtenEntities(channel: string): DataChangedEvent['entity'][] {
     const entity = w[1] as DataChangedEvent['entity'];
     // A registration opens / moves a case; payment releases lines to the queues and is a
     // payment of the open shift.
-    if (channel === 'appointments:checkout') return ['appointments', 'cases', 'shifts'];
+    // v2.10: paying (or registering a free direct sale) takes products from stock.
+    if (channel === 'appointments:checkout') {
+      return ['appointments', 'cases', 'shifts', 'stock', 'finance'];
+    }
+    if (channel === 'appointments:create') return ['appointments', 'cases', 'stock'];
     return entity === 'appointments' ? ['appointments', 'cases'] : [entity];
   }
+  // v2.10 stock: a delivery or its void may move the drawer; an expense is money spent.
+  if (/^stock:(receive|voidReceipt)$/.test(channel)) return ['stock', 'finance', 'shifts'];
+  // A product may make its own sale service.
+  if (channel === 'stock:saveProduct') return ['stock', 'finance', 'services'];
+  if (/^stock:(setSupplies|writeOff|count)$/.test(channel)) return ['stock', 'finance'];
+  if (/^expenses:(create|void)$/.test(channel)) return ['finance', 'shifts'];
   if (channel === 'clinic:setSettings') return ['settings'];
   // v2.6: cash shifts (the drawer, its movements); fiscal receipts change visits.
   if (/^shifts:(open|close|addCashMovement|delete)$/.test(channel)) return ['shifts'];
@@ -181,7 +191,11 @@ export function writtenEntities(channel: string): DataChangedEvent['entity'][] {
   // Types change how services and staff are shown (and their kind / role).
   if (channel === 'types:saveServiceType') return ['services'];
   if (channel === 'types:saveStaffType') return ['users'];
-  return CLINICAL.test(channel) ? ['cases', 'appointments'] : [];
+  if (!CLINICAL.test(channel)) return [];
+  // Finishing a line, saving a result or ticking a session uses the service's supplies (v2.10).
+  return /^(queue|results|sessions):/.test(channel)
+    ? ['cases', 'appointments', 'stock']
+    : ['cases', 'appointments'];
 }
 
 /** Runs a handler on THIS till's database: licence gate, handler, then "what changed". */

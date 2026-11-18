@@ -29,6 +29,11 @@ class FakeDb implements SyncDb {
     results: new Map(),
     serviceTypes: new Map(),
     staffTypes: new Map(),
+    products: new Map(),
+    stockReceipts: new Map(),
+    stockMovements: new Map(),
+    expenses: new Map(),
+    payments: new Map(),
   };
   writes = 0;
 
@@ -181,6 +186,11 @@ describe('applyPush', () => {
       results: 0,
       serviceTypes: 0,
       staffTypes: 0,
+      products: 0,
+      stockReceipts: 0,
+      stockMovements: 0,
+      expenses: 0,
+      payments: 0,
     });
     assert.equal(r.written, 5);
     assert.equal((db.rows.users.get('u1')?.row as RowMap['users']).phone, '+998901112233');
@@ -448,18 +458,44 @@ describe('applyPush: clinical workflow rows (till v2.5)', () => {
       'c1',
       {
         serviceTypes: [
-          { id: 'st1', nameUz: 'Dorilar', nameRu: null, behavior: 'DIRECT_SALE', color: '#7c3aed', sortOrder: 0, active: true, createdAt: T0, updatedAt: T1 },
+          {
+            id: 'st1',
+            nameUz: 'Dorilar',
+            nameRu: null,
+            behavior: 'DIRECT_SALE',
+            color: '#7c3aed',
+            sortOrder: 0,
+            active: true,
+            createdAt: T0,
+            updatedAt: T1,
+          },
           { id: 'st2', nameUz: 'X', behavior: 'MAGIC', active: true, createdAt: T0, updatedAt: T1 },
         ],
-        staffTypes: [{ id: 'sf1', nameUz: 'Farrosh', nameRu: null, access: 'NONE', active: true, createdAt: T0, updatedAt: T1 }],
+        staffTypes: [
+          {
+            id: 'sf1',
+            nameUz: 'Farrosh',
+            nameRu: null,
+            access: 'NONE',
+            active: true,
+            createdAt: T0,
+            updatedAt: T1,
+          },
+        ],
         users: [user({ id: 'u9', phone: '90 777 66 55', role: 'STAFF', staffTypeId: 'sf1' })],
         services: [service({ id: 's9', code: 'CREAM', kind: 'DIRECT_SALE', serviceTypeId: 'st1' })],
       },
       NOW,
     );
-    assert.deepEqual(r.rejected.map((x) => [x.entity, x.id, x.reason]), [['serviceTypes', 'st2', 'invalid']]);
+    assert.deepEqual(
+      r.rejected.map((x) => [x.entity, x.id, x.reason]),
+      [['serviceTypes', 'st2', 'invalid']],
+    );
     assert.equal((db.rows.users.get('u9')?.row as { staffTypeId: string }).staffTypeId, 'sf1');
-    assert.equal((db.rows.services.get('s9')?.row as { serviceTypeId: string }).serviceTypeId, 'st1');
+    assert.equal(
+      (db.rows.services.get('s9')?.row as { serviceTypeId: string }).serviceTypeId,
+      'st1',
+    );
   });
 
   it('keeps a service’s fiscal codes (v2.6); a bad code is dropped, not the row', async () => {
@@ -477,11 +513,16 @@ describe('applyPush: clinical workflow rows (till v2.5)', () => {
       NOW,
     );
     assert.deepEqual(r.rejected, []);
-    const row = (id: string) => db.rows.services.get(id)?.row as { mxik: string | null; packageCode: string | null };
+    const row = (id: string) =>
+      db.rows.services.get(id)?.row as { mxik: string | null; packageCode: string | null };
     assert.deepEqual([row('sm1').mxik, row('sm1').packageCode], ['10902001034000000', '1321927']);
     assert.deepEqual([row('sm2').mxik, row('sm2').packageCode], [null, null]);
     assert.deepEqual([row('sm3').mxik, row('sm3').packageCode], [null, null]);
-    assert.deepEqual([row('sm4').mxik, row('sm4').packageCode], [null, null], 'too long / not a string');
+    assert.deepEqual(
+      [row('sm4').mxik, row('sm4').packageCode],
+      [null, null],
+      'too long / not a string',
+    );
   });
 
   it('accepts a NURSE login', async () => {
@@ -492,6 +533,140 @@ describe('applyPush: clinical workflow rows (till v2.5)', () => {
       NOW,
     );
     assert.deepEqual(r.rejected, []);
+  });
+});
+
+describe('applyPush: stock and money rows (till v2.10)', () => {
+  let db: FakeDb;
+  beforeEach(() => {
+    db = new FakeDb();
+  });
+
+  const product = (over: Record<string, unknown> = {}) => ({
+    id: 'pr1',
+    name: 'Shpris 5 ml',
+    category: 'TREATMENT',
+    unit: 'dona',
+    barcode: null,
+    minQty: 10,
+    qtyOnHand: -2,
+    avgCost: 1200.5,
+    serviceId: null,
+    active: true,
+    createdAt: T0,
+    updatedAt: T1,
+    ...over,
+  });
+  const movement = (over: Record<string, unknown> = {}) => ({
+    id: 'm1',
+    productId: 'pr1',
+    type: 'TREATMENT',
+    qty: -1.5,
+    unitCost: 1200.5,
+    receiptId: null,
+    itemId: 'i1',
+    sessionId: null,
+    note: '',
+    createdById: 'u1',
+    createdAt: T1,
+    updatedAt: T1,
+    ...over,
+  });
+  const payment = (over: Record<string, unknown> = {}) => ({
+    id: 'pay1',
+    appointmentId: 'a1',
+    method: 'CASH',
+    amount: 100000,
+    createdById: 'u1',
+    createdAt: T1,
+    updatedAt: T1,
+    ...over,
+  });
+
+  it('accepts products, deliveries, movements, expenses and payments', async () => {
+    const r = await applyPush(
+      db,
+      'c1',
+      {
+        ...fullBatch(),
+        products: [product()],
+        stockReceipts: [
+          {
+            id: 'r1',
+            number: 'K-000001',
+            supplier: 'Farm',
+            docNo: null,
+            receivedAt: T1,
+            total: 12005,
+            paidFrom: 'DRAWER',
+            note: '',
+            createdById: 'u1',
+            voidedAt: null,
+            voidedById: null,
+            createdAt: T1,
+            updatedAt: T1,
+          },
+        ],
+        stockMovements: [movement()],
+        expenses: [
+          {
+            id: 'e1',
+            category: 'RENT',
+            amount: 3000000,
+            spentAt: T1,
+            note: 'Noyabr',
+            paidFrom: 'OUTSIDE',
+            createdById: 'u1',
+            voidedAt: null,
+            voidedById: null,
+            createdAt: T1,
+            updatedAt: T1,
+          },
+        ],
+        payments: [payment()],
+      },
+      NOW,
+    );
+    assert.deepEqual(r.rejected, []);
+    assert.equal(r.written, 10);
+    const m = db.rows.stockMovements.get('m1')?.row as RowMap['stockMovements'];
+    assert.equal(m.qty, -1.5, 'out movements keep their minus');
+    const p = db.rows.products.get('pr1')?.row as RowMap['products'];
+    assert.equal(p.qtyOnHand, -2, 'stock below zero is kept as the till has it');
+  });
+
+  it('keeps a movement / payment that arrives before its product / visit; rejects bad rows', async () => {
+    const r = await applyPush(
+      db,
+      'c1',
+      {
+        products: [product({ id: 'bad', category: 'FOOD' })],
+        stockMovements: [movement({ productId: 'nope' })],
+        payments: [payment({ appointmentId: 'nope' }), payment({ id: 'pay2', method: 'BITCOIN' })],
+      },
+      NOW,
+    );
+    assert.deepEqual(
+      r.rejected.map((x) => [x.entity, x.id, x.reason]),
+      [
+        ['products', 'bad', 'invalid'],
+        ['payments', 'pay2', 'invalid'],
+      ],
+    );
+    // A sale made while a sync ran: its movement and payment are kept, never lost.
+    assert.ok(db.rows.stockMovements.has('m1'));
+    assert.ok(db.rows.payments.has('pay1'));
+    assert.equal(r.accepted.stockMovements, 1);
+    assert.equal(r.accepted.payments, 1);
+  });
+
+  it('never writes into another clinic’s product', async () => {
+    await applyPush(db, 'c1', { products: [product()] }, NOW);
+    const r = await applyPush(db, 'c2', { products: [product({ updatedAt: T2 })] }, NOW);
+    assert.deepEqual(
+      r.rejected.map((x) => x.reason),
+      ['foreign_id'],
+    );
   });
 });
 

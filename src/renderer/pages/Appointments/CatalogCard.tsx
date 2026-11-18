@@ -13,6 +13,8 @@ export interface CatalogCardProps {
   price: string;
   onAdd: () => void;
   addLabel: string;
+  /** v2.10: a sold product's stock ("Omborda: 3 quti"); `low` paints it as a warning. */
+  stock?: { text: string; low: boolean } | null;
 }
 
 export function CatalogCard({
@@ -23,6 +25,7 @@ export function CatalogCard({
   price,
   onAdd,
   addLabel,
+  stock,
 }: CatalogCardProps) {
   return (
     <Card type="button" onClick={onAdd} title={`${addLabel}: ${name}`} $color={typeColor}>
@@ -31,6 +34,7 @@ export function CatalogCard({
       </Picture>
       <Badge $color={typeColor}>{typeLabel}</Badge>
       <Name>{name}</Name>
+      {stock && <StockLine $low={stock.low}>{stock.text}</StockLine>}
       <Foot>
         <Price>{price}</Price>
         <AddDot aria-hidden="true">
@@ -116,6 +120,11 @@ const Foot = styled.span`
   justify-content: space-between;
   gap: 6px;
   margin-top: auto;
+`;
+
+const StockLine = styled.span<{ $low: boolean }>`
+  font-size: 11px;
+  color: ${({ theme, $low }) => ($low ? theme.colors.error : theme.colors.textSecondary)};
 `;
 
 const Price = styled.span`

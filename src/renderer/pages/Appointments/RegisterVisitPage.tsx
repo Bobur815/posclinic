@@ -142,6 +142,33 @@ export function RegisterVisitPage() {
     window.electronAPI.services.getActive().then(setServices);
   }, [catalogVersion]);
 
+  // v2.10: what is on hand of each product sold here (shown on its card; never blocks a sale).
+  const stockVersion = useDataVersion(['stock']);
+  const [stockByService, setStockByService] = useState<
+    Map<string, { qty: number; unit: string; low: boolean }>
+  >(new Map());
+  useEffect(() => {
+    window.electronAPI.stock
+      .listProducts()
+      .then((list) =>
+        setStockByService(
+          new Map(
+            list
+              .filter((p) => p.serviceId)
+              .map((p) => [
+                p.serviceId as string,
+                {
+                  qty: p.qtyOnHand,
+                  unit: p.unit,
+                  low: p.qtyOnHand <= 0 || (p.minQty !== null && p.qtyOnHand <= p.minQty),
+                },
+              ]),
+          ),
+        ),
+      )
+      .catch(() => undefined);
+  }, [stockVersion]);
+
   const casesVersion = useDataVersion(['appointments', 'cases']);
   useEffect(() => {
     if (!patient) return;
@@ -536,6 +563,18 @@ export function RegisterVisitPage() {
                       typeColor={type.color}
                       price={money(Number(s.price))}
                       addLabel={t('common.add')}
+                      stock={(() => {
+                        const st = stockByService.get(s.id);
+                        return st
+                          ? {
+                              text: t('stock.onHandShort', {
+                                qty: st.qty.toLocaleString(undefined, { maximumFractionDigits: 3 }),
+                                unit: st.unit,
+                              }),
+                              low: st.low,
+                            }
+                          : null;
+                      })()}
                       onAdd={() => addService(s)}
                     />
                   );

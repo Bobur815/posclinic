@@ -168,6 +168,12 @@ describe('v2.4 → v2.5 upgrade', () => {
       'referrals',
       'analysis_results',
       'treatment_sessions',
+      'case_recommendations',
+      'products',
+      'service_supplies',
+      'stock_receipts',
+      'stock_movements',
+      'expenses',
     ]) {
       assert.ok(names.includes(n), n);
     }

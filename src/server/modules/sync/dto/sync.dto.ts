@@ -70,6 +70,31 @@ export class SyncPushDto {
   @IsOptional()
   @IsArray()
   results?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Product rows (v2.10) (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  products?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Stock delivery rows (v2.10) (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  stockReceipts?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Stock movement rows (v2.10) (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  stockMovements?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Expense rows (v2.10) (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  expenses?: Record<string, unknown>[];
+
+  @ApiPropertyOptional({ type: [Object], description: 'Payment rows (v2.10) (≤ 200)' })
+  @IsOptional()
+  @IsArray()
+  payments?: Record<string, unknown>[];
 }
 
 export class SyncPullQueryDto {

@@ -35,6 +35,16 @@ export class PrismaSyncDb implements SyncDb {
         return this.tx.serviceType.findMany({ where, select: ref });
       case 'staffTypes':
         return this.tx.staffType.findMany({ where, select: ref });
+      case 'products':
+        return this.tx.product.findMany({ where, select: ref });
+      case 'stockReceipts':
+        return this.tx.stockReceipt.findMany({ where, select: ref });
+      case 'stockMovements':
+        return this.tx.stockMovement.findMany({ where, select: ref });
+      case 'expenses':
+        return this.tx.expense.findMany({ where, select: ref });
+      case 'payments':
+        return this.tx.payment.findMany({ where, select: ref });
       default:
         return [];
     }
@@ -166,6 +176,52 @@ export class PrismaSyncDb implements SyncDb {
       case 'staffTypes': {
         const { id, ...data } = row as RowMap['staffTypes'];
         await this.tx.staffType.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      // v2.10: stock and money (read-only on the web).
+      case 'products': {
+        const { id, ...data } = row as RowMap['products'];
+        await this.tx.product.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'stockReceipts': {
+        const { id, ...data } = row as RowMap['stockReceipts'];
+        await this.tx.stockReceipt.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'stockMovements': {
+        const { id, ...data } = row as RowMap['stockMovements'];
+        await this.tx.stockMovement.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'expenses': {
+        const { id, ...data } = row as RowMap['expenses'];
+        await this.tx.expense.upsert({
+          where: { id },
+          create: { id, clinicId, ...data, syncedAt },
+          update: { ...data, syncedAt },
+        });
+        return;
+      }
+      case 'payments': {
+        const { id, ...data } = row as RowMap['payments'];
+        await this.tx.payment.upsert({
           where: { id },
           create: { id, clinicId, ...data, syncedAt },
           update: { ...data, syncedAt },

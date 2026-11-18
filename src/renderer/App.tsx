@@ -26,6 +26,9 @@ import { ServiceList } from './pages/Services/ServiceList';
 import { DoctorList } from './pages/Doctors/DoctorList';
 import { DailyReport } from './pages/Reports/DailyReport';
 import { ShiftsPage } from './pages/Shifts/ShiftsPage';
+import { ExpensesPage } from './pages/Stock/ExpensesPage';
+import { FinanceReportPage } from './pages/Stock/FinanceReportPage';
+import { StockPage } from './pages/Stock/StockPage';
 import { SettingsPage, SettingsSectionPage } from './pages/Settings/SettingsPage';
 import { UserSettingsPage } from './pages/Settings/UserSettingsPage';
 
@@ -107,6 +110,23 @@ function App() {
             }
           />
           <Route path="reports/daily" element={<DailyReport />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route
+            path="expenses"
+            element={
+              <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLINIC_ADMIN', 'RECEPTIONIST']}>
+                <ExpensesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reports/finance"
+            element={
+              <ProtectedRoute requiredRole={['SUPER_ADMIN', 'CLINIC_ADMIN']}>
+                <FinanceReportPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="shifts"
             element={

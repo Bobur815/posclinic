@@ -43,6 +43,11 @@ model Clinic {
   results      AnalysisResult[]
   serviceTypes ServiceType[]
   staffTypes   StaffType[]
+  products       Product[]
+  stockReceipts  StockReceipt[]
+  stockMovements StockMovement[]
+  expenses       Expense[]
+  payments       Payment[]
 
   @@map("clinics")
 }
@@ -410,4 +415,128 @@ model StaffType {
 
   @@index([clinicId, syncedAt])
   @@map("staff_types")
+}
+
+// ==================== STOCK AND MONEY (till v2.10, read-only on the web) ====================
+
+/// Anything the clinic buys and keeps. On hand and average cost come from the till.
+model Product {
+  id        String   @id
+  clinicId  String   @map("clinic_id")
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  name      String
+  /// SALE | TREATMENT | HOUSEHOLD
+  category  String
+  unit      String
+  barcode   String?
+  minQty    Decimal? @map("min_qty") @db.Decimal(14, 3)
+  qtyOnHand Decimal  @default(0) @map("qty_on_hand") @db.Decimal(14, 3)
+  avgCost   Decimal  @default(0) @map("avg_cost") @db.Decimal(14, 4)
+  /// The DIRECT_SALE service that sells it (plain id).
+  serviceId String?  @map("service_id")
+  active    Boolean  @default(true)
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  syncedAt  DateTime @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, category])
+  @@map("products")
+}
+
+/// A delivery from a supplier (its lines are IN movements).
+model StockReceipt {
+  id          String    @id
+  clinicId    String    @map("clinic_id")
+  clinic      Clinic    @relation(fields: [clinicId], references: [id])
+  number      String
+  supplier    String?
+  docNo       String?   @map("doc_no")
+  receivedAt  DateTime  @map("received_at")
+  total       Decimal   @db.Decimal(14, 2)
+  /// DRAWER | OUTSIDE
+  paidFrom    String    @map("paid_from")
+  note        String    @default("")
+  createdById String?   @map("created_by_id")
+  voidedAt    DateTime? @map("voided_at")
+  voidedById  String?   @map("voided_by_id")
+  createdAt   DateTime  @map("created_at")
+  updatedAt   DateTime  @map("updated_at")
+  syncedAt    DateTime  @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, receivedAt])
+  @@map("stock_receipts")
+}
+
+/// Every change of stock (never edited on the till).
+model StockMovement {
+  id          String   @id
+  clinicId    String   @map("clinic_id")
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+  /// The product (plain id: a movement may arrive before its product, sync never drops it).
+  productId   String   @map("product_id")
+  /// IN | SALE | TREATMENT | HOUSEHOLD | ADJUST | VOID
+  type        String
+  qty         Decimal  @db.Decimal(14, 3)
+  unitCost    Decimal  @map("unit_cost") @db.Decimal(14, 4)
+  receiptId   String?  @map("receipt_id")
+  itemId      String?  @map("item_id")
+  sessionId   String?  @map("session_id")
+  note        String   @default("")
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @map("created_at")
+  updatedAt   DateTime @map("updated_at")
+  syncedAt    DateTime @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, createdAt])
+  @@index([productId, createdAt])
+  @@map("stock_movements")
+}
+
+/// Money spent that is not stock.
+model Expense {
+  id          String    @id
+  clinicId    String    @map("clinic_id")
+  clinic      Clinic    @relation(fields: [clinicId], references: [id])
+  /// RENT | SALARY | UTILITIES | REPAIR | TAX | OTHER
+  category    String
+  amount      Decimal   @db.Decimal(14, 2)
+  spentAt     DateTime  @map("spent_at")
+  note        String    @default("")
+  /// DRAWER | OUTSIDE
+  paidFrom    String    @map("paid_from")
+  createdById String?   @map("created_by_id")
+  voidedAt    DateTime? @map("voided_at")
+  voidedById  String?   @map("voided_by_id")
+  createdAt   DateTime  @map("created_at")
+  updatedAt   DateTime  @map("updated_at")
+  syncedAt    DateTime  @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, spentAt])
+  @@map("expenses")
+}
+
+/// One payment taken on a visit (till v2.6 rows; synced from till v2.10). Never changed. The visit
+/// is a plain id: a payment may arrive before its visit, sync never drops it.
+model Payment {
+  id            String   @id
+  clinicId      String   @map("clinic_id")
+  clinic        Clinic   @relation(fields: [clinicId], references: [id])
+  /// The visit (plain id).
+  appointmentId String   @map("appointment_id")
+  /// CASH | CARD | TRANSFER | INSURANCE
+  method        String
+  amount        Decimal  @db.Decimal(14, 2)
+  createdById   String?  @map("created_by_id")
+  createdAt     DateTime @map("created_at")
+  updatedAt     DateTime @map("updated_at")
+  syncedAt      DateTime @map("synced_at")
+
+  @@index([clinicId, syncedAt])
+  @@index([clinicId, createdAt])
+  @@index([appointmentId])
+  @@map("payments")
 }

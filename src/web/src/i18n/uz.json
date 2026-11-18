@@ -87,7 +87,11 @@
     "settings": "Sozlamalar",
     "menu": "Menyu",
     "collapse": "Yig'ish",
-    "expand": "Kengaytirish"
+    "expand": "Kengaytirish",
+    "financeReport": "Moliya hisoboti",
+    "stockGroup": "Ombor va xarajatlar",
+    "stock": "Ombor",
+    "expenses": "Xarajatlar"
   },
   "roles": {
     "CLINIC_ADMIN": "Administrator",
@@ -378,5 +382,99 @@
     "prev": "Oldingi sahifa",
     "next": "Keyingi sahifa",
     "rowsPerPage": "Sahifada:"
+  },
+  "stock": {
+    "title": "Ombor",
+    "readOnly": "Asosiy kassadan sinxronlangan ma’lumot; o‘zgartirishlar kassada qilinadi.",
+    "value": "Ombor qiymati",
+    "products": "Mahsulotlar",
+    "low": "Kam qoldi",
+    "negative": "Minusda",
+    "empty": "Mahsulot yo‘q",
+    "product": "Mahsulot",
+    "categoryLabel": "Turi",
+    "category": {
+      "SALE": "Sotuv uchun",
+      "TREATMENT": "Muolaja uchun",
+      "HOUSEHOLD": "Xo‘jalik"
+    },
+    "onHand": "Qoldiq",
+    "avgCost": "O‘rtacha tannarx",
+    "history": "Harakatlar",
+    "noMovements": "Bu davrda harakat yo‘q",
+    "movementType": "Harakat",
+    "qty": "Miqdor",
+    "movement": {
+      "IN": "Kirim",
+      "SALE": "Sotildi",
+      "TREATMENT": "Muolajada ishlatildi",
+      "HOUSEHOLD": "Hisobdan chiqarildi",
+      "ADJUST": "Inventarizatsiya",
+      "VOID": "Kirim bekor qilindi"
+    },
+    "lastUpdated": "Qoldiq yangilangan: {{at}}"
+  },
+  "expenses": {
+    "title": "Xarajatlar",
+    "pageTotal": "Sahifadagi jami",
+    "empty": "Bu davrda xarajat yo‘q",
+    "category": "Turi",
+    "categories": {
+      "RENT": "Ijara",
+      "SALARY": "Ish haqi",
+      "UTILITIES": "Kommunal xizmatlar",
+      "REPAIR": "Ta’mirlash",
+      "TAX": "Soliq",
+      "OTHER": "Boshqa"
+    },
+    "paidFrom": "To‘lov",
+    "from": {
+      "DRAWER": "Kassadan",
+      "OUTSIDE": "Kassadan tashqari"
+    },
+    "amount": "Summa",
+    "voided": "Bekor qilingan"
+  },
+  "finance": {
+    "title": "Moliya hisoboti",
+    "today": "Bugun",
+    "week": "7 kun",
+    "month": "Shu oy",
+    "lastMonth": "O‘tgan oy",
+    "income": "Tushum",
+    "costs": "Tannarx, sarflar va xarajatlar",
+    "profit": "Foyda",
+    "netCash": "Pul oqimi",
+    "debt": "Qarzdorlik",
+    "stockValue": "Ombor qiymati",
+    "profitHint": "Foyda = tushum − sotilgan mahsulot tannarxi − muolaja va xo‘jalik sarflari − kamomad − xarajatlar. Pul oqimi = tushum − kirimlar va xarajatlarga to‘langan pul.",
+    "incomeTitle": "Tushum (to‘lov turlari bo‘yicha)",
+    "billedByKind": "Hisoblangan (xizmat turlari bo‘yicha)",
+    "billed": "Hisoblangan",
+    "costsTitle": "Tannarx, sarflar va xarajatlar",
+    "costOfSales": "Sotilgan mahsulot tannarxi",
+    "treatment": "Muolajalarda sarflangan",
+    "household": "Hisobdan chiqarilgan",
+    "stockLoss": "Inventarizatsiya kamomadi",
+    "cashOutTitle": "Chiqqan pul",
+    "out": {
+      "purchases": "Kirimlar (mahsulot xaridi)",
+      "expenses": "Xarajatlar"
+    },
+    "lowStock": "Kam qolgan mahsulotlar",
+    "noLowStock": "Hammasi yetarli",
+    "methods": {
+      "CASH": "Naqd",
+      "CARD": "Karta",
+      "TRANSFER": "O‘tkazma",
+      "INSURANCE": "Sug‘urta"
+    },
+    "kinds": {
+      "CONSULTATION": "Konsultatsiya",
+      "ANALYSIS": "Tahlil",
+      "PROCEDURE": "Muolaja",
+      "DIRECT_SALE": "To‘g‘ridan-to‘g‘ri sotuv",
+      "OTHER": "Boshqa"
+    }
   }
 }

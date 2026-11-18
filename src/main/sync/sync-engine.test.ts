@@ -361,6 +361,68 @@ describe('runSync against a real till database', () => {
     assert.equal(server.sent('vitals')[0]?.weightKg, 70.5);
   });
 
+  it('pushes stock and money (v2.10); payments follow createdAt and go once', async () => {
+    const shift = await db.shift.create({ data: { id: 'sh1', status: 'CLOSED' } });
+    await db.product.create({
+      data: {
+        id: 'pr1',
+        name: 'Eritma',
+        category: 'TREATMENT',
+        unit: 'ml',
+        qtyOnHand: 650.5,
+        avgCost: 20,
+      },
+    });
+    const cm = await db.cashMovement.create({
+      data: { shiftId: shift.id, type: 'PAY_OUT', amount: 20000 },
+    });
+    await db.stockReceipt.create({
+      data: {
+        id: 'rc1',
+        number: 'K-000001',
+        total: 20000,
+        paidFrom: 'DRAWER',
+        cashMovementId: cm.id,
+      },
+    });
+    await db.stockMovement.create({
+      data: { id: 'mv1', productId: 'pr1', type: 'IN', qty: 1000, unitCost: 20, receiptId: 'rc1' },
+    });
+    await db.expense.create({ data: { id: 'ex1', category: 'RENT', amount: 1000000 } });
+    await db.payment.create({
+      data: {
+        id: 'pay1',
+        appointmentId: 'a-course',
+        shiftId: shift.id,
+        method: 'CASH',
+        amount: 90000,
+      },
+    });
+
+    const server = new FakeServer();
+    await runSync(sdb(), server);
+    const order = server.pushes.map((p) => Object.keys(p)[0]);
+    assert.ok(order.indexOf('appointments') < order.indexOf('payments'), order.join(','));
+    assert.ok(order.indexOf('products') < order.indexOf('stockMovements'), order.join(','));
+    assert.equal(server.sent('products')[0]?.qtyOnHand, 650.5);
+    assert.equal(server.sent('stockMovements')[0]?.qty, 1000);
+    const receipt = server.sent('stockReceipts')[0] as Record<string, unknown>;
+    assert.equal(receipt.total, 20000);
+    assert.ok(!('cashMovementId' in receipt), 'the drawer link stays on the till');
+    const pay = server.sent('payments')[0] as Record<string, unknown>;
+    assert.equal(pay.amount, 90000);
+    assert.equal(pay.updatedAt, pay.createdAt);
+    assert.ok(!('shiftId' in pay));
+    assert.equal(server.sent('expenses')[0]?.amount, 1000000);
+
+    const again = new FakeServer();
+    await runSync(sdb(), again);
+    for (const e of ['products', 'stockReceipts', 'stockMovements', 'expenses', 'payments']) {
+      assert.equal(again.sent(e).length, 0, e);
+    }
+    assert.equal(await pendingCount(sdb()), 0);
+  });
+
   it('keeps the cursor of an entity the server did not process, and sends it once it does', async () => {
     await db.patientVitals.create({ data: { id: 'v-old-server', patientId: 'p1', weightKg: 60 } });
     // An older server: it does not know `vitals` and leaves it out of `accepted`.

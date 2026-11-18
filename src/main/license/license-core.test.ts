@@ -153,6 +153,14 @@ describe('refusal', () => {
       await refusal('appointments:checkout', ['a1', { amount: 100_000 }], ro, facts()),
       null,
     );
+    // v2.10: new products, deliveries and expenses are new business; records of what happened
+    // (write-offs, stocktakes, voids) are not.
+    for (const ch of ['stock:saveProduct', 'stock:receive', 'expenses:create']) {
+      assert.equal(await refusal(ch, [{}], ro, facts()), 'license.refused.blocked', ch);
+    }
+    for (const ch of ['stock:writeOff', 'stock:count', 'stock:voidReceipt', 'expenses:void']) {
+      assert.equal(await refusal(ch, [{}], ro, facts()), null, ch);
+    }
   });
 
   it('enforces the monthly visit limit', async () => {
@@ -257,6 +265,39 @@ describe('refusal', () => {
       'license.feature.printPrescription',
     );
     assert.equal(await refusal('print:prescription', ['a1'], state(payload()), facts()), null);
+  });
+
+  it('the money report (v2.10): one day free, longer or malformed needs reports', async () => {
+    const s = state(start);
+    const day = { from: '2026-11-18', to: '2026-11-18' };
+    assert.equal(await refusal('finance:report', [day], s, facts()), null);
+    // A list of expenses over a month is a report too.
+    assert.equal(await refusal('expenses:list', [day], s, facts()), null);
+    assert.equal(
+      await refusal('expenses:list', [{ from: '2026-11-01', to: '2026-11-18' }], s, facts()),
+      'license.feature.reports',
+    );
+    for (const range of [
+      { from: '2026-11-01', to: '2026-11-18' },
+      { from: '2026-11-18' },
+      { from: 'x', to: 'y' },
+      {},
+    ]) {
+      assert.equal(
+        await refusal('finance:report', [range], s, facts()),
+        'license.feature.reports',
+        JSON.stringify(range),
+      );
+    }
+    assert.equal(
+      await refusal(
+        'finance:report',
+        [{ from: '2026-11-01', to: '2026-11-30' }],
+        state(payload()),
+        facts(),
+      ),
+      null,
+    );
   });
 });
 

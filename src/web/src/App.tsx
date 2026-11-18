@@ -9,6 +9,9 @@ import { PatientList } from './pages/Patients/PatientList';
 import { PatientDetails } from './pages/Patients/PatientDetails';
 import { DailySummary } from './pages/Reports/DailySummary';
 import { MonthlyReport } from './pages/Reports/MonthlyReport';
+import { ExpensesPage } from './pages/Stock/ExpensesPage';
+import { FinanceReport } from './pages/Stock/FinanceReport';
+import { StockPage } from './pages/Stock/StockPage';
 import { ServiceList } from './pages/Services/ServiceList';
 import { DoctorList } from './pages/Doctors/DoctorList';
 import { UserList } from './pages/Users/UserList';
@@ -52,6 +55,9 @@ export function App() {
           <Route path="reports" element={<Navigate to="/reports/daily" replace />} />
           <Route path="reports/daily" element={<DailySummary />} />
           <Route path="reports/monthly" element={<MonthlyReport />} />
+          <Route path="reports/finance" element={<FinanceReport />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
           <Route path="services" element={<ServiceList />} />
           <Route path="doctors" element={<DoctorList />} />
           <Route path="staff" element={<UserList />} />

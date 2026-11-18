@@ -68,7 +68,10 @@ export interface DataChangedEvent {
     | 'users'
     | 'cases'
     | 'settings'
-    | 'shifts';
+    | 'shifts'
+    // v2.10: products and their movements; expenses and the money report.
+    | 'stock'
+    | 'finance';
 }
 export type AppEvent = DataChangedEvent;
 

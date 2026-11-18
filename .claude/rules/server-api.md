@@ -65,6 +65,31 @@ Result      { id, itemId, caseId|null, patientId, serviceId, outcome: POSITIVE|N
 - Migration `20261115200000_clinical_workflow`: additive, plus `appointments.doctor_id` made nullable and a data
   backfill of the new item `status` from the visit status.
 
+### v2.10 additions (stock and money; read-only on the web)
+```ts
+Product       { id, name, category: SALE|TREATMENT|HOUSEHOLD, unit, barcode|null, minQty|null, qtyOnHand (may be < 0),
+                avgCost, serviceId|null (plain id), active, createdAt, updatedAt }
+StockReceipt  { id, number, supplier|null, docNo|null, receivedAt, total, paidFrom: DRAWER|OUTSIDE, note, createdById|null,
+                voidedAt|null, voidedById|null, createdAt, updatedAt }
+StockMovement { id, productId, type: IN|SALE|TREATMENT|HOUSEHOLD|ADJUST|VOID, qty (signed: − out), unitCost,
+                receiptId|null, itemId|null, sessionId|null, note, createdById|null, createdAt, updatedAt }
+Expense       { id, category: RENT|SALARY|UTILITIES|REPAIR|TAX|OTHER, amount, spentAt, note, paidFrom: DRAWER|OUTSIDE,
+                createdById|null, voidedAt|null, voidedById|null, createdAt, updatedAt }
+Payment       { id, appointmentId, method: CASH|CARD|TRANSFER|INSURANCE, amount, createdById|null, createdAt, updatedAt }
+```
+- Push arrays `products, stockReceipts, stockMovements, expenses, payments`, applied after `results`.
+  Movements and payments (append-only facts) are kept even before their product / visit arrives (a sale made while
+  a sync runs): `productId` / `appointmentId` are plain ids, no foreign key, read back only within the clinic.
+- **Payments now go up** (before v2.10 they stayed on the till). They are never changed: the till's cursor follows
+  `createdAt` and sends `updatedAt = createdAt`. Shifts, cash movements and the drawer links (`cashMovementId`,
+  `shiftId`) stay on the till. Supply lists per service (`service_supplies`) stay on the till.
+- Up only, never pulled; the web cannot change them.
+- `GET /api/stock/products?includeInactive=` → `{ items }`; `GET /api/stock/movements?productId=&from=&to=&page=&pageSize=`
+  and `GET /api/expenses?from=&to=&page=&pageSize=` → `{ items, total }`;
+  `GET /api/reports/finance?from=YYYY-MM-DD&to=YYYY-MM-DD` (clinic days, both included, ≤ 366 days) →
+  `FinanceReportDto` from `src/shared/stock.ts` `buildFinanceReport`, the same function the till's report uses.
+- Migration `20261118100000_stock_finance`: additive (new tables only).
+
 ## Sync (main till → server). Auth: licence
 Headers: `Authorization: License <posgro licence token>`, `X-Terminal-Id: <terminalId>`,
 `X-App-Version: <version>`. `LicenseGuard` verifies the Ed25519 signature with

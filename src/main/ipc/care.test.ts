@@ -8,9 +8,13 @@ import type {
   OpenCaseDto,
   PatientDto,
   QueueItemDto,
+  RecommendationDto,
 } from '../../shared/clinic';
+import { caseCourses } from '../../shared/course';
+import { type PrintSourceAppointment, toPrintableVisit } from '../../shared/receipt-html';
 import { useDatabaseClient } from '../database/sqlite-client';
 import { createTestDb, openTestShift, type TestDb } from '../test-utils/db';
+import { MAX_RECOMMENDATIONS } from './care-handlers';
 import { setupIpcHandlers } from './handlers';
 import {
   type Actor,
@@ -55,7 +59,8 @@ let visit: AppointmentDto;
 
 before(async () => {
   t = await createTestDb();
-  useDatabaseClient(t.db); await openTestShift(t.db);
+  useDatabaseClient(t.db);
+  await openTestShift(t.db);
   clearHandlers();
   setupIpcHandlers();
   configureHandlers({ gate: async () => null, onWrite: () => undefined, emit: () => undefined });
@@ -238,7 +243,24 @@ describe('the case page', () => {
       ],
     );
 
+    // The sheet handed over now already holds the whole course, every box empty (main and
+    // satellite read the same `appointments:getById`); the case page draws the same boxes.
+    const printed = async () =>
+      toPrintableVisit(
+        JSON.parse(
+          JSON.stringify(await as(desk)<PrintSourceAppointment>('appointments:getById', visit.id)),
+        ),
+      ).courses;
+    const onSheet = await printed();
+    assert.deepEqual(
+      onSheet.map((c) => [c.perDay, c.days, c.sessions.length, c.sessions.some((s) => s.doneAt)]),
+      [[2, 5, 10, false]],
+    );
+    const onPage = caseCourses(page).find((c) => c.referralId === course.id);
+    assert.equal(onPage?.sessions.length, 10);
+
     await as(drA)('cases:cancelReferral', course.id);
+    assert.deepEqual(await printed(), [], 'a cancelled course leaves the sheet');
     assert.equal(
       (await as(desk)<OpenCaseDto[]>('cases:forPatient', patient.id))[0].referrals.length,
       1,
@@ -268,6 +290,97 @@ describe('the case page', () => {
       [u.fullName, u.phone, u.allergies, u.chronicConditions],
       ['Aziz Karimov', '+998901234567', 'Penitsillin', 'Gastrit'],
     );
+  });
+
+  it('keeps the doctor’s home advice on the whole case; later visits add to it', async () => {
+    const caseId = visit.caseId as string;
+    const first = await as(drA)<RecommendationDto>('cases:addRecommendation', caseId, {
+      category: 'DIET_AVOID',
+      text: '  Shirinliklar\n- Sut  ',
+    });
+    assert.equal(first.text, 'Shirinliklar\n- Sut');
+    assert.equal(first.doctorId, 'dA');
+    const byAdmin = await as(admin)<RecommendationDto>('cases:addRecommendation', caseId, {
+      category: 'HOME',
+      text: 'Suvni qaynatib iching',
+    });
+    assert.equal(byAdmin.doctorId, null, 'an admin without a doctor profile: not the lead doctor');
+    assert.equal(byAdmin.createdBy, admin.id);
+
+    // At most MAX_RECOMMENDATIONS active ones per case.
+    const filler = Array.from({ length: MAX_RECOMMENDATIONS - 2 }, (_, i) => ({
+      id: `fill-${i}`,
+      caseId,
+      category: 'HOME',
+      text: 'x',
+    }));
+    await t.db.caseRecommendation.createMany({ data: filler });
+    await refusedWith(
+      as(drA)('cases:addRecommendation', caseId, { category: 'HOME', text: 'one more' }),
+      'errors.tooManyRecommendations',
+    );
+    await t.db.caseRecommendation.deleteMany({ where: { id: { startsWith: 'fill-' } } });
+
+    for (const bad of [
+      { category: 'DIET_AVOID', text: '   ' },
+      { category: 'NOPE', text: 'x' },
+      { text: 'x' },
+    ]) {
+      await refusedWith(
+        as(drA)('cases:addRecommendation', caseId, bad),
+        'errors.invalidRecommendation',
+      );
+    }
+    await refusedWith(
+      as(desk)('cases:addRecommendation', caseId, { category: 'HOME', text: 'x' }),
+      'errors.forbidden',
+    );
+    await refusedWith(
+      as(drB)('cases:addRecommendation', caseId, { category: 'HOME', text: 'x' }),
+      'errors.notYourPatient',
+    );
+
+    // Only its author or an admin takes one off; it stays in the database, off the sheet.
+    await refusedWith(as(drA)('cases:removeRecommendation', byAdmin.id), 'errors.forbidden');
+    await refusedWith(as(drB)('cases:removeRecommendation', first.id), 'errors.notYourPatient');
+    await as(admin)('cases:removeRecommendation', byAdmin.id);
+    await refusedWith(as(admin)('cases:removeRecommendation', byAdmin.id), 'errors.notFound');
+    assert.equal(await t.db.caseRecommendation.count({ where: { caseId } }), 2);
+
+    const page = await as(drA)<CaseDetailDto>('cases:get', caseId);
+    assert.deepEqual(
+      page.recommendations.map((r) => [r.category, r.doctor?.fullName]),
+      [['DIET_AVOID', 'Dr A']],
+    );
+
+    // The visit the printers (and a satellite) read carries it: one line, one point.
+    const source = await as(desk)<PrintSourceAppointment>('appointments:getById', visit.id);
+    const sheet = toPrintableVisit(JSON.parse(JSON.stringify(source)));
+    await refusedWith(
+      invokeHandler(
+        'appointments:getById',
+        { actor: null, setActor: () => undefined, terminalId: 'T1' } as HandlerContext,
+        [visit.id],
+      ),
+      'errors.notAuthenticated',
+    );
+    assert.deepEqual(sheet.recommendations, {
+      dietAllowed: [],
+      dietAvoid: ['Shirinliklar', 'Sut'],
+      home: [],
+    });
+    assert.equal(sheet.weightKg, 68.5);
+    assert.equal(sheet.heightCm, 172);
+    assert.equal(sheet.diagnosis, 'Lyambliya?', 'the case’s diagnosis when the visit has none');
+
+    // A closed case takes no new advice.
+    await as(drA)('cases:update', caseId, { close: true });
+    await refusedWith(
+      as(drA)('cases:addRecommendation', caseId, { category: 'HOME', text: 'x' }),
+      'errors.caseUnavailable',
+    );
+    await refusedWith(as(drA)('cases:removeRecommendation', first.id), 'errors.caseUnavailable');
+    await as(drA)('cases:update', caseId, { reopen: true });
   });
 
   it('closes and reopens a case', async () => {
@@ -357,9 +470,12 @@ describe('live updates', () => {
     ]) {
       assert.deepEqual(writtenEntities(ch), [], ch);
     }
-    assert.deepEqual(writtenEntities('queue:finish'), ['cases', 'appointments']);
+    // v2.10: finishing a line or ticking a session uses supplies; a free direct sale is sold.
+    assert.deepEqual(writtenEntities('queue:finish'), ['cases', 'appointments', 'stock']);
+    assert.deepEqual(writtenEntities('sessions:tick'), ['cases', 'appointments', 'stock']);
     assert.deepEqual(writtenEntities('cases:addReferral'), ['cases', 'appointments']);
-    assert.deepEqual(writtenEntities('appointments:create'), ['appointments', 'cases']);
+    assert.deepEqual(writtenEntities('cases:addRecommendation'), ['cases', 'appointments']);
+    assert.deepEqual(writtenEntities('appointments:create'), ['appointments', 'cases', 'stock']);
     assert.deepEqual(writtenEntities('doctors:createLogin'), ['doctors']);
   });
 });

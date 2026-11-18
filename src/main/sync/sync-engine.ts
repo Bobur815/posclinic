@@ -4,7 +4,8 @@
  * SQLite file and a fake server.
  *
  * Up: every row of users, doctors, services, patients, cases, referrals, appointments (with their
- *     lines and course sessions), vitals and results changed since the entity's
+ *     lines and course sessions), vitals, results and (v2.10) products, deliveries, stock
+ *     movements, expenses and payments changed since the entity's
  *     push cursor, oldest first, 200 at a time. The cursor is `<updatedAt ISO>|<id>` of the last
  *     row sent, so rows sharing one timestamp are neither skipped nor sent forever.
  * Down: doctors, services, users the web dashboard changed since the last pull's `serverTime`.
@@ -28,6 +29,12 @@ export const PUSH_ORDER = [
   'appointments',
   'vitals',
   'results',
+  // v2.10: stock and money, for the web dashboard's money report. Up only.
+  'products',
+  'stockReceipts',
+  'stockMovements',
+  'expenses',
+  'payments',
 ] as const;
 export type PushEntity = (typeof PUSH_ORDER)[number];
 export const PULL_ENTITIES = ['users', 'doctors', 'services'] as const;
@@ -59,6 +66,16 @@ export interface SyncDb {
   serviceType: any;
   // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
   staffType: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  product: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  stockReceipt: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  stockMovement: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  expense: any;
+  // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
+  payment: any;
   // biome-ignore lint/suspicious/noExplicitAny: generated Prisma delegates
   syncState: any;
 }
@@ -104,8 +121,14 @@ export interface SyncResult {
 
 const iso = (d: Date | string) => (d instanceof Date ? d.toISOString() : new Date(d).toISOString());
 
-export function cursorOf(row: Row): string {
-  return `${iso(row.updatedAt)}|${row.id}`;
+/**
+ * The column a push cursor follows. Payments are never changed and have no `updatedAt`: they
+ * follow `createdAt` (and go up with `updatedAt = createdAt`).
+ */
+export const CURSOR_FIELD: Partial<Record<PushEntity, 'createdAt'>> = { payments: 'createdAt' };
+
+export function cursorOf(row: Row, field: 'updatedAt' | 'createdAt' = 'updatedAt'): string {
+  return `${iso(row[field] as Date | string)}|${row.id}`;
 }
 
 export function parseCursor(cursor: string | null | undefined): { at: Date; id: string } | null {
@@ -116,11 +139,14 @@ export function parseCursor(cursor: string | null | undefined): { at: Date; id: 
   return { at, id: cursor.slice(bar + 1) };
 }
 
-/** Rows strictly after the cursor in (updatedAt, id) order. */
-function afterCursor(cursor: { at: Date; id: string } | null) {
+/** Rows strictly after the cursor in (field, id) order. */
+function afterCursor(
+  cursor: { at: Date; id: string } | null,
+  field: 'updatedAt' | 'createdAt' = 'updatedAt',
+) {
   if (!cursor) return {};
   return {
-    OR: [{ updatedAt: { gt: cursor.at } }, { updatedAt: cursor.at, id: { gt: cursor.id } }],
+    OR: [{ [field]: { gt: cursor.at } }, { [field]: cursor.at, id: { gt: cursor.id } }],
   };
 }
 
@@ -186,7 +212,32 @@ export function toWire(entity: PushEntity, row: Record<string, unknown>): Record
       });
     }
     case 'results':
-      return dates({ ...row, value: row.value === null || row.value === undefined ? null : Number(row.value) });
+      return dates({
+        ...row,
+        value: row.value === null || row.value === undefined ? null : Number(row.value),
+      });
+    // v2.10. Decimals go as numbers; the drawer link is the till's own (shifts stay on it).
+    case 'products':
+      return dates({
+        ...row,
+        minQty: row.minQty === null || row.minQty === undefined ? null : Number(row.minQty),
+        qtyOnHand: Number(row.qtyOnHand),
+        avgCost: Number(row.avgCost),
+      });
+    case 'stockReceipts': {
+      const { cashMovementId: _c, ...rest } = row;
+      return dates({ ...rest, total: Number(rest.total) });
+    }
+    case 'stockMovements':
+      return dates({ ...row, qty: Number(row.qty), unitCost: Number(row.unitCost) });
+    case 'expenses': {
+      const { cashMovementId: _c, ...rest } = row;
+      return dates({ ...rest, amount: Number(rest.amount) });
+    }
+    case 'payments': {
+      const { shiftId: _s, ...rest } = row;
+      return dates({ ...rest, amount: Number(rest.amount), updatedAt: rest.createdAt });
+    }
     default:
       return dates(row);
   }
@@ -223,6 +274,11 @@ const MODEL: Record<PushEntity, keyof SyncDb> = {
   results: 'analysisResult',
   serviceTypes: 'serviceType',
   staffTypes: 'staffType',
+  products: 'product',
+  stockReceipts: 'stockReceipt',
+  stockMovements: 'stockMovement',
+  expenses: 'expense',
+  payments: 'payment',
 };
 
 /** Fields each pulled entity may write on the till (nothing else from the server is trusted). */
@@ -273,7 +329,9 @@ export async function pendingCount(db: SyncDb): Promise<number> {
   let total = 0;
   for (const entity of PUSH_ORDER) {
     const cursor = parseCursor((await readState(db, entity))?.pushCursor);
-    total += await db[MODEL[entity]].count({ where: afterCursor(cursor) });
+    total += await db[MODEL[entity]].count({
+      where: afterCursor(cursor, CURSOR_FIELD[entity]),
+    });
   }
   return total;
 }
@@ -289,9 +347,10 @@ export async function runSync(
   for (const entity of PUSH_ORDER) {
     for (;;) {
       const cursor = parseCursor((await readState(db, entity))?.pushCursor);
+      const field = CURSOR_FIELD[entity] ?? 'updatedAt';
       const rows: Row[] = await db[MODEL[entity]].findMany({
-        where: afterCursor(cursor),
-        orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
+        where: afterCursor(cursor, field),
+        orderBy: [{ [field]: 'asc' }, { id: 'asc' }],
         take: BATCH,
         ...(entity === 'appointments'
           ? { include: { items: { include: { sessions: { orderBy: { number: 'asc' } } } } } }
@@ -314,7 +373,7 @@ export async function runSync(
       }
       result.pushed += rows.length - answer.rejected.length;
       result.rejected += answer.rejected.length;
-      await writeState(db, entity, { pushCursor: cursorOf(rows[rows.length - 1]!) });
+      await writeState(db, entity, { pushCursor: cursorOf(rows[rows.length - 1]!, field) });
       if (rows.length < BATCH) break;
     }
   }

@@ -74,6 +74,8 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
     await addShiftsIfNeeded(prisma);
     await addServiceFiscalCodesIfNeeded(prisma);
     await addFiscalReceiptsIfNeeded(prisma);
+    await addCaseRecommendationsIfNeeded(prisma);
+    await addStockIfNeeded(prisma);
     return;
   }
 
@@ -169,6 +171,8 @@ export async function createSchemaIfNeeded(prisma: SchemaClient): Promise<void> 
   await addShiftsIfNeeded(prisma);
   await addServiceFiscalCodesIfNeeded(prisma);
   await addFiscalReceiptsIfNeeded(prisma);
+  await addCaseRecommendationsIfNeeded(prisma);
+  await addStockIfNeeded(prisma);
 }
 
 /**
@@ -722,4 +726,117 @@ async function addFiscalReceiptsIfNeeded(prisma: SchemaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
     'CREATE INDEX IF NOT EXISTS idx_appointments_fiscal_status ON appointments(fiscal_status)',
   );
+}
+
+/**
+ * v2.9.0: the doctor's home recommendations on a case (A4 treatment sheet). A new table only:
+ * additive and idempotent. Till only, not synced.
+ */
+async function addCaseRecommendationsIfNeeded(prisma: SchemaClient): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS case_recommendations (
+      id TEXT PRIMARY KEY,
+      case_id TEXT NOT NULL REFERENCES clinical_cases(id),
+      doctor_id TEXT REFERENCES doctors(id),
+      category TEXT NOT NULL DEFAULT 'HOME',
+      text TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_by TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    'CREATE INDEX IF NOT EXISTS idx_recommendations_case ON case_recommendations(case_id, active)',
+  );
+}
+
+/**
+ * v2.10.0: stock (products, what a procedure uses, deliveries, every stock movement) and
+ * expenses. New tables only: additive and idempotent, on fresh and existing databases alike.
+ */
+async function addStockIfNeeded(prisma: SchemaClient): Promise<void> {
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS products (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'HOUSEHOLD',
+      unit TEXT NOT NULL DEFAULT 'dona',
+      barcode TEXT,
+      min_qty REAL,
+      qty_on_hand REAL NOT NULL DEFAULT 0,
+      avg_cost REAL NOT NULL DEFAULT 0,
+      service_id TEXT UNIQUE REFERENCES services(id),
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS service_supplies (
+      id TEXT PRIMARY KEY,
+      service_id TEXT NOT NULL REFERENCES services(id),
+      product_id TEXT NOT NULL REFERENCES products(id),
+      qty REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (service_id, product_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS stock_receipts (
+      id TEXT PRIMARY KEY,
+      number TEXT NOT NULL UNIQUE,
+      supplier TEXT,
+      doc_no TEXT,
+      received_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      total REAL NOT NULL DEFAULT 0,
+      paid_from TEXT NOT NULL DEFAULT 'OUTSIDE',
+      cash_movement_id TEXT UNIQUE,
+      note TEXT NOT NULL DEFAULT '',
+      created_by_id TEXT,
+      voided_at DATETIME,
+      voided_by_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS stock_movements (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL REFERENCES products(id),
+      type TEXT NOT NULL,
+      qty REAL NOT NULL,
+      unit_cost REAL NOT NULL,
+      receipt_id TEXT REFERENCES stock_receipts(id),
+      item_id TEXT,
+      session_id TEXT,
+      note TEXT NOT NULL DEFAULT '',
+      created_by_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS expenses (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL DEFAULT 'OTHER',
+      amount REAL NOT NULL,
+      spent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      note TEXT NOT NULL DEFAULT '',
+      paid_from TEXT NOT NULL DEFAULT 'OUTSIDE',
+      cash_movement_id TEXT UNIQUE,
+      created_by_id TEXT,
+      voided_at DATETIME,
+      voided_by_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category, active)',
+    'CREATE INDEX IF NOT EXISTS idx_products_updated ON products(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_receipts_received ON stock_receipts(received_at)',
+    'CREATE INDEX IF NOT EXISTS idx_receipts_updated ON stock_receipts(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_movements_product ON stock_movements(product_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_movements_type ON stock_movements(type, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_movements_item ON stock_movements(item_id)',
+    'CREATE INDEX IF NOT EXISTS idx_movements_session ON stock_movements(session_id)',
+    'CREATE INDEX IF NOT EXISTS idx_movements_updated ON stock_movements(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_expenses_spent ON expenses(spent_at)',
+    'CREATE INDEX IF NOT EXISTS idx_expenses_updated ON expenses(updated_at)',
+    // Cloud sync reads payments in creation order (they are never changed).
+    'CREATE INDEX IF NOT EXISTS idx_payments_created ON payments(created_at)',
+  ];
+  for (const sql of statements) await prisma.$executeRawUnsafe(sql);
 }

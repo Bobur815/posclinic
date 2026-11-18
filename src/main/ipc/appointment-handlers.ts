@@ -9,6 +9,7 @@ import {
 } from './ipc-safe';
 import { getPrismaClient } from '../database/sqlite-client';
 import { money, PAYMENT_METHODS, requireOpenShiftId } from '../clinic/shifts';
+import { settleOrderStock } from '../clinic/stock';
 import { fiscalStatusAtPayment } from '../fiscal/fiscal-service';
 import { getFiscalService } from '../fiscal/registry';
 import { getAppConfig } from '../config/app-config';
@@ -132,17 +133,21 @@ export function setupAppointmentHandlers(): void {
     },
   );
 
-  handle('appointments:getById', async (_event, id: string) => {
+  handle('appointments:getById', async (ctx, id: unknown) => {
+    // A visit carries medical data (and, since v2.9, the case's advice, course and vitals).
+    if (!ctx.actor) throw new RefusedError('errors.notAuthenticated');
     try {
       const prisma = getPrismaClient();
       const appointment = await prisma.appointment.findUnique({
-        where: { id },
+        where: { id: String(id ?? '') },
         include: {
           patient: true,
           doctor: true,
           items: { include: { service: true } },
           // Its payments (method, amount, cashier's name): the receipt a satellite prints.
           payments: PRINTABLE_APPOINTMENT_INCLUDE.payments,
+          // The case's course and home advice: the treatment sheet a satellite prints.
+          case: PRINTABLE_APPOINTMENT_INCLUDE.case,
         },
       });
       return ipcSafe(appointment);
@@ -329,6 +334,8 @@ export function setupAppointmentHandlers(): void {
               },
               data: { status: 'DONE', startedAt: now, completedAt: now },
             });
+            // v2.10: the products sold leave stock now, in the same transaction.
+            await settleOrderStock(tx, id, ctx.actor?.id ?? null);
           }
           const paid = await tx.appointment.update({
             where: { id },

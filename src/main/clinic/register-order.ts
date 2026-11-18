@@ -8,6 +8,7 @@ import { nextAppointmentNumber } from '../ipc/appointment-handlers';
 import { completeOrderIfDone, recomputeCaseStatus } from './case-status';
 import { getClinicSettings } from './clinic-settings';
 import { type LineInput, PricingError, priceLines, sessionPlan } from './pricing';
+import { settleOrderStock } from './stock';
 
 /**
  * Reception registers services for a patient (`appointments:create`): one paid order inside the
@@ -259,8 +260,7 @@ export async function registerOrder(
       typeof input.doctorId === 'string' && doctors.some((d) => d.id === input.doctorId)
         ? input.doctorId
         : null;
-    const consultDoctor =
-      priced.find((p) => p.kind === 'CONSULTATION')?.doctorId ?? legacyDoctor;
+    const consultDoctor = priced.find((p) => p.kind === 'CONSULTATION')?.doctorId ?? legacyDoctor;
     // Only direct sales (drugs, ointments…) with no case: a sale, not a patient journey. It opens
     // no case and is no visit for the plan's limit; inside an open case it joins that case.
     const directOnly = priced.every((p) => p.kind === 'DIRECT_SALE');
@@ -341,7 +341,11 @@ export async function registerOrder(
       });
     }
 
-    if (free) await completeOrderIfDone(tx, appointment.id);
+    if (free) {
+      // v2.10: a free direct sale leaves stock as it is registered.
+      await settleOrderStock(tx, appointment.id, ctx.actor?.id ?? null);
+      await completeOrderIfDone(tx, appointment.id);
+    }
     if (theCase) {
       if (!theCase.doctorId && consultDoctor) {
         await tx.clinicalCase.update({

@@ -23,6 +23,13 @@ export const SYNC_ENTITIES = [
   'appointments',
   'vitals',
   'results',
+  // v2.10: stock and money (the web dashboard's money report). Movements after their product,
+  // payments after their visit.
+  'products',
+  'stockReceipts',
+  'stockMovements',
+  'expenses',
+  'payments',
 ] as const;
 export type SyncEntity = (typeof SYNC_ENTITIES)[number];
 
@@ -196,6 +203,56 @@ export interface StaffTypeIn extends Base {
   access: string;
 }
 
+export interface ProductIn extends Base {
+  name: string;
+  category: string;
+  unit: string;
+  barcode: string | null;
+  minQty: number | null;
+  qtyOnHand: number;
+  avgCost: number;
+  serviceId: string | null;
+}
+export interface StockReceiptIn extends Omit<Base, 'active'> {
+  number: string;
+  supplier: string | null;
+  docNo: string | null;
+  receivedAt: Date;
+  total: number;
+  paidFrom: string;
+  note: string;
+  createdById: string | null;
+  voidedAt: Date | null;
+  voidedById: string | null;
+}
+export interface StockMovementIn extends Omit<Base, 'active'> {
+  productId: string;
+  type: string;
+  qty: number;
+  unitCost: number;
+  receiptId: string | null;
+  itemId: string | null;
+  sessionId: string | null;
+  note: string;
+  createdById: string | null;
+}
+export interface ExpenseIn extends Omit<Base, 'active'> {
+  category: string;
+  amount: number;
+  spentAt: Date;
+  note: string;
+  paidFrom: string;
+  createdById: string | null;
+  voidedAt: Date | null;
+  voidedById: string | null;
+}
+export interface PaymentIn extends Omit<Base, 'active'> {
+  appointmentId: string;
+  method: string;
+  amount: number;
+  createdById: string | null;
+}
+
 export interface RowMap {
   serviceTypes: ServiceTypeIn;
   staffTypes: StaffTypeIn;
@@ -208,6 +265,11 @@ export interface RowMap {
   appointments: AppointmentIn;
   vitals: VitalsIn;
   results: ResultIn;
+  products: ProductIn;
+  stockReceipts: StockReceiptIn;
+  stockMovements: StockMovementIn;
+  expenses: ExpenseIn;
+  payments: PaymentIn;
 }
 
 export interface StoredRef {
@@ -559,6 +621,78 @@ Object.assign(PARSERS, {
   }),
 });
 
+const PRODUCT_CATEGORIES = ['SALE', 'TREATMENT', 'HOUSEHOLD'] as const;
+const MOVEMENT_TYPES = ['IN', 'SALE', 'TREATMENT', 'HOUSEHOLD', 'ADJUST', 'VOID'] as const;
+const EXPENSE_CATEGORIES = ['RENT', 'SALARY', 'UTILITIES', 'REPAIR', 'TAX', 'OTHER'] as const;
+const PAID_FROM = ['DRAWER', 'OUTSIDE'] as const;
+const PAYMENT_METHODS = ['CASH', 'CARD', 'TRANSFER', 'INSURANCE'] as const;
+/** A signed quantity (movements go out with a minus). */
+const signed = (r: Raw, k: string) => num(r, k, { min: Number.NEGATIVE_INFINITY });
+const stamps = (r: Raw) => ({
+  id: str(r, 'id', 64),
+  createdAt: date(r, 'createdAt'),
+  updatedAt: date(r, 'updatedAt'),
+});
+
+// v2.10: stock and money.
+Object.assign(PARSERS, {
+  products: (r: Raw): ProductIn => ({
+    ...base(r),
+    name: str(r, 'name', 200),
+    category: oneOf(r, 'category', PRODUCT_CATEGORIES),
+    unit: optStr(r, 'unit', 20) ?? 'dona',
+    barcode: optStr(r, 'barcode', 64),
+    minQty: optNum(r, 'minQty'),
+    // On hand may be below zero (sold before the delivery was entered).
+    qtyOnHand: signed(r, 'qtyOnHand'),
+    avgCost: num(r, 'avgCost'),
+    serviceId: optStr(r, 'serviceId', 64),
+  }),
+  stockReceipts: (r: Raw): StockReceiptIn => ({
+    ...stamps(r),
+    number: str(r, 'number', 40),
+    supplier: optStr(r, 'supplier', 200),
+    docNo: optStr(r, 'docNo', 100),
+    receivedAt: date(r, 'receivedAt'),
+    total: num(r, 'total'),
+    paidFrom: oneOf(r, 'paidFrom', PAID_FROM),
+    note: optStr(r, 'note', 500) ?? '',
+    createdById: optStr(r, 'createdById', 64),
+    voidedAt: optDate(r, 'voidedAt'),
+    voidedById: optStr(r, 'voidedById', 64),
+  }),
+  stockMovements: (r: Raw): StockMovementIn => ({
+    ...stamps(r),
+    productId: str(r, 'productId', 64),
+    type: oneOf(r, 'type', MOVEMENT_TYPES),
+    qty: signed(r, 'qty'),
+    unitCost: num(r, 'unitCost'),
+    receiptId: optStr(r, 'receiptId', 64),
+    itemId: optStr(r, 'itemId', 64),
+    sessionId: optStr(r, 'sessionId', 64),
+    note: optStr(r, 'note', 200) ?? '',
+    createdById: optStr(r, 'createdById', 64),
+  }),
+  expenses: (r: Raw): ExpenseIn => ({
+    ...stamps(r),
+    category: oneOf(r, 'category', EXPENSE_CATEGORIES),
+    amount: num(r, 'amount'),
+    spentAt: date(r, 'spentAt'),
+    note: optStr(r, 'note', 500) ?? '',
+    paidFrom: oneOf(r, 'paidFrom', PAID_FROM),
+    createdById: optStr(r, 'createdById', 64),
+    voidedAt: optDate(r, 'voidedAt'),
+    voidedById: optStr(r, 'voidedById', 64),
+  }),
+  payments: (r: Raw): PaymentIn => ({
+    ...stamps(r),
+    appointmentId: str(r, 'appointmentId', 64),
+    method: oneOf(r, 'method', PAYMENT_METHODS),
+    amount: num(r, 'amount'),
+    createdById: optStr(r, 'createdById', 64),
+  }),
+});
+
 const PARSE = PARSERS as unknown as { [E in SyncEntity]: (r: Raw) => RowMap[E] };
 
 const rawId = (raw: unknown) => {
@@ -699,6 +833,10 @@ export async function applyPush(
           continue;
         }
       }
+      // v2.10: stock movements and payments are facts that are only ever appended. They are kept
+      // even when their product / visit has not arrived yet (a sale made while a sync runs):
+      // a rejected row is never sent again, and the money report would be short for good. Their
+      // product / visit ids are plain ids, read back only inside the clinic (stock.service.ts).
 
       await db.write(entity, clinicId, row as never, now);
       stored.set(row.id, { id: row.id, clinicId, updatedAt: row.updatedAt });

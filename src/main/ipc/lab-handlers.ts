@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { completeOrderIfDone, recomputeCaseStatus, touchOrder } from '../clinic/case-status';
+import { settleItemStock } from '../clinic/stock';
 import { getPrismaClient } from '../database/sqlite-client';
 import { ADMIN_ROLES, type HandlerContext, handle, ipcSafe, RefusedError } from './ipc-safe';
 
@@ -238,6 +239,8 @@ export function setupLabHandlers(): void {
           performedBy: a.id,
         },
       });
+      // v2.10: the analysis uses its supplies (test kit, tubes…) once it is done.
+      await settleItemStock(tx, item.id, a.id);
       await completeOrderIfDone(tx, item.appointment.id);
       await touchOrder(tx, item.appointment.id);
       if (item.appointment.caseId) await recomputeCaseStatus(tx, item.appointment.caseId);
@@ -334,6 +337,8 @@ export function setupLabHandlers(): void {
               }
             : { status: 'IN_PROGRESS', startedAt: s.item.startedAt ?? now, completedAt: null },
       });
+      // v2.10: a ticked session uses the procedure's supplies; an undo gives them back.
+      await settleItemStock(tx, s.item.id, a.id);
       if (left === 0) await completeOrderIfDone(tx, s.item.appointment.id);
       else {
         // An undo can reopen a completed order.

@@ -4,6 +4,7 @@ import {
   buildTestPageHTML,
   buildVisitReceiptHTML,
   type DocumentPaper,
+  hasPrescriptionContent,
   type PrintSourceAppointment,
   type ReceiptLayout,
   readReceiptLayout,
@@ -78,7 +79,7 @@ export async function printPrescription(
 ): Promise<PrintResult> {
   try {
     const visit = toPrintableVisit(appointment);
-    if (!visit.diagnosis && !visit.prescription) return failed('printing.errors.noPrescription');
+    if (!hasPrescriptionContent(visit)) return failed('printing.errors.noPrescription');
     const { printer, paper } = documentTarget(printerConfig());
     await (
       await getEngine()
@@ -98,6 +99,58 @@ export const PRINTERS: Record<
   'print:prescription': printPrescription,
 };
 
+/**
+ * The case data the A4 treatment sheet prints (`PrintSourceCase`): its diagnosis, the doctor's
+ * active home advice, every course in the case (its referral + registered sessions), the
+ * latest vitals.
+ */
+const PRESCRIPTION_CASE_SELECT = {
+  select: {
+    diagnosis: true,
+    recommendations: {
+      where: { active: true },
+      orderBy: { createdAt: 'asc' as const },
+      select: { category: true, text: true },
+    },
+    // A course is on the sheet from the doctor's referral on, before reception registers it.
+    referrals: {
+      where: { status: { not: 'CANCELLED' }, perDay: { not: null }, days: { not: null } },
+      orderBy: { createdAt: 'asc' as const },
+      select: {
+        id: true,
+        status: true,
+        quantity: true,
+        perDay: true,
+        days: true,
+        service: { select: { name: true } },
+      },
+    },
+    appointments: {
+      orderBy: { appointmentDate: 'asc' as const },
+      select: {
+        items: {
+          where: { status: { not: 'CANCELLED' }, sessions: { some: {} } },
+          select: {
+            referralId: true,
+            serviceName: true,
+            status: true,
+            referral: { select: { perDay: true, days: true } },
+            sessions: {
+              orderBy: { number: 'asc' as const },
+              select: { number: true, plannedDate: true, doneAt: true },
+            },
+          },
+        },
+      },
+    },
+    vitals: {
+      orderBy: { recordedAt: 'desc' as const },
+      take: 1,
+      select: { weightKg: true, heightCm: true },
+    },
+  },
+};
+
 /** What a printed visit needs (also what `appointments:getById` returns to a satellite). */
 export const PRINTABLE_APPOINTMENT_INCLUDE = {
   patient: true,
@@ -112,6 +165,7 @@ export const PRINTABLE_APPOINTMENT_INCLUDE = {
       createdBy: { select: { fullName: true } },
     },
   },
+  case: PRESCRIPTION_CASE_SELECT,
 };
 
 export function setupPrintHandlers(): void {

@@ -210,6 +210,11 @@ export const READONLY_REFUSED: ReadonlySet<string> = new Set([
   'cases:addReferral',
   'doctors:createLogin',
   'users:create',
+  // v2.10: new products, deliveries and expenses are new business. Write-offs, stocktakes and
+  // voids stay allowed: they record what already happened.
+  'stock:saveProduct',
+  'stock:receive',
+  'expenses:create',
 ]);
 
 /** Answers from the database the gate needs; injected so this file stays pure. */
@@ -276,6 +281,15 @@ async function needed(
       return Number.isFinite(span) && span <= REPORT_RANGE_FREE_MS
         ? null
         : 'license.feature.reports';
+    }
+    case 'expenses:list':
+    case 'finance:report': {
+      // v2.10, the same rule as the visit report: one day is free, longer needs `reports` (a
+      // list of expenses over a month is a report too).
+      if (has('reports')) return null;
+      const { from, to } = arg(0);
+      const span = Date.parse(`${String(to)}T00:00:00`) - Date.parse(`${String(from)}T00:00:00`);
+      return Number.isFinite(span) && span <= 0 ? null : 'license.feature.reports';
     }
     case 'doctors:create':
       return !has('multiDoctor') && (await facts.activeDoctors()) >= 1

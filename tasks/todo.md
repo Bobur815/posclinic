@@ -1,398 +1,415 @@
-# Plan — Clinic web dashboard + satellite tills (v2.1)
+# Plan — Stock, expenses and the clinic's money report (v2.10.0)
 
-Previous plan (posgro licensing, v2.0.0) is done and committed in `2856f9d`; its review is in git history.
+**Status: approved 2026-11-18 with the recommended answers, except Q7: stock, expenses and the
+money report also go to the web dashboard (clinic totals, no split between owners). In progress.**
 
-## Decisions (owner, 2026-11-15)
+Previous plan (A4 treatment sheet, v2.9.0) is implemented but **not committed**; it is kept
+unchanged at the end of this file.
 
-1. **Data home:** revive the posclinic server (`src/server`, Postgres). The **main till** syncs up to it; the owner uses `src/web`. posgro stays licensing-only.
-2. **Scope:** patients/visits/reports read-only on the web; **services, prices, doctors, staff** editable on the web and synced down.
-3. **Web users:** clinic admins only (`CLINIC_ADMIN`/`SUPER_ADMIN` till roles), same phone + password as on the till.
-4. **Tills:** one main till (database, licence, sync) plus **satellite tills on the LAN** that do everything the main can, by remote calls to the main (SavdoChef design).
-5. **Hosting:** new container stack on the posgro VPS, own domain + staging copy.
-6. **Plans:** dashboard and satellites on **all plans**; satellites limited only by the licence `terminals` (devices = terminals − 1; VIP unlimited).
-7. **Satellite:** full till (register, visit, checkout, print). Licence, LAN, updater and setup stay per machine.
+## Goal
 
-## Architecture
+The 3 people who run the clinic want exact figures: what came in, what went out, what it cost.
+Everything the clinic buys is tracked in and out:
 
+- **Products for sale**: drugs and ointments sold to patients (today: `DIRECT_SALE` services)
+- **Treatment supplies**: used in procedures (enema kits, syringes, solutions…)
+- **Household**: toilet paper, tissues, cleaning products…
+
+On top of stock: other expenses (rent, salaries, utilities…) and one **money report** for any
+period (income, cost of what was sold or used, expenses, profit, cash flow, stock value).
+
+## Explored (patterns to follow)
+
+| Area | File | What is there / pattern |
+|---|---|---|
+| Sold products today | `prisma/schema.sqlite.prisma` `Service.kind = DIRECT_SALE`; `register-order.ts:266,313` | A product is a service line on a visit. No stock, no cost price |
+| Payment | `appointment-handlers.ts` `appointments:checkout` | One transaction: `Payment` row in the open shift. When the visit is fully PAID, DIRECT_SALE lines go `DONE` → **the place a sale leaves stock** |
+| Cancelling | `appointments:update` status CANCELLED | Only unpaid visits with nothing done → no stock has moved yet. There are no refunds of paid visits today |
+| Treatment use | `lab-handlers.ts` `sessions:tick` (+ undo), `care-handlers.ts` queue finish (line DONE) | The places a procedure's supplies would be used |
+| Cash drawer | `src/main/clinic/shifts.ts`, `shift-handlers.ts`; models `Shift`, `CashMovement` (PAY_IN / PAY_OUT, never edited, a mistake = opposite movement) | Money paid out of the drawer must be a `PAY_OUT` of the open shift so the drawer still adds up. `amountOf()` / `money()` for amounts |
+| Payments | model `Payment` (method CASH / CARD / TRANSFER / INSURANCE, shift) | Income on a cash basis comes from these rows (visits paid before v2.6 have none) |
+| Reports today | `pages/Reports/DailyReport.tsx` ← `appointments:getAll` | Visits only, no costs |
+| Licence | `license-core.ts`: `READONLY_REFUSED`, `appointments:getAll` case | A report over more than one day needs the `reports` feature. Read-only mode refuses new business |
+| Data refresh | `ipc-safe.ts` `writtenEntities` + `useDataVersion` | A new entity `stock` / `finance` must be announced so pages refresh |
+| Cloud sync | `src/main/sync/sync-engine.ts` `PUSH_ORDER` + `.claude/rules/server-api.md` | Only the listed entities go up. New tables are till-only unless the server is changed too |
+| Roles | `ipc-safe.ts` `requireAdmin`, `requireReception`, `isAdmin` | Allow-list helpers |
+| SQLite upgrade | `src/main/database/schema.ts` `*IfNeeded` (same as `case_recommendations`) | Additive, idempotent, in place |
+| Pages / nav | `src/renderer/App.tsx` routes, `components/layout/Sidebar.tsx` | New routes + sidebar items |
+| Service editor | `pages/Services/ServiceList.tsx` | Where a product link and a supply list per service go |
+
+## Proposed design (each choice is a question at the end; the plan uses the recommended answer)
+
+### Data model (5 new tables, nothing changed in existing ones except optional links)
+
+```prisma
+/// Anything the clinic buys and keeps (v2.10). qtyOnHand and avgCost are kept by stock.ts only.
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  /// SALE | TREATMENT | HOUSEHOLD (what it is mostly for; reports group by it)
+  category   String   @default("HOUSEHOLD")
+  /// piece, pack, ml, g… (free text, shown next to quantities)
+  unit       String   @default("dona")
+  barcode    String?
+  /// Warn when on hand drops to this or below; null = no warning.
+  minQty     Decimal? @map("min_qty")
+  qtyOnHand  Decimal  @default(0) @map("qty_on_hand")
+  /// Weighted average cost of one unit (so'm), recomputed on every stock receipt.
+  avgCost    Decimal  @default(0) @map("avg_cost")
+  /// The DIRECT_SALE service that sells it (1 unit per line unit); null = not sold.
+  serviceId  String?  @unique @map("service_id")
+  active     Boolean  @default(true)
+  …timestamps
+}
+
+/// What one unit of a procedure uses (e.g. "Huqna" = 1 kit + 200 ml solution).
+model ServiceSupply { id, serviceId, productId, qty Decimal; @@unique([serviceId, productId]) }
+
+/// A delivery from a supplier: its lines are IN movements. Paid from the drawer = a PAY_OUT.
+model StockReceipt {
+  id, number (unique, e.g. "K-000123"), supplier String?, docNo String?, receivedAt,
+  total Decimal, paidFrom String  // DRAWER | OUTSIDE
+  cashMovementId String? @unique, note, createdById, createdAt, voidedAt?, voidedById?
+}
+
+/// Every change of stock. Never edited or deleted: a mistake is the opposite movement.
+model StockMovement {
+  id, productId,
+  /// IN | SALE | TREATMENT | HOUSEHOLD | ADJUST (stocktake) | VOID (undoes a receipt)
+  type String,
+  qty Decimal,          // signed: + in, - out
+  unitCost Decimal,     // the purchase price (IN) or the average cost at that moment (out)
+  receiptId?, itemId? (visit line: SALE / TREATMENT), sessionId?, note,
+  createdById?, createdAt
+  @@index([productId, createdAt]) @@index([type, createdAt])
+}
+
+/// Money spent that is not stock: rent, salaries, utilities, repairs, taxes, other.
+model Expense {
+  id, category String,  // RENT | SALARY | UTILITIES | REPAIR | TAX | OTHER
+  amount Decimal, spentAt DateTime, note,
+  paidFrom String,      // DRAWER | OUTSIDE
+  cashMovementId String? @unique,
+  createdById, createdAt, voidedAt?, voidedById?
+}
 ```
- satellite till ──LAN RPC──▶ MAIN TILL (SQLite = source of truth) ──HTTPS sync──▶ posclinic server (Postgres) ◀── web dashboard (admins)
-                                   │                                     ▲
-                                   └──── licence check-in ──▶ posgro ────┘ (server verifies the posgro licence with the public key)
-```
 
-- **Till → server credential = the posgro licence token** (same idea as posgro `licenses/renew`). The server holds only the POSCLINIC **public** key, verifies the signature, and takes `storeId` as the clinic id. No passwords or secrets on the till; a blocked licence stops sync. No posgro change needed.
-- **Sync rules:** up (main → server): patients, appointments + items, users (bcrypt hash), doctors, services. Down (server → main): doctors, services, users edited on the web. Catalog conflicts: last-write-wins by `updatedAt`, ids are UUIDs everywhere, deletes are soft (`active=false`). Visits and patients are only created on tills, so there are no conflicts there.
-- **Satellite RPC:** the `handle(channel, fn)` helper in `src/main/ipc/ipc-safe.ts` becomes the single branch point. On a satellite it forwards `{channel, args}` to the main over LAN; on the main it runs the same handler with a per-caller context. Licence, roles and validation all run on the main.
+Quantities are decimals (3 places: ml, g). Money to the tiyin like `shifts.ts`.
 
-## Phase 0 — housekeeping
+### How stock moves
 
-- [ ] Commit pending work on `feature/posgro-licensing`: the updater, release scripts, icons, the `import type` controller fix, the `src/web` proxy.
-- [ ] New branch `feature/clinic-dashboard`. Update CLAUDE.md: `src/server` + `src/web` are **active again** (no longer frozen).
+| Event | Movement | Where |
+|---|---|---|
+| Delivery received | `IN` +qty at its price; average cost recomputed | `stock:receive` |
+| Visit fully paid, a DIRECT_SALE line with a linked product | `SALE` −qty at average cost | inside `appointments:checkout` transaction |
+| Procedure session ticked / non-course procedure line done | `TREATMENT` −(supply qty) for each supply of the service | `sessions:tick`, queue finish; undo of a tick = opposite movement |
+| Household / other use, broken, expired | `HOUSEHOLD` −qty (manual write-off with a note) | `stock:writeOff` |
+| Stocktake (counted ≠ on hand) | `ADJUST` ± difference | `stock:count` |
+| Delivery entered by mistake | `VOID` opposite of its lines (+ opposite cash movement if it was paid from the drawer) | `stock:voidReceipt` |
 
-## Phase 1 — posclinic server (`src/server`, `prisma/schema.prisma`)
+Out of stock: the sale or treatment still goes through (stock goes negative, page shows it red);
+reception is never blocked from taking money (Q6).
 
-- [ ] **Schema** (new migration; see open question A on existing data):
-  - `Tenant`/`Clinic` keyed by the posgro `storeId` (`Clinic.id = storeId`); drop `clinicCode`, self-registration, `contactEmail` unique.
-  - `User`: `phone` required, unique per clinic, `+998XXXXXXXXX`; `email` optional; drop `emailVerified`, `googleId`, OTP table. `role` mirrors the till roles.
-  - Plan/tier no longer stored as an enum: `licensePlan String?` and `licenseExpiresAt` copied from the last verified licence, for display only.
-  - Sync bookkeeping: `TerminalHeartbeat` reused (main + satellites count, last sync).
-- [ ] **Remove** OTP, email (`mail.service.ts`, nodemailer), Google OAuth, `/auth/register|request-otp|verify-otp|set-password|create-clinic|forgot-password|reset-password`, `electron/setup`, platform-admin clinic list (posgro owns clinics).
-- [ ] **Licence auth:** `LicenseGuard` reads `Authorization: License <token>`, verifies Ed25519 with `POSCLINIC_LICENSE_PUBLIC_KEY` (shared contract), rejects other products, stale `checkinBy`, or a blocked state → `request.clinicId = storeId`. Clinic row auto-created on first sync.
-- [ ] **Sync API** (idempotent, batched ≤ 200, one `$transaction` per batch):
-  - `POST /sync/push` `{patients, appointments, users, doctors, services}` → upsert by id. Appointments upsert their items. Users carry the hash, never plaintext.
-  - `GET /sync/pull?since=` → doctors, services, users changed since the cursor (including inactive), plus `serverTime`.
-  - Fixes the old bug: patients were never pushed, so appointment foreign keys failed.
-- [ ] **Dashboard auth:** `POST /auth/login {phone, password}`; only active admins of a clinic whose last licence is not blocked (like posgro's `dashboardLoginBlockReason`). JWT `{sub, clinicId, role}`.
-- [ ] **Catalog CRUD** for admins: services, doctors, users (create/edit/deactivate, reset password). Writes bump `updatedAt` so the main pulls them. Audit log row on every mutation.
-- [ ] **Read APIs:** patients (search, detail + visits), appointments (filters), reports (daily, monthly, by doctor and service, debt).
-- [ ] Every query scoped by `clinicId` from the JWT or the licence, never from the body. Logs carry ids only, never patient fields.
-- [ ] Tests (node:test via tsx, like the till; service level with a fake Prisma, plus one run against the local Postgres): LicenseGuard, push idempotency, LWW pull, clinic scoping, login refusals.
+### Money report (`finance:report`, from / to)
 
-## Phase 2 — main till sync (`src/main/sync/`, SQLite)
+- **Income**: payments taken in the period by method (cash, card, transfer, insurance) +
+  unpaid balance (debt) of visits in the period.
+- **Cost of goods sold**: SALE movements × their unit cost.
+- **Supplies used**: TREATMENT + HOUSEHOLD movements × unit cost (by product category).
+- **Stocktake differences**: ADJUST × cost.
+- **Expenses** by category.
+- **Profit** = income − cost of goods sold − supplies used − stocktake loss − expenses.
+- **Cash flow** (what actually left the clinic): deliveries paid + expenses paid, split
+  drawer / outside.
+- **Stock value** now (Σ on hand × average cost) and low-stock list.
+- Breakdown per service kind (consultation / analysis / procedure / sale) for income.
 
-- [ ] SQLite, **additive in-place upgrade** (tills are in the field from 2.0.0):
-  - new table `sync_state(entity TEXT PRIMARY KEY, push_cursor TEXT, pull_cursor TEXT)`;
-  - index on `updated_at` for the synced tables.
-  - Remove the unused `sync_queue` table only if it is empty (otherwise leave it).
-- [ ] `sync-service.ts` (main only): push rows with `updated_at > push_cursor` in batches, then pull since `pull_cursor` and apply LWW. Runs every 60 s and after writes (debounced). Offline = silent retry with backoff.
-- [ ] Every handler that writes sets `updated_at` (check patients/doctors/services/users/appointments handlers).
-- [ ] Settings → "Cloud sync" status row (last sync, pending count, error).
-- [ ] Contract update: `.claude/rules/licensing.md` gets "the licence is also the sync credential for the posclinic server".
+## Steps
 
-## Phase 3 — web dashboard (`src/web`)
+### 1. SQLite (skill `prisma-migration`)
+- [x] `prisma/schema.sqlite.prisma`: the 5 models; relations on `Service`, `User`, `CashMovement`, `AppointmentItem`, `TreatmentSession` (relation fields only, no new columns in old tables)
+- [x] `src/main/database/schema.ts`: `addStockIfNeeded` (CREATE TABLE / INDEX IF NOT EXISTS) on both paths
+- [x] `npm run prisma:generate:sqlite`, `prisma validate`, model count +5 (CRLF lesson)
+- [x] `schema-upgrade.test.ts`: old DB gains the tables; a second run changes nothing
+- [x] `migration-reviewer` agent
 
-- [ ] Login by phone + password; remove Register, Google and forgot-password pages. Recovery is done by an admin (Telegram later).
-- [ ] Pages: Dashboard (today, month, top services and doctors), Patients (list, search, detail with visit history, read-only), Appointments (filters, read-only), Reports daily/monthly (+ by doctor, by service, debt), **Services (CRUD, prices)**, **Doctors (CRUD)**, **Staff (CRUD, phone login, role, reset password)**, Devices (main + satellites, last seen, last sync), Subscription (plan/expiry from the licence, read-only).
-- [ ] Remove `admin/clinics` and audit pages for platform admins (posgro is the super admin). Keep a per-clinic audit log page.
-- [ ] i18n ru + uz for every string (shares the renderer locale files via the `@i18n` alias).
-- [ ] Builds into `dist/web`, served by Nest at `/web` (as now).
+### 2. Main
+- [x] `src/main/clinic/stock.ts` (pure, takes `tx`, like `shifts.ts`): `receive`, `consume(type, productId, qty, link)`, `adjustTo(counted)`, `voidReceipt`, average cost math, quantity / amount validation
+- [x] `src/main/clinic/finance.ts`: the report queries (Prisma, not raw SQL: lesson 2026-11-15)
+- [x] `src/main/ipc/stock-handlers.ts`: `stock:listProducts`, `stock:saveProduct`, `stock:receive`, `stock:listReceipts`, `stock:voidReceipt`, `stock:writeOff`, `stock:count`, `stock:movements` (product history), `stock:setSupplies` (per service)
+- [x] `src/main/ipc/finance-handlers.ts`: `expenses:create`, `expenses:list`, `expenses:void`, `finance:report`
+- [x] Hooks into existing transactions: `appointments:checkout` (SALE), `sessions:tick` + undo, queue finish (TREATMENT). Same transaction, so money and stock never disagree
+- [x] Paid from the drawer: needs the open shift (`requireOpenShiftId`), creates the `PAY_OUT` with a note "Kirim K-000123" / "Xarajat: Ijara"
+- [x] Roles (Q7): admin = everything; receptionist = receive deliveries, write-offs, expenses from the drawer; nurse = write-offs; doctor = read stock
+- [x] `ipc-safe.ts` `writtenEntities`: `stock:*` → `stock`; `expenses:*` → `finance`, `shifts` when drawer; checkout / tick also announce `stock`
+- [x] Logs: ids and kinds only
 
-## Phase 4 — satellites (port of SavdoChef `src/main/lan/`)
+### 3. Licence (no posgro change)
+- [x] `license-core.ts`: `stock:receive`, `stock:saveProduct`, `expenses:create` in `READONLY_REFUSED` (new business). Write-offs, counts and voids stay allowed (records of what happened)
+- [x] `finance:report`: same rule as `appointments:getAll`: one day free, longer needs `reports`
+- [x] No new plan feature (would change the posgro contract and plans; separate task if wanted)
+- Note: the till is no longer "offline-only" for this data: it goes up with the existing cloud
+  sync (main till, licence-authenticated), like visits already do.
 
-- [x] **Handler context refactor first:** handlers get `ctx = { actor, terminalId }` instead of reading the module-global `currentUser` (auth-handlers). Add role checks the review flagged (receptionist cannot edit services, doctors or staff).
-- [x] Port `config.ts`, `devices.ts`, `pairing.ts`, `serve-policy.ts`, `server.ts`, `main-link.ts`, `lan-service.ts` + `lan.test.ts`, `satellite.e2e.test.ts`. Adapt:
-  - app id `posclinic`, default port 5180;
-  - header `Authorization: Posclinic <deviceId>.<secret>`;
-  - `NOT_OVER_LAN` = `license:*`, `setup:*`, `update:*`, `lan:*`, `config:*`.
-- [x] SQLite (additive): `lan_devices(id, name, secret_hash, ip, last_seen_at, active, created_at)`; `lan_role` and `lan_link` (secret encrypted with `safeStorage`) in a `settings` table (new).
-- [x] RPC: `handle()` → on a satellite, forward; on the main, run with the caller's session actor. Login on a satellite gives a per-device session token on the main.
-- [x] **Printing on a satellite stays local:** `print:*` runs on the satellite's own printer, fetching the visit over RPC.
-- [x] Concurrency: `appointmentNumber` is generated inside a transaction with retry on the unique conflict (two desks at once).
-- [x] Device limit = licence `terminals − 1` (null = unlimited). Satellites never contact posgro or the posclinic server; the main's licence gates every forwarded call.
-- [x] Events: main → satellites SSE so lists refresh (`appointments/patients/catalog changed`).
-- [x] Renderer (React):
-  - setup wizard step 0 "Main till / Extra till";
-  - join form (main address + 6-digit code);
-  - Settings → Satellites (enable, port, addresses, code with countdown, devices + revoke, firewall command);
-  - "Waiting for main till" overlay driven by link state.
-- [x] i18n ru + uz.
+### 4. Preload + shared types
+- [x] `preload.ts`: `stock.*`, `expenses.*`, `finance.report` + types
+- [x] `src/shared/stock.ts`: DTOs from the Prisma field names, category lists, `FinanceReportDto`
 
-### Phase 4 review (2026-11-15, v2.2.0)
+### 5. Renderer (Styled Components tokens, light + dark)
+- [x] **Ombor / Склад** page: products with on hand, unit, average cost, value, low-stock badge; filter by category; product form; history per product
+- [x] **Kirim** (delivery) form: supplier, document no., lines (product, qty, price), paid from drawer / outside; list of deliveries with void
+- [x] **Hisobdan chiqarish** (write-off) form and **Inventarizatsiya** (stocktake: counted qty per product, shows differences before saving)
+- [x] **Xarajatlar** (expenses) page: add, list by period, void
+- [x] **Moliya hisoboti** (money report) page: period picker (today / week / month / custom), the blocks above, print on A4 (reuse print engine) optional later
+- [x] Service editor: DIRECT_SALE → pick its product; PROCEDURE → supply list (product + qty)
+- [x] Checkout / service picker: show "omborda: 3" next to products (no blocking)
+- [x] `App.tsx` routes + `Sidebar.tsx` items (by role)
 
-- `handle()` only records handlers (`ipc/ipc-safe.ts`, Electron-free); `ipc/dispatch.ts` binds them to ipcMain and is the one branch point (main: run with the window's actor; satellite: forward over `lan/main-link.ts`).
-- Deviations from SavdoChef: `license:status` is forwarded (a satellite shows and hides by its main's plan); `sync:*`, `app:*`, `print:*` are also local-only; join only from the setup wizard (no unattended re-pair; leave → setup again); patient codes get the same transaction + retry as visit numbers; the remember-me token is now HMAC-signed (old unsigned tokens are refused once, users sign in again after the update).
-- Tests: `lan/lan.test.ts` (13) + `lan/satellite.e2e.test.ts` (19, real handlers over a real server on 127.0.0.1); `npm run check` 90/90, `electron-vite build` green.
-- Not verified without two machines: real LAN + Windows firewall, safeStorage on the satellite, relaunch after join/leave, printing on a satellite printer (printing is still a log stub).
+### 6. i18n
+- [x] Every string in `ru.json` and `uz.json` (`stock.*`, `expenses.*`, `finance.*`, errors `errors.invalidQuantity`, `errors.productNotFound`…); key parity check
 
-## Phase 5 — deploy (posgro VPS)
+### 7. Version
+- [x] `npm version minor --no-git-tag-version` → 2.10.0
 
-- [x] `Dockerfile` + `docker-compose.yml` / `docker-compose.staging.yml` in posclinic: `posclinic-server` + its **own** `posclinic-postgres` (separate from posgro's database: medical data, own backups), not published publicly; `RUN_MIGRATIONS`.
-- [x] GitHub Actions `deploy-staging.yml` (dev) / `deploy.yml` (main) modelled on posgro's (`ENV_FILE` / `ENV_FILE_PROD` secrets, ssh to `posgro-vps`).
-- [x] Production (2026-11-18, owner: same Contabo VPS for now): `docker-compose.yml` (ports 3013/5443), `nginx/sites-prod/clinic.posgro.uz.conf` + `nginx/sites-live-prod.txt`, `scripts/deploy/production.sh` (shared steps in `lib.sh`), nightly `scripts/deploy/backup.sh` (14 days, never fewer than 7).
-- [x] posgro: branch `feat/posclinic-prod` sets `POSCLINIC_ENABLED` in posgro's production compose.
-- [x] **User (2026-11-18):** DNS `clinic.posgro.uz` → VPS; GitHub secret `ENV_FILE_PROD`; certificate issued; host listed in `nginx/sites-live-prod.txt`.
-- [ ] Push `main` (first production deploy); merge + deploy the posgro branch; run one backup by hand and check it restores.
-- [ ] Till: `POSCLINIC_SERVER_URL` compiled default (prod), dev override only when unpackaged (same rule as `POSCLINIC_API_URL`).
+### 7b. Web dashboard (Q7: the owners see it from home). Contract `.claude/rules/server-api.md`
+- [x] One pure report function `src/shared/finance-report.ts` (rows in → figures out), used by the
+  till's `finance:report` **and** the server, so both show the same numbers
+- [x] Till sync (`sync-engine.ts`): push `products`, `stockReceipts`, `stockMovements`, `expenses`,
+  `payments` (after appointments). Append-only rows (movements, payments) use `createdAt` as the
+  cursor (payments have no `updatedAt`; the wire sends `updatedAt = createdAt`). Up only, never pulled
+- [x] Postgres `prisma/schema.prisma`: the same 5 tables with `clinicId` + `syncedAt` (supplies per
+  service stay on the till). Migration `20261118100000_stock_finance`, additive, made with
+  `prisma migrate diff` (no database needed) and read before saving. The user runs `migrate deploy`
+- [x] Server sync: `SYNC_ENTITIES`, parsers (bad row = reject, not the batch), `SyncPushDto` arrays
+  (+ `sync.dto.test.ts`), `PrismaSyncDb` find / write; reject `missing_product`,
+  `missing_appointment`
+- [x] Server API (admins, read-only): `GET /api/stock/products`, `GET /api/stock/movements`,
+  `GET /api/expenses`, `GET /api/reports/finance?from=&to=` (clinic time UTC+5)
+- [x] Web pages: Stock (on hand, value, low stock, history), Expenses, Money report; nav; uz + ru
+- [x] Contract file updated (payments now go up; the new rows and endpoints)
+- [x] Server tests: apply of the new rows (reject foreign / missing), finance endpoint figures
 
-## Versioning
+### 8. Tests and checks
+- [x] `stock.test.ts` (real test DB): receipt → average cost (e.g. 10 × 1 000 + 10 × 1 400 → 1 200); sale at checkout only when fully PAID; a partial payment moves nothing; tick / undo use and return supplies; write-off; stocktake difference; void receipt reverses stock and the drawer; negative stock allowed and shown; roles refused; read-only refusals
+- [x] `finance.test.ts`: a fixed scenario (2 visits, 1 delivery paid from the drawer, 1 expense outside, 1 write-off) gives exact income, cost, profit, cash flow, stock value; drawer expected cash still matches `shifts:summary`
+- [x] Licence gate tests: report range > 1 day without `reports`
+- [x] `npm run typecheck`, `npm test`
+- [x] `migration-reviewer` + `electron-security-reviewer` agents
+- [ ] End to end in the running till (skill `run`): add product, receive delivery from the drawer, sell it, tick a procedure session, write off tissues, add rent, open the report → figures match by hand
 
-- Till: **2.1.0** (minor: new features, additive SQLite). Server/web: no Electron bump.
+## Review (stock, v2.10.0)
 
-## Verification
+**Built**
+- Till: 5 tables (`products`, `service_supplies`, `stock_receipts`, `stock_movements`, `expenses`),
+  in place, additive. `src/main/clinic/stock.ts` (weighted average cost, one `move()` for every
+  quantity change, drawer cash-outs in the same transaction, `settleItemStock` idempotent per
+  line / session so retries and undo never double-count) and `finance.ts`.
+- Hooks: checkout when fully paid (SALE), free direct sale at registration, `sessions:tick` +
+  undo, `results:save`, `queue:finish` (TREATMENT by the service's supply list).
+- Pages: Ombor (products, deliveries with void, write-off, stocktake, supply lists per service,
+  history), Xarajatlar, Moliya hisoboti (admins); on-hand shown on sale cards at registration.
+  The product form can make its DIRECT_SALE service (Q1).
+- Web: products, movements, expenses and payments sync up (payments for the first time); server
+  tables + migration `20261118100000_stock_finance`; read-only endpoints; 3 web pages. The money
+  report is one pure function (`src/shared/stock.ts`) on both sides.
 
-- Server: tests + `build:server`; Swagger smoke test; push the same batch twice → no duplicates; a licence for another product → 401.
-- Till: `npm run check`, the ported `lan.test.ts` + `satellite.e2e.test.ts` (real LAN server on 127.0.0.1), sync service tests with a fake server.
-- End to end on staging:
-  1. A main till links the Demo clinic and creates a patient and a visit. They appear on the web within 60 s.
-  2. Edit a service price on the web. The main shows it after the next pull.
-  3. Pair a satellite. A visit created there lands in the main DB and on the web, and prints on the satellite's printer.
-  4. Revoke the satellite → refused. Exceed `terminals` → pairing refused.
-  5. Expire the licence in posgro → sync refused and dashboard login refused.
+**Differences from the plan**
+- Handlers in one file `stock-handlers.ts` (no separate finance-handlers); report function in
+  `src/shared/stock.ts` (not finance-report.ts); one test file `stock.test.ts` covers the
+  finance scenario too.
+- Supply lists are edited on the stock page ("Muolaja sarflari" tab), not in the service editor.
+- Stock quantity errors use the new key `errors.invalidStockQty` (the existing
+  `invalidQuantity` text says "service quantity").
 
-## Risks
+**Verified**
+- `npm run typecheck`, server `tsc`, web `tsc` + `vite build`, `electron-vite build`, `nest build`.
+- `npm test` 276/276 (new: stock end to end with every report figure worked out by hand and the
+  drawer re-checked; licence gate; read-only refusals; sync push of the new entities; server
+  apply / reject of the new rows; DTO whitelist).
+- `migration-reviewer`: safe to ship (till and Postgres).
+- `electron-security-reviewer`: no high findings. Fixed:
+  - stock movements and payments are kept on the server even before their product / visit
+    arrives (a sale during a sync run was rejected and lost for good); plain ids, read back only
+    within the clinic; the migration has no product foreign key;
+  - drawer expenses are dated now; only an admin dates an "outside" one, never in the future;
+  - reception lists only drawer expenses, and receives deliveries from the drawer only;
+  - `expenses:list` over more than one day needs `reports`; lists and reports cap at 366 days;
+  - a repeated submit (page id) saves a delivery / expense once; pages block double clicks;
+  - a stocktake refuses the same product twice; the product's service check is in the transaction.
+  - Not changed: `products.serviceId` / `stockMovements.receiptId` stay unchecked plain ids on the
+    server (no read path joins on them).
 
-- **Medical data leaves the clinic again** → TLS only, licence auth, clinicId scoping, no patient fields in logs, own database with backups; VPS location vs the Uzbekistan personal-data localisation rule (owner to confirm).
-- **LAN has no TLS** (SavdoChef design) → private-address-only plus pairing code plus 256-bit device secret. Option: pin a self-signed certificate at pairing (later).
-- The main's IP changes break satellites → advise a DHCP reservation; "change main address" action (posgro `repointMain`) as a follow-up.
-- Big change set → ship in phase order; each phase is usable on its own (1+2+3 = dashboard; 4 = satellites).
+**Not done / for the owner**
+- End to end in the running till (not run in this session).
+- The server's container applies the new migration on start (`scripts/deploy/lib.sh`), so deploy
+  the server before or with the till. A till on v2.10 talking to an older server keeps the new
+  rows queued (cursor stays) and sends them once the server takes them.
 
-## Open (answer before Phase 1)
+**v2.10.1: simpler product form (owner found "Sotuv xizmati" confusing)**
+- The sale part shows only for category SALE and asks just for the sale price. Saving a new one
+  makes its DIRECT_SALE service; editing a linked one sets that service's price.
+- "Link to an existing service" is a secondary button and lists only services no other product
+  uses. Main: `salePrice` replaces `createServicePrice`; `serviceId` left out keeps the link; other
+  categories never get a service. Tests: price update, kept link, HOUSEHOLD ignores both.
 
-- **A.** Does `posclinic.bobur-dev.uz` (old server) hold any real clinic data? If none → reset to one fresh baseline migration. If yes → additive migrations + data mapping.
-- **B.** Domain names: `clinic.posgro.uz` / `dev.clinic.posgro.uz`? Something else?
+## Open questions (plan assumes the recommended answer)
+
+1. Products for sale: link each to its existing DIRECT_SALE service (price stays on the service, stock on the product)? (recommended: yes; a product page creates the service for you if missing)
+2. When does a sold product leave stock: when the visit is fully paid? (recommended: yes, same moment the line becomes DONE; partly paid = still in stock)
+3. Treatment supplies: deducted automatically by a per-procedure supply list when a session is ticked, plus manual write-off for anything else? (recommended: yes, both)
+4. Cost method: weighted average cost, no batches or expiry dates? (recommended: average now; batches with expiry date = later task)
+5. Other expenses (rent, salaries, utilities…) in the same task, each marked "paid from the drawer" (cash-out in the shift) or "paid outside" (bank, owner's pocket)? (recommended: yes, both)
+6. Selling or using more than is on hand: allow it (stock goes negative, shown in red) rather than block reception? (recommended: allow)
+7. Should stock, expenses and the money report also reach the web dashboard, so the owners see them from home? (recommended: not in this task, till only; the server sync is a separate task. Also say if the profit must be split between the 3 owners by shares; the plan shows clinic totals only)
+
+Roles assumed (say if different): admin everything; reception receives deliveries, writes off, adds
+expenses from the drawer; nurse writes off; doctor only sees stock.
 
 ---
 
-# Uzbekistan address selection (v2.4.0, till only) — done
+# Previous plan (kept as it was)
 
-Decisions (owner, 2026-11-15): till only, no server tables/API; no React Query (session cache in the renderer); 2 levels (region → district/city) + street text.
+## Plan — A4 prescription: course checklist + doctor's recommendations (v2.9.0)
 
-- [x] Verified SOATO dataset (stat.uz classifier 2022 + SIAT 2026 cross-check), 220 units, no invented codes → `src/main/database/data/admin-units.json`, provenance + gaps in `docs/addresses.md`, `docs/addresses/GAPS.md`, build scripts in `tools/soato/`
-- [x] `admin_units` table + `patients.region_code/district_code` (in-place, additive)
-- [x] Idempotent import on DB open (hash version, deactivate never delete, failure never blocks opening)
-- [x] IPC `addresses:regions`, `addresses:children`; patients:create/update validate the pair (`errors.invalidAddress`)
-- [x] `AddressSelector` + `AddressText` + `useAdminUnits` cache; PatientForm / PatientDetails
-- [x] i18n uz + ru
-- [x] Tests `src/main/ipc/address.test.ts` (11); `npm run check` 117/117; pos build OK
+Previous plan (web dashboard + satellite tills, v2.1) is done and committed; its review is in git history.
+
+**Status: implemented 2026-11-18 (approved with the recommended answers). Not committed. One check open: see Review.**
+
+## Decisions
+
+- (owner, 2026-11-18) Recommendations belong to the **whole course** (`ClinicalCase`). New ones
+  can be added on later visits; earlier ones stay.
+- The final A4 layout comes later from Claude Design. This plan covers the data, the doctor's
+  input and the print plumbing, with a plain A4 layout that the design will replace.
+- Open questions are at the end. The plan below uses the **recommended** answer for each one.
+
+## Explored (patterns to follow)
+
+| Area | File | Pattern |
+|---|---|---|
+| Case handlers | `src/main/ipc/care-handlers.ts` | `handle()`; `requireCaseClinician` (lead doctor, a doctor with a line in the case, or an admin); `text()` trim + cap; `randomUUID()` ids; `cases:get` include |
+| SQLite bootstrap | `src/main/database/schema.ts` | `CREATE TABLE IF NOT EXISTS` + `CREATE INDEX IF NOT EXISTS` list (idempotent, in place, same as `treatment_sessions`) |
+| Prisma model | `prisma/schema.sqlite.prisma` | `ClinicalCase` relations; `TreatmentSession` (number, plannedDate, doneAt) already exists |
+| Print | `src/main/ipc/print-handlers.ts` | `PRINTABLE_APPOINTMENT_INCLUDE` → `toPrintableVisit` → `buildPrescriptionHTML`; refuses when there is no diagnosis or prescription |
+| Print types + HTML | `src/shared/receipt-html.ts` | `PrintSourceAppointment` → `PrintableVisit`; `a4Styles()`, `escapeHtml`, `LABELS` ru/uz, `sampleVisit` |
+| Satellite print | `src/main/ipc/dispatch.ts` `satellitePrint` | the visit comes from main's `appointments:getById`, so that call must carry the new data too |
+| `getById` | `src/main/ipc/appointment-handlers.ts` | its own include (patient, doctor, items, payments) |
+| Licence | `src/main/ipc/dispatch.ts`, `license-core.ts` | `printPrescription` feature already gates `print:prescription` on main and satellite. **No licence, plan or posgro change.** |
+| Cloud sync | `src/main/sync/sync-engine.ts` `PUSH_ORDER` | only listed entities go up. A new table is till-only unless it is added here **and** on the server (Q6) |
+| Doctor UI | `src/renderer/pages/Care/CasePage.tsx` | complaint/diagnosis editor (`cases.update`), referrals form (`cases.addReferral`) |
+| Print button | `src/renderer/pages/Appointments/AppointmentDetails.tsx` | `print.prescription(id)` via `usePrint` |
+| Preload | `src/main/preload.ts` `cases:` namespace (line 144) + types (line 393) |
+
+## Data model
+
+New table, append-only list per case:
+
+```prisma
+/// The doctor's advice for home: diet, home procedures, other. Belongs to the course (case);
+/// new ones are added on later visits, old ones stay (removed = active false).
+model CaseRecommendation {
+  id        String       @id @default(cuid())
+  caseId    String       @map("case_id")
+  case      ClinicalCase @relation(fields: [caseId], references: [id])
+  doctorId  String?      @map("doctor_id")
+  doctor    Doctor?      @relation(fields: [doctorId], references: [id])
+  /// DIET | HOME | OTHER
+  category  String       @default("OTHER")
+  text      String
+  active    Boolean      @default(true)
+  createdBy String?      @map("created_by")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@index([caseId, active])
+  @@map("case_recommendations")
+}
+```
+
+## Steps
+
+### 1. SQLite (skill `prisma-migration`)
+- [x] `prisma/schema.sqlite.prisma`: model above + `recommendations CaseRecommendation[]` on `ClinicalCase` and `Doctor`
+- [x] `src/main/database/schema.ts`: `CREATE TABLE IF NOT EXISTS case_recommendations (…)` + index `idx_recommendations_case`. Additive and idempotent: existing tills upgrade in place on start
+- [x] `npm run prisma:generate:sqlite`, `prisma validate`; check that the model count went up by exactly one (CRLF lesson)
+- [x] `schema-upgrade.test.ts`: an old DB without the table gets it; a second run changes nothing
+- [x] Run the `migration-reviewer` agent
+
+### 2. Main / IPC (`care-handlers.ts`)
+- [x] `cases:addRecommendation(caseId, { category, text })`: `requireCaseClinician`; case must not be CLOSED; category in the list; text trimmed, 1–2000 chars
+- [x] `cases:removeRecommendation(id)`: sets `active = false`. Only its author or an admin
+- [x] `cases:get` includes active recommendations (oldest first) with the doctor's name
+- [x] Nothing is logged except ids (medical data)
+
+### 3. Print plumbing
+- [x] `receipt-html.ts`: `PrintSourceAppointment` gets an optional `case`: `{ recommendations[], courses[] }`. A course = one course line of the case (service name, total sessions, sessions `{ number, plannedDate, doneAt }`)
+- [x] `PrintableVisit` gets `courses` and `recommendations` (grouped DIET / HOME / OTHER); `toPrintableVisit` maps them
+- [x] One shared include `PRESCRIPTION_CASE_INCLUDE` (case → recommendations + every course line in the case with its sessions), used by both `print-handlers.ts` and `appointments:getById`, so a satellite prints the same sheet
+- [x] `printPrescription`: print when there is a diagnosis, a prescription, a course **or** a recommendation (today it needs one of the first two)
+- [x] `buildPrescriptionHTML` A4: "Treatment course" section (per course: `3 / 10`, a box per session: ✔ + date done, or an empty box + planned date) and "Recommendations" section. Roll (80/58 mm): course as one `3 / 10` line, recommendations as text, no grid
+- [x] `sampleVisit` gets a sample course and sample recommendations (Settings preview)
+- [x] Final layout: port the Claude Design HTML here once the owner sends it (separate step)
+
+### 4. Preload + renderer
+- [x] `preload.ts`: `cases.addRecommendation`, `cases.removeRecommendation` + types
+- [x] Shared type in `src/shared/clinic.ts` (field names from the Prisma model, lesson 2026-11-15)
+- [x] `CasePage.tsx`: "Recommendations" panel under the diagnosis: list grouped by category (date, doctor), a category selector, a text area, Add, and Remove on your own entries. Hidden for roles that cannot write (main enforces)
+- [x] Styled Components theme tokens, light + dark
+
+### 5. i18n (ru + uz, both)
+- [x] Renderer: `cases.recommendations.*` (title, categories, add, remove, empty, placeholder) and errors (`errors.invalidRecommendation`)
+- [x] Print `LABELS` in `receipt-html.ts`: course, sessions done, planned, recommendations, diet, home, other
+
+### 6. Version
+- [x] `npm version minor --no-git-tag-version` → 2.9.0 (new feature)
+
+### 7. Tests and checks
+- [x] `care.test.ts`: add as lead doctor / admin; refused for another doctor, for reception, on a CLOSED case, for an empty text or unknown category; remove by author / admin only; `cases:get` returns only active ones
+- [x] `printing.test.ts`: prescription HTML holds the course boxes (done ✔ + date, planned empty) and the recommendations, escaped (`<script>` in text); prints with recommendations only; `appointments:getById` carries the case data (satellite path)
+- [x] `npm run typecheck`, `npm test` (`npm run lint` fails before this change: no `eslint.config.js` for ESLint 9)
+- [ ] End to end in the real app (skill `run`): open case → add 2 recommendations → register a course → tick 3 sessions → print prescription to "Microsoft Print to PDF" on A4 → check the PDF
+- [x] `electron-security-reviewer` agent on the IPC + print changes
+
+## Open questions (plan assumes the recommended answer)
+
+1. Who adds recommendations: doctors on the case and admins, like the diagnosis? (recommended: yes; nurses and reception read only)
+2. Can a saved recommendation be removed or edited? (recommended: author or admin can remove, no editing; to change it, remove and add a new one)
+3. Category per entry (Diet / At home / Other) or free text only? (recommended: category, so the sheet can show diet in its own block)
+4. Saved templates (e.g. "antiparasitic diet") now or later? (recommended: later, separate task)
+5. Which course lines go on the sheet: every course in the case, or only this visit's order? (recommended: every course in the case)
+6. Should recommendations go up to the cloud server / web dashboard? (recommended: not now, till-only; server change is a separate task)
+7. Print from the case page too, not only from a visit? (recommended: not now; the visit page button prints the whole case anyway)
 
 ## Review
 
-- `patients.city` keeps "District, Region" (Uzbek) for the server/web, which have no dataset; the till shows names in the app language from the codes.
-- Legacy patients keep their free-text city until a region is chosen (shown as a hint in the form).
-- Not verified by hand in the running till yet.
+**Done (v2.9.0)**
+- Table `case_recommendations` (additive, idempotent, till only). Categories follow the design:
+  `DIET_ALLOWED | DIET_AVOID | HOME` (not DIET/HOME/OTHER as first planned).
+- `cases:addRecommendation` / `cases:removeRecommendation`: doctors on the case + admins; removal
+  by author or admin (soft); closed case refused; max 50 active per case; not read-only-refused
+  (a clinical note, like `cases:update`).
+- A4 prescription = the treatment sheet from `docs/design/…Variant A — rasmiy blank.html`:
+  sections numbered by content (I medicines = the free-text prescription, II course grid with
+  10 boxes per row, III diet table + home points), next-visit line, signature, stamp, footer.
+  Roll prescription: course `done / total` lines + advice points.
+- One include (`PRINTABLE_APPOINTMENT_INCLUDE.case`) feeds both the main till and satellites.
+- (owner, 2026-11-18) The sheet is handed over once, when the doctor assigns the course; the
+  nurse ticks it by hand. So a course comes from the doctor's course referral
+  (`src/shared/course.ts` `caseCourses`): all its boxes are there from the referral on (empty
+  until reception registers it), registered sessions fill them in order (also over several
+  orders), a cancelled referral leaves the sheet. The case page draws the same 10-per-row grid
+  under each course referral (✓ + done date, planned date, dashed = not registered yet).
+- Review fixes: `appointments:getById` now requires a signed-in user; an admin's advice is not
+  credited to the lead doctor; unknown categories are not printed.
 
----
+**Verified**
+- `npm run typecheck` clean; `npm test` 262/262 (new: handler roles/limits, sheet HTML, mapping,
+  Russian age words, upgrade test lists the table).
+- Sample sheets (uz + ru) rendered in headless Edge at A4 width and compared with the design.
+- `migration-reviewer`: safe to ship. `electron-security-reviewer`: no high findings; mediums fixed.
 
-# Plan: Clinical workflow (reception → doctor → analysis → treatment), v2.5.0
-
-## Decisions (owner, 2026-11-15)
-1. A doctor's login is linked to their doctor record. Doctors see their own queue and never take money; payment is at reception only.
-2. One **case** (episode) groups the whole journey. Each registration at reception is a paid order inside the case. The case shows its status.
-3. Prepay always. A repeat consultation is **free automatically within 14 days** of the paid consultation in the same case. It is still registered at reception (price 0), so it appears in the doctor's queue.
-4. Every service gets a type:
-   - CONSULTATION: needs a doctor;
-   - ANALYSIS: no doctor, has a structured result plus a comment;
-   - PROCEDURE: no doctor, can be a course.
-
-   Whoever has the result enters it, and the doctor confirms it.
-5. The doctor's referral appears at reception, ready to register. A course can be paid in full upfront (with an optional discount) or per day. Sessions are ticked off ("3 of 10").
-6. Vitals (height, weight, …) are recorded **per visit**, and the latest is shown. The doctor writes doses for now; calculation comes later when the owner gives the rules.
-7. Setup:
-   - reception = main till; doctor's PC = satellite; optional third PC for the nurse/lab (also a satellite).
-   - Search by name, phone, patient code, region/district and last visit.
-   - The queue ticket/receipt after payment is optional (a setting).
-8. The new medical fields are added to the patient form. The owner's own form design comes later.
-
-## Data model (SQLite; in-place upgrades in `schema.ts` + `schema.sqlite.prisma`)
-| Change | Kind |
-|---|---|
-| `services` + `kind` (CONSULTATION / ANALYSIS / PROCEDURE, default PROCEDURE; seeded PAR-CONS/PAR-CONS2 = CONSULTATION, analyses = ANALYSIS), `is_follow_up` (PAR-CONS2), `result_type` (QUALITATIVE / QUANTITATIVE / TEXT), `result_unit`, `reference_range` | new columns with defaults |
-| `doctors` + `user_id` (unique, nullable): the doctor's login | new column |
-| `patients` + `chronic_conditions` | new column |
-| `clinical_cases` (case number, patient, lead doctor, status OPEN / WAITING_DOCTOR / WAITING_ANALYSIS / RESULT_READY / ON_TREATMENT / CLOSED, complaint, diagnosis, opened/closed at) | new table |
-| `appointments` + `case_id`, `discount_amount`; **`doctor_id` becomes nullable** (an analysis or procedure order has no doctor) | see Q1 |
-| `appointment_items` + `doctor_id` (nullable), `status` (WAITING / IN_PROGRESS / DONE / CANCELLED), `discount`, `referral_id`, `performed_by`, `started_at`, `completed_at` | new columns |
-| `patient_vitals` (patient, case, height cm, weight kg, temperature, blood pressure, complaints, pregnancy flag, recorded by/at) | new table |
-| `referrals` (case, patient, doctor, service, quantity, per day × days, instructions, registered quantity, status PENDING / PARTIAL / REGISTERED / CANCELLED) | new table |
-| `analysis_results` (item, case, patient, service, result POSITIVE / NEGATIVE / value + unit, finding, comment, entered by/at, confirmed by/at) | new table |
-| `treatment_sessions` (item, number, planned date, done at, done by) | new table |
-| `settings`: `followUpFreeDays` = 14, `printTicketAfterPayment` = false, `maxDiscountPercent` (see Q2) | settings rows |
-
-## Roles (till)
-- **RECEPTIONIST:** register, pay, referrals inbox, queue overview, patient form.
-- **DOCTOR:** my queue, case page, vitals, medical fields of the patient, referrals, confirm results. No checkout, no catalog.
-- **NURSE** (lab/procedures): analysis queue (sample taken → result), treatment sessions to tick.
-- **CLINIC_ADMIN:** everything, plus doctor/nurse logins (created on the till's Doctors/Staff page and on the web).
-- Enforced in main (`handle()` role checks); the renderer only hides controls.
-
-## Phases
-### P1: Data + catalog
-- [x] Schema upgrades above. Migration-reviewer pass (fixes applied: orphan lines set aside, atomic service classification, completed_at kept). Upgrade test on a v2.4 DB with real-shaped rows (`schema-upgrade.test.ts`).
-- [x] Services page: type, follow-up flag, result type/unit/range. Seed update (in place, codes unchanged; + PAR-ENEMA procedure). `service-kind.test.ts`.
-
-### P2: Reception: new registration flow (replaces NewAppointmentPage)
-- [x] Step 1, Patient:
-  - search by name, phone or code;
-  - filters: region → district (AddressSelector), last visit;
-  - "New patient" inline.
-- [x] Step 2, Services:
-  - the patient's open case and **pending referrals** first (one click adds them);
-  - catalog by type; a doctor is picked only for consultations;
-  - free follow-up applied automatically (≤ 14 days);
-  - course: "full course (discount)" or "today only".
-- [x] Step 3, Payment: the existing checkout page; optional ticket/receipt print (Settings → Clinic). Paying no longer completes the visit.
-- [x] Reception queue overview: who is waiting for which doctor or nurse, live across tills. Done in P3 (/queue board).
-
-### P3: Doctor workspace (doctor's PC, satellite)
-- [x] Doctor login linked to the doctor record (Doctors page → Create login; plan staff limit checked). The home page is **My queue** (paid, waiting), live.
-- [x] Case page:
-  - complaint, vitals entry (height, weight, …);
-  - allergies and chronic conditions;
-  - diagnosis, history timeline (orders, results, sessions);
-  - "Send to analysis" / "Prescribe course" = referrals;
-  - confirm results; finish the consultation.
-- [ ] Prescription/referral print (licence `printPrescription`). **Deferred**: the existing appointment prescription print still works; a referral print comes with P4.
-
-### P4: Lab / procedures (nurse)
-- [x] Analysis queue: sample taken → result entry (structured by `result_type`). The case moves to RESULT_READY; the doctor sees "results ready" on My queue and confirms on the case page.
-- [x] Treatment sessions: sessions due up to today (overdue flagged), tick done, "3 of 10"; undo within 24 h on the case page.
-
-### P5: Patient form
-- [x] Add height, weight (written as a vitals record when changed), allergies, chronic conditions; the latest vitals and the patient's cases shown in PatientDetails.
-
-### P6: Server + web (read-only display)
-- [x] Sync up the new tables and fields (cases, referrals, vitals, results; sessions inside their line). Server `doctorId` nullable plus new columns/tables: migration `20261115200000_clinical_workflow` (staging applies it on container start). `TILL_ROLES` gains NURSE.
-- [x] Web: cases, results, latest measurements on the patient page; service type in the web catalog; NURSE role on the Users page.
-- [x] Till Staff page (/users): receptionist, nurse and admin logins; staff limit; no self-demotion.
-
-### Throughout
-- [ ] i18n uz + ru.
-- [ ] Contract tests per channel (as `clinic-contract.test.ts`), a satellite e2e for the doctor queue.
-- [ ] Version 2.5.0. `npm run check` plus a pos build. A hand run: reception till + doctor satellite through the full journey.
-
-## Open questions (answer before P1)
-- **Q1.** In SQLite, `appointments.doctor_id` is `NOT NULL` and can only become nullable by **rebuilding that one table**: copy into a new table in a transaction, verify the row counts, swap. That breaks the "additive only" rule once. The alternative is keeping a doctor on every order (the case's lead doctor, or a hidden "no doctor" placeholder), which is hacky and wrong for walk-in analyses. *Recommendation: rebuild once (you said no tills are in real use), reviewed by migration-reviewer.*
-- **Q2.** Discount on a full course: who may give it and how much? *Recommendation: receptionist up to `maxDiscountPercent` (admin setting, default 10 %); more needs an admin login.*
-- **Q3.** Can a patient register an analysis without a consultation first (a walk-in with a referral from another clinic)? *Recommendation: yes; it opens a case with no lead doctor.*
-- **Q4.** Should the doctor be able to edit the patient's identity (name, phone, address) or only medical fields? *Recommendation: medical fields only; identity stays at reception.*
-
-**Answers (owner, 2026-11-15):** Q1–Q4 all as recommended: rebuild `appointments` once so `doctor_id` is nullable; receptionist discount up to `maxDiscountPercent` (default 10 %), more needs an admin; walk-in analysis allowed (case without lead doctor); doctors edit medical fields only.
-
-**More answers (owner, 2026-11-15):** the plan limit `monthlyVisits` counts **new cases** (patient journeys) per calendar month, not orders: till-side meaning only, posgro just stores the number. Commit after each finished phase (not pushed).
-
-**Admin-doctors (owner, 2026-11-15):** a clinic admin can also be a doctor. Being a doctor is a profile linked to a login (`doctors.user_id`), not only the DOCTOR role: Doctors page → "Link existing login" (no extra staff seat, the role stays), setup option "I also see patients as a doctor", sidebar shows My queue to anyone with a profile. Admin-doctors may register and take payment (they are admins).
-
----
-
-# Custom order and staff types + catalog cards (v2.5.0)
-
-**Owner decisions (2026-11-16):** staff type = name + access (no login / reception / nurse-lab / admin); order type = name + colour + a fixed behaviour (doctor / lab result / course / **sold directly**: done at payment, no queue, no case); no stock for drugs yet; both synced to the server (web read-only).
-
-- [x] SQLite: `service_types`, `staff_types`; `services.service_type_id`, `users.staff_type_id`; kind `DIRECT_SALE`; role `STAFF` (no login, no staff seat).
-- [x] Main: types CRUD (admin), service kind follows its type, staff role follows its type; login refuses STAFF; direct-sale lines done at payment and never open a case.
-- [x] Settings → Types (admin): order types and staff types.
-- [x] Staff page: pick a built-in role or a custom type; Services page: pick a type.
-- [x] Registration: catalog cards (bigger picture, type badge, price).
-- [x] Sync + server migration (types tables, type ids, DIRECT_SALE, STAFF) + web shows type names.
-- [x] Tests, i18n uz/ru, check + builds.
-
-## v2.6 Fiscal receipts through REGOS:VCR (approved 2026-11-16, built 2026-11-17)
-
-Copies SavdoChef F18 (`restaurant-app/src/main/fiscal/`: `vcr-client.ts`, `fiscal-service.ts`, `config.ts`, `order-status.ts`, `ofd-link.ts`, `shared/utils/fiscal-receipt.ts`, `test-utils/fake-vcr.ts`, `renderer/views/settings/fiscal-section.ts`) and posgro's tasnif lookups (`posgro/src/main/fiscal/tasnif.ts`). Same rules:
-- REGOS:VCR runs on the **main till's** PC (`http://127.0.0.1:22298/`, JSON-RPC, login `cassir`). Satellites forward every call, so only the main till talks to VCR.
-- "Allow, fiscalise later": a payment always commits; the receipt is sent after commit and retried.
-- Never twice: receipt `code` = `PC-<db prefix>-<appointmentNumber>`, looked up with `Receipt.GetInfo` before a resend.
-- VCR calls run one at a time. The VCR password is encrypted with safeStorage and never leaves main.
-
-**tasnif findings (checked live 2026-11-16).** The goods search (`elasticsearch/search`) does not index services. Services are found with `GET https://tasnif.soliq.uz/api/cls-api/mxik/search/by-params?text=<words>&lang=ru|uz_cyrl|uz_latn&size=&page=` (only `text` and `mxikCode` filter). Package codes come from `integration-mxik/get/history/<mxik>` (`packageNames`). Medical services are class `10902`:
-
-| Clinic service | MXIK | Package code (`xizmat (marta)`) |
-|---|---|---|
-| Parasitologist consultation (PAR-CONS, PAR-CONS2) | `10902001034000000` Консультация паразитолога | `1321927` |
-| Lab analyses (PAR-OP … PAR-MAL) | `10902002003000999` Лабораторная диагностика, прочие | `1321964` |
-| Procedures, courses (PAR-ENEMA) | `10902003035000000` Услуги паразитолога по лечению и проведению процедур | `1322001` |
-| Ultrasound, if the clinic adds one | `10902002002000003` УЗИ | (look up) |
-
-Each MXIK has its own package code: the package is always taken from the same MXIK, never mixed.
-
-### SQLite (in-place, additive: `schema.ts` ADD COLUMN + `schema.sqlite.prisma`)
-- [x] `services`: `mxik TEXT`, `package_code TEXT` (null = the settings default for its kind).
-- [x] `appointments`:
-  - `fiscal_status`: null = fiscal off when paid or never sent; otherwise `PENDING | FISCALIZED | FAILED | SKIPPED`.
-  - `fiscal_error`, `fiscal_attempts INT DEFAULT 0`.
-  - `fiscal_receipt_id`, `fiscal_receipt_no`, `fiscal_sign`, `fiscal_qr_url`, `fiscal_terminal_id`, `fiscal_at`.
-  - Index on `fiscal_status`.
-- [x] Settings keys `fiscal_*` (as SavdoChef): enabled, host, port, login, password (encrypted), VAT mode, default MXIK + package per kind (consultation / analysis / procedure / direct sale), code prefix.
-- [x] One-time data upgrade: fill the seeded parasitology services' MXIK + package from the table above, only where empty (Q7).
-
-### Main
-- [x] `src/main/fiscal/`:
-  - `vcr-client.ts` and `ofd-link.ts`: copied.
-  - `config.ts`: settings keys, per-kind defaults.
-  - `fiscal-service.ts`: send, retry, look up by code, adopt, Z-report open and close, duplicate. No shifts, no debts, no edits.
-- [x] `src/shared/fiscal-receipt.ts`: a pure builder. One position per paid line:
-  - `amount` = line `total` in tiyin; `quantity` x 1000;
-  - `discount` = line discount in tiyin (the course discount);
-  - `icps` / `package_code` from the service, or its kind's default;
-  - `barcode` = service code; `vat_value` per VAT mode (Q3).
-  - Payments per Q2. Throws on a missing MXIK, or when positions ≠ payments.
-- [x] `src/main/fiscal/tasnif.ts`:
-  - `searchServices(text, lang)` (by-params) and `packagesFor(mxik)`.
-  - 8 s timeout, called from main (no CORS).
-  - Answers mapped to `{ code, name, className, packages }`.
-- [x] `appointments:checkout`: when the visit becomes PAID (Q1) and fiscal is on, set `fiscal_status = PENDING` in the same transaction; after commit, `fiscal.kick()`.
-- [x] Visit cancel and edit: refused on a FISCALIZED visit (Q5).
-- [x] IPC, all through `handle()`:
-  - Admin: `fiscal:getConfig`, `fiscal:setConfig`, `fiscal:test`, `fiscal:zReport`, `fiscal:zOpen`, `fiscal:zClose`, `fiscal:searchMxik`, `fiscal:packages`.
-  - Reception + admin: `fiscal:retry`, `fiscal:retryAll`.
-  - Also: `fiscal:status`, `fiscal:duplicate`.
-  - Host allow-list as SavdoChef (`isAllowedVcrHost`); `redirect: 'error'`.
-- [x] `index.ts`: create the FiscalService on the main till only; `start()` sends what is waiting once after start. `POSCLINIC_VCR_URL` override, unpackaged builds only.
-- [x] LAN: satellites forward `fiscal:*` like every channel; the password never travels (only `hasPassword`).
-
-### Renderer
-- [x] Settings → **Fiscal receipt** (admin):
-  - on/off; VCR host, port, login, password; test connection; VAT mode;
-  - default MXIK + package per kind, each with the tasnif search;
-  - Z-report state with Open / Close buttons;
-  - "waiting / failed" counters with "Send again".
-- [x] Services form: an MXIK field with **Search tasnif**.
-  - Type words → a list of `code — name`; pick one.
-  - The package list is filled from tasnif, and the single `xizmat (marta)` is picked automatically.
-  - Validation: 17 digits.
-- [x] Visit details and list:
-  - a fiscal badge (Sent / Waiting / Failed with the reason);
-  - "Send again"; "Print copy" (`Receipt.Duplicate`).
-- [x] i18n uz + ru for all of it; VCR error texts from SavdoChef (`describeVcrError`).
-
-### Licence, sync, version
-- [x] Licence: no new plan feature in v1 (every plan may fiscalise). The gate still applies: read-only mode refuses `fiscal:*` writes, except a retry of a visit already paid.
-- [x] Sync: `services.mxik` / `package_code` synced (server column + migration + **SyncPushDto** + `sync.dto.test.ts`, lesson 2026-11-16). Fiscal receipt fields stay on the till in v1 (Q7).
-- [x] Version 2.5.0 → **2.6.0**.
-
-### Tests and verification
-- [x] `fiscal-receipt.test.ts`: tiyin/milli rounding, course discount, VAT modes, per-kind defaults, missing MXIK, unbalanced, payment mapping.
-- [x] `vcr-client.test.ts` + `fiscal-service.test.ts` against a local fake VCR (copy `fake-vcr.ts`):
-  - a sale;
-  - a lost answer adopted by code;
-  - busy retry;
-  - an environment error keeps PENDING without counting an attempt;
-  - a data refusal → FAILED;
-  - Z-report auto-open on 704010.
-- [x] `tasnif.test.ts` against a fake HTTP server (answer shapes from the live calls above).
-- [x] `npm test`, typecheck, till build. One end-to-end pass: dev till → fake VCR (`POSCLINIC_VCR_URL`) → a paid visit → FISCALIZED with a receipt number.
-- [ ] Not verified without you: a real REGOS:VCR + fiscal module on the clinic PC.
-
-**Owner decisions (2026-11-16): all R, except 6: shifts like SavdoChef.** So:
-- Payments become rows (`payments`: visit, shift, method, amount, who, when); `paidAmount` stays the running total. Checkout needs an open shift (one for the whole clinic, all desks).
-- `shifts`: open with the opening cash; pay in / pay out (never edited; a mistake is undone by the opposite movement); close with the counted cash. The expected cash is frozen at close; history shows the difference. A shift with no payments or movements can be deleted (admin).
-- The Z-report follows the shift: opened with it (in the background), closed with it after the waiting receipts are sent, with buttons for when the two disagree.
-- A visit paid partly by transfer or insurance is SKIPPED as a whole (positions must equal the payments).
-- Commits: (A) shifts + payment rows, (B) MXIK codes (+ tasnif search, seeded codes, server/web), (C) fiscal receipts.
-
-### Questions (answered 2026-11-16)
-1. **Partial payments:** one receipt when the visit is fully paid (R), or a receipt for every payment (needs advance-payment receipts, much harder)?
-2. **Payment methods:** CASH → cash, CARD → card (R). TRANSFER and INSURANCE: not fiscalised, marked SKIPPED (R), or sent as cash?
-3. **VAT:** medical services are VAT-exempt (Tax Code, art. 243): send "Без НДС" (R). Also a 12 % option in settings, for a clinic that pays VAT on goods?
-4. **Direct-sale goods (drugs, ointments):** medicines need a marking code (Asl Belgisi) on the receipt. v1: services and unmarked goods only, and a marked drug line stops the receipt with a clear error (R)? Or leave direct-sale lines out of fiscal for now?
-5. **Refunds:** v1: a fiscalised visit cannot be cancelled in the app, and refunds are done in the REGOS app (R)? Or build `Receipt.FullRefund` now (scan the paper receipt's QR, as SavdoChef)?
-6. **Z-report:** posclinic has no shifts. Open it automatically before the first receipt of the day and close it with a button in Settings → Fiscal receipt (R)? Or also close it automatically at a set time?
-7. **Codes:** prefill the seeded parasitology services with the MXIK/package codes above (R)? Sync MXIK/package to the server so the web shows them (R), with fiscal status staying on the till for now (R)?
-
-### Review (2026-11-17)
-- Three commits: (A) shifts + payment rows, (B) MXIK codes + tasnif search + server/web, (C) fiscal receipts.
-- Built as planned, with these differences:
-  - The Z-report follows the shift (owner: shifts like SavdoChef). Buttons on the Shifts page let an admin open or close it by hand.
-  - A visit paid partly before v2.6 (no payment rows) is SKIPPED, the same as one paid by transfer or insurance.
-  - VCR error texts are Uzbek only (SavdoChef's list).
-  - No refunds in v1: a paid visit already cannot be cancelled.
-  - Services get a stable 8-digit barcode (VCR wants one).
-- Verified:
-  - npm test: 221 pass, including the fiscal flow against a fake VCR (sale, lost answer, VCR trouble, refusal, transfer skipped, Z-report with the shift).
-  - Typecheck passes, and the till, server and web build.
-  - Migration and security reviews.
-  - The UI was not clicked through.
-- Not verified: a real REGOS:VCR and fiscal module. To try without one: npm run dev:fake-vcr (127.0.0.1:22298, cassir / pass).
-- Security review fixes: a saved VCR password is not reused when host, port or login change (it must be typed again). Closing a shift and "Send again for all" no longer wait for VCR, so a satellite call never times out; the result shows on the Z panel. The VCR timeout is 20 s. Errors are logged as their kind only. A reply that is not JSON is not echoed back. Left for later: clearing a saved VCR password without replacing it, and theme colours on the visit badge.
-
-## v2.7.0: Printer + Receipt settings, real printing (2026-11-17)
-
-Ported from SavdoChef/posgro (`printer/thermal-printer.ts`, `shared/receipt-html.ts`, `PrinterSettings`, `ReceiptSettings`, `utils/receipt-logo.ts`).
-
-- [x] Settings → Printer: this PC's receipt printer, roll width 80/58, optional A4 printer for prescriptions, cash drawer (ESC/POS over winspool, Windows only). Saved per PC in `userData/printer.json`, because a satellite has its own printer.
-- [x] Settings → Receipt: the clinic's layout (language, clinic name, address, phone, STIR, header and footer lines, top and bottom images, show/hide ticks), with a live preview. Kept on the main till (`settings.receipt_layout`); satellites read it over the LAN.
-- [x] Print jobs: `print:serviceReceipt` and `print:prescription` now really print (they only logged before), through one serial queue with a 60 s timeout. Test print, and the drawer opens after a cash payment.
-- [x] Satellites print on their own printer, with the visit (now with its payments) and the layout fetched from the main till.
-- [x] The print buttons show the real result ("no printer chosen", "printer not found", driver errors).
-- Verified: 252/252 tests (20 new), typecheck, electron-vite build. Not verified: a real thermal printer or drawer, and the UI was not clicked through.
-- Security review fixes: the PC printer channels are not licence-gated (a satellite has no licence; they were refused there), printing a visit stays gated. Printing a visit needs a signed-in user; the drawer needs reception or an admin. Errors are logged with `errorSummary`. PowerShell is started by its full path.
+**Not done / follow-ups**
+- End to end in the running till (case page panel + a real print to PDF): not run in this session.
+- Medicines are still free text; the design's structured table (dose / times / days) needs its
+  own data model. Saved advice templates: later (Q4).
+- `appointments:getAll` / `getTodaySummary` also lack a signed-in check (older code, not touched).

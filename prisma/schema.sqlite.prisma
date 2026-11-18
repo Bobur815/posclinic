@@ -156,6 +156,7 @@ model Doctor {
   items        AppointmentItem[]
   cases        ClinicalCase[]
   referrals    Referral[]
+  recommendations CaseRecommendation[]
 
   @@map("doctors")
 }
@@ -196,6 +197,9 @@ model Service {
   appointmentItems AppointmentItem[]
   referrals        Referral[]
   analysisResults  AnalysisResult[]
+  /// v2.10: the product a DIRECT_SALE service sells, and what one unit of a procedure uses.
+  product          Product?
+  supplies         ServiceSupply[]
 
   @@map("services")
 }
@@ -223,6 +227,7 @@ model ClinicalCase {
   vitals          PatientVitals[]
   referrals       Referral[]
   analysisResults AnalysisResult[]
+  recommendations CaseRecommendation[]
 
   @@index([patientId, status])
   @@index([doctorId, status])
@@ -416,6 +421,149 @@ model TreatmentSession {
   @@unique([itemId, number])
   @@index([plannedDate, doneAt])
   @@map("treatment_sessions")
+}
+
+/// v2.9: the doctor's advice for home, printed on the A4 treatment sheet. Belongs to the whole
+/// course (case): new ones are added on later visits, the old ones stay. Removing one only sets
+/// `active` false. Till only (not synced).
+model CaseRecommendation {
+  id        String       @id @default(cuid())
+  caseId    String       @map("case_id")
+  case      ClinicalCase @relation(fields: [caseId], references: [id])
+  doctorId  String?      @map("doctor_id")
+  doctor    Doctor?      @relation(fields: [doctorId], references: [id])
+  /// DIET_ALLOWED | DIET_AVOID | HOME
+  category  String       @default("HOME")
+  text      String
+  active    Boolean      @default(true)
+  /// User who wrote it (a doctor or an admin).
+  createdBy String?      @map("created_by")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@index([caseId, active])
+  @@map("case_recommendations")
+}
+
+// ==================== STOCK AND EXPENSES (v2.10) ====================
+
+/// Anything the clinic buys and keeps: products it sells, treatment supplies, household goods.
+/// `qtyOnHand` and `avgCost` are written by src/main/clinic/stock.ts only, in the same
+/// transaction as the movement that changes them.
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  /// SALE | TREATMENT | HOUSEHOLD (what it is mostly for; reports group by it)
+  category  String   @default("HOUSEHOLD")
+  /// dona, quti, ml, g… (free text shown next to quantities)
+  unit      String   @default("dona")
+  barcode   String?
+  /// Warn when on hand drops to this or below; null = no warning.
+  minQty    Decimal? @map("min_qty")
+  qtyOnHand Decimal  @default(0) @map("qty_on_hand")
+  /// Weighted average cost of one unit (so'm), recomputed on every delivery.
+  avgCost   Decimal  @default(0) @map("avg_cost")
+  /// The DIRECT_SALE service that sells it (one unit per line unit); null = not sold.
+  serviceId String?  @unique @map("service_id")
+  service   Service? @relation(fields: [serviceId], references: [id])
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  supplies  ServiceSupply[]
+  movements StockMovement[]
+
+  @@index([category, active])
+  @@map("products")
+}
+
+/// What one unit of a procedure uses ("Huqna" = 1 kit + 200 ml solution). Till only.
+model ServiceSupply {
+  id        String   @id @default(cuid())
+  serviceId String   @map("service_id")
+  service   Service  @relation(fields: [serviceId], references: [id])
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  qty       Decimal
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([serviceId, productId])
+  @@map("service_supplies")
+}
+
+/// A delivery from a supplier; its lines are IN movements. Paid from the drawer = a PAY_OUT of
+/// the open shift (`cashMovementId`). A mistake is voided (VOID movements), never edited.
+model StockReceipt {
+  id             String    @id @default(cuid())
+  number         String    @unique
+  supplier       String?
+  docNo          String?   @map("doc_no")
+  receivedAt     DateTime  @default(now()) @map("received_at")
+  total          Decimal   @default(0)
+  /// DRAWER | OUTSIDE
+  paidFrom       String    @default("OUTSIDE") @map("paid_from")
+  cashMovementId String?   @unique @map("cash_movement_id")
+  note           String    @default("")
+  createdById    String?   @map("created_by_id")
+  voidedAt       DateTime? @map("voided_at")
+  voidedById     String?   @map("voided_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  movements StockMovement[]
+
+  @@index([receivedAt])
+  @@map("stock_receipts")
+}
+
+/// Every change of stock. Never edited or deleted: a mistake is the opposite movement.
+model StockMovement {
+  id          String        @id @default(cuid())
+  productId   String        @map("product_id")
+  product     Product       @relation(fields: [productId], references: [id])
+  /// IN | SALE | TREATMENT | HOUSEHOLD | ADJUST (stocktake) | VOID (undoes a delivery line)
+  type        String
+  /// Signed: + in, - out.
+  qty         Decimal
+  /// The delivery price (IN, VOID) or the average cost at that moment (everything else).
+  unitCost    Decimal       @map("unit_cost")
+  receiptId   String?       @map("receipt_id")
+  receipt     StockReceipt? @relation(fields: [receiptId], references: [id])
+  /// The visit line it was sold or used for (SALE, TREATMENT), and the course session.
+  itemId      String?       @map("item_id")
+  sessionId   String?       @map("session_id")
+  note        String        @default("")
+  createdById String?       @map("created_by_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([productId, createdAt])
+  @@index([type, createdAt])
+  @@index([itemId])
+  @@index([sessionId])
+  @@map("stock_movements")
+}
+
+/// Money spent that is not stock: rent, salaries, utilities, repairs, taxes, other.
+model Expense {
+  id             String    @id @default(cuid())
+  /// RENT | SALARY | UTILITIES | REPAIR | TAX | OTHER
+  category       String    @default("OTHER")
+  amount         Decimal
+  spentAt        DateTime  @default(now()) @map("spent_at")
+  note           String    @default("")
+  /// DRAWER | OUTSIDE
+  paidFrom       String    @default("OUTSIDE") @map("paid_from")
+  cashMovementId String?   @unique @map("cash_movement_id")
+  createdById    String?   @map("created_by_id")
+  voidedAt       DateTime? @map("voided_at")
+  voidedById     String?   @map("voided_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([spentAt])
+  @@map("expenses")
 }
 
 // ==================== SYNC QUEUE ====================

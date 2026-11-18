@@ -176,6 +176,17 @@ describe('cash shifts', () => {
   it('announces shift changes', () => {
     assert.deepEqual(writtenEntities('shifts:open'), ['shifts']);
     assert.deepEqual(writtenEntities('shifts:summary'), []);
-    assert.deepEqual(writtenEntities('appointments:checkout'), ['appointments', 'cases', 'shifts']);
+    assert.deepEqual(writtenEntities('appointments:checkout'), [
+      'appointments',
+      'cases',
+      'shifts',
+      'stock',
+      'finance',
+    ]);
+    // v2.10: a delivery or an expense may move the drawer.
+    assert.deepEqual(writtenEntities('stock:receive'), ['stock', 'finance', 'shifts']);
+    assert.deepEqual(writtenEntities('expenses:create'), ['finance', 'shifts']);
+    assert.deepEqual(writtenEntities('stock:listProducts'), []);
+    assert.deepEqual(writtenEntities('finance:report'), []);
   });
 });

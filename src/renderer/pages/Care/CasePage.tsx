@@ -1,9 +1,30 @@
 import { format } from 'date-fns';
-import { ArrowLeft, CheckCircle2, FlaskConical, Lock, Save, Undo2, Unlock, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  FlaskConical,
+  Lock,
+  Plus,
+  Save,
+  Undo2,
+  Unlock,
+  X,
+} from 'lucide-react';
 import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import type { CaseDetailDto, ServiceDto, VitalsInput } from '../../../shared/clinic';
+import styled from 'styled-components';
+import {
+  type CaseDetailDto,
+  RECOMMENDATION_CATEGORIES,
+  type RecommendationCategory,
+  type ServiceDto,
+  type TreatmentSessionDto,
+  type VitalsInput,
+} from '../../../shared/clinic';
+import { caseCourses } from '../../../shared/course';
 import { useToast } from '../../context/ToastContext';
 import { useDataVersion } from '../../hooks/useDataVersion';
 import { useAuthStore } from '../../store/auth-store';
@@ -168,6 +189,8 @@ export function CasePage() {
 
       <ReferralsCard caseDetail={c} editable={canDecide && !closed} onRun={run} />
 
+      <RecommendationsCard caseDetail={c} editable={canDecide && !closed} onRun={run} />
+
       <Card>
         <CardTitle>
           <span>
@@ -234,7 +257,9 @@ export function CasePage() {
                     {(() => {
                       // Undo the last session ticked in the last 24 h (a mistake at the desk).
                       const last = [...i.sessions]
-                        .filter((s) => s.doneAt && Date.now() - new Date(s.doneAt).getTime() < 86_400_000)
+                        .filter(
+                          (s) => s.doneAt && Date.now() - new Date(s.doneAt).getTime() < 86_400_000,
+                        )
                         .sort((x, y) => y.number - x.number)[0];
                       return last && !closed ? (
                         <Btn
@@ -400,6 +425,105 @@ function ComplaintDiagnosis({
   );
 }
 
+/**
+ * The doctor's home advice for the whole course (diet allowed / to avoid, at home), printed on
+ * the A4 treatment sheet. Later visits add to it; the author (or an admin) can take one off.
+ */
+function RecommendationsCard({
+  caseDetail: c,
+  editable,
+  onRun,
+}: {
+  caseDetail: CaseDetailDto;
+  editable: boolean;
+  onRun: Run;
+}) {
+  const { t } = useTranslation();
+  const me = useAuthStore((s) => s.user);
+  const isAdmin = me?.role === 'CLINIC_ADMIN' || me?.role === 'SUPER_ADMIN';
+  const [category, setCategory] = useState<RecommendationCategory>('DIET_ALLOWED');
+  const [text, setText] = useState('');
+  const add = async () => {
+    const ok = await onRun(() =>
+      window.electronAPI.cases.addRecommendation(c.id, { category, text: text.trim() }),
+    );
+    if (ok) setText('');
+  };
+  return (
+    <Card>
+      <CardTitle>
+        <span>
+          <ClipboardList size={15} /> {t('care.recommendations.title')}
+        </span>
+      </CardTitle>
+      {c.recommendations.length === 0 ? (
+        <Empty>{t('care.recommendations.empty')}</Empty>
+      ) : (
+        RECOMMENDATION_CATEGORIES.map((cat) => {
+          const list = c.recommendations.filter((r) => r.category === cat);
+          if (!list.length) return null;
+          return (
+            <div key={cat} style={{ marginBottom: 8 }}>
+              <strong>{t(`care.recommendations.category.${cat}`)}</strong>
+              {list.map((r) => (
+                <Row key={r.id}>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>
+                    {r.text}
+                    <Muted>
+                      {format(new Date(r.createdAt), 'dd.MM.yyyy')}
+                      {r.doctor ? ` · ${r.doctor.fullName}` : ''}
+                    </Muted>
+                  </div>
+                  {editable && (isAdmin || r.createdBy === me?.id) && (
+                    <Btn
+                      title={t('care.recommendations.remove')}
+                      onClick={() =>
+                        onRun(() => window.electronAPI.cases.removeRecommendation(r.id))
+                      }
+                    >
+                      <X size={14} />
+                    </Btn>
+                  )}
+                </Row>
+              ))}
+            </div>
+          );
+        })
+      )}
+      {editable && (
+        <div style={{ marginTop: 8 }}>
+          <Label>
+            {t('care.recommendations.category.label')}
+            <Select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as RecommendationCategory)}
+            >
+              {RECOMMENDATION_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {t(`care.recommendations.category.${cat}`)}
+                </option>
+              ))}
+            </Select>
+          </Label>
+          <Label style={{ marginTop: 8 }}>
+            {t('care.recommendations.text')}
+            <Textarea
+              value={text}
+              maxLength={2000}
+              placeholder={t('care.recommendations.placeholder')}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </Label>
+          <Btn $variant="primary" style={{ marginTop: 8 }} disabled={!text.trim()} onClick={add}>
+            <Plus size={14} />
+            {t('care.recommendations.add')}
+          </Btn>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function VitalsCard({
   caseDetail: c,
   disabled,
@@ -519,6 +643,77 @@ function VitalsCard({
   );
 }
 
+/** Session boxes per row, as on the A4 sheet. */
+const COURSE_GRID = 10;
+
+const Boxes = styled.div`
+  display: grid;
+  grid-template-columns: repeat(${COURSE_GRID}, minmax(0, 1fr));
+  gap: 4px;
+  margin: 6px 0 10px;
+`;
+const Box = styled.div<{ $state: 'done' | 'planned' | 'none' }>`
+  min-height: 46px;
+  padding: 3px 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 11px;
+  border-radius: ${({ theme }) => theme.borderRadius};
+  border: 1px ${({ $state }) => ($state === 'none' ? 'dashed' : 'solid')}
+    ${({ theme, $state }) => ($state === 'done' ? theme.colors.success : theme.colors.border)};
+  background: ${({ theme, $state }) =>
+    $state === 'done' ? `${theme.colors.success}22` : 'transparent'};
+  color: ${({ theme, $state }) =>
+    $state === 'none' ? theme.colors.textSecondary : theme.colors.text};
+  & > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2px;
+  }
+  & strong {
+    font-weight: 700;
+  }
+  & svg {
+    color: ${({ theme }) => theme.colors.success};
+    flex: none;
+  }
+`;
+
+const dm = (d: string | null) => (d ? format(new Date(d), 'dd.MM') : '');
+
+/** A course's sessions as boxes (the A4 sheet's grid): done ✓ + date, planned date, or empty. */
+function CourseGrid({ sessions }: { sessions: Array<TreatmentSessionDto | null> }) {
+  const { t } = useTranslation();
+  const done = sessions.filter((s) => s?.doneAt).length;
+  return (
+    <>
+      <Muted>{t('care.sessionsDone', { done, total: sessions.length })}</Muted>
+      <Boxes>
+        {sessions.map((s, i) => {
+          const n = i + 1;
+          const state = s?.doneAt ? 'done' : s ? 'planned' : 'none';
+          const title = s?.doneAt
+            ? t('care.courseSession.done', { n, date: dm(s.doneAt) })
+            : s
+              ? t('care.courseSession.planned', { n, date: dm(s.plannedDate) })
+              : t('care.courseSession.notRegistered', { n });
+          return (
+            <Box key={s?.id ?? `n${n}`} $state={state} title={title} aria-label={title}>
+              <div>
+                <strong>{n}</strong>
+                {s?.doneAt ? <Check size={13} /> : <span>{dm(s?.plannedDate ?? null)}</span>}
+              </div>
+              {s?.doneAt && <span>{dm(s.doneAt)}</span>}
+            </Box>
+          );
+        })}
+      </Boxes>
+    </>
+  );
+}
+
 function ReferralsCard({
   caseDetail: c,
   editable,
@@ -539,6 +734,11 @@ function ReferralsCard({
     if (editable) window.electronAPI.services.getActive().then(setServices);
   }, [editable]);
   const offer = useMemo(() => services.filter((s) => s.kind !== 'CONSULTATION'), [services]);
+  // The same boxes as the printed sheet: whole from the referral on.
+  const courseOf = useMemo(
+    () => new Map(caseCourses(c).map((x) => [x.referralId, x.sessions])),
+    [c],
+  );
   const chosen = offer.find((s) => s.id === serviceId);
   const isCourse = chosen?.kind === 'PROCEDURE';
 
@@ -565,30 +765,33 @@ function ReferralsCard({
         <Empty>{t('care.noReferrals')}</Empty>
       ) : (
         c.referrals.map((r) => (
-          <Row key={r.id}>
-            <div>
-              <strong>{r.service.name}</strong>
-              <Muted>
-                {r.perDay && r.days
-                  ? t('register.perDay', { perDay: r.perDay, days: r.days })
-                  : `× ${r.quantity}`}
-                {` · ${t('register.remaining', { n: r.quantity - r.registeredQty, total: r.quantity })}`}
-                {r.instructions ? ` · ${r.instructions}` : ''}
-              </Muted>
-            </div>
-            <Actions>
-              <StatusBadge $status={r.status}>{t(`care.referralStatus.${r.status}`)}</StatusBadge>
-              {editable && (r.status === 'PENDING' || r.status === 'PARTIAL') && (
-                <Btn
-                  $variant="danger"
-                  aria-label={t('common.cancel')}
-                  onClick={() => onRun(() => window.electronAPI.cases.cancelReferral(r.id))}
-                >
-                  <X size={14} />
-                </Btn>
-              )}
-            </Actions>
-          </Row>
+          <div key={r.id}>
+            <Row>
+              <div>
+                <strong>{r.service.name}</strong>
+                <Muted>
+                  {r.perDay && r.days
+                    ? t('register.perDay', { perDay: r.perDay, days: r.days })
+                    : `× ${r.quantity}`}
+                  {` · ${t('register.remaining', { n: r.quantity - r.registeredQty, total: r.quantity })}`}
+                  {r.instructions ? ` · ${r.instructions}` : ''}
+                </Muted>
+              </div>
+              <Actions>
+                <StatusBadge $status={r.status}>{t(`care.referralStatus.${r.status}`)}</StatusBadge>
+                {editable && (r.status === 'PENDING' || r.status === 'PARTIAL') && (
+                  <Btn
+                    $variant="danger"
+                    aria-label={t('common.cancel')}
+                    onClick={() => onRun(() => window.electronAPI.cases.cancelReferral(r.id))}
+                  >
+                    <X size={14} />
+                  </Btn>
+                )}
+              </Actions>
+            </Row>
+            {courseOf.has(r.id) && <CourseGrid sessions={courseOf.get(r.id) ?? []} />}
+          </div>
         ))
       )}
       {editable && (

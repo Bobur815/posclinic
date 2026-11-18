@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { RECOMMENDATION_CATEGORIES } from '../../shared/clinic';
 import { normalizePhone } from '../../shared/phone';
 import { completeOrderIfDone, recomputeCaseStatus, touchOrder } from '../clinic/case-status';
+import { settleItemStock } from '../clinic/stock';
 import { getPrismaClient } from '../database/sqlite-client';
 import { isUniqueConflict } from './appointment-handlers';
 import {
@@ -79,6 +81,9 @@ const text = (v: unknown, max = 2000): string | null | undefined => {
   if (v === undefined) return undefined;
   return typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
 };
+
+/** Active home recommendations per case. */
+export const MAX_RECOMMENDATIONS = 50;
 
 const QUEUE_INCLUDE = {
   service: { select: { id: true, name: true, kind: true } },
@@ -180,7 +185,11 @@ export function setupCareHandlers(): void {
                   performedBy: a.id,
                 },
         });
-        if (next === 'DONE') await completeOrderIfDone(tx, item.appointment.id);
+        if (next === 'DONE') {
+          // v2.10: a consultation's supplies (gloves, spatulas…), if it has a list.
+          await settleItemStock(tx, item.id, a.id);
+          await completeOrderIfDone(tx, item.appointment.id);
+        }
         await touchOrder(tx, item.appointment.id);
         if (item.appointment.caseId) await recomputeCaseStatus(tx, item.appointment.caseId);
         return u;
@@ -218,6 +227,11 @@ export function setupCareHandlers(): void {
         analysisResults: {
           orderBy: { createdAt: 'asc' },
           include: { service: { select: { id: true, name: true, resultType: true } } },
+        },
+        recommendations: {
+          where: { active: true },
+          orderBy: { createdAt: 'asc' },
+          include: { doctor: { select: { id: true, fullName: true } } },
         },
       },
     });
@@ -375,6 +389,59 @@ export function setupCareHandlers(): void {
       const u = await tx.referral.update({ where: { id: r.id }, data: { status: 'CANCELLED' } });
       await recomputeCaseStatus(tx, r.caseId);
       return u;
+    });
+    return ipcSafe(updated);
+  });
+
+  /**
+   * The doctor's advice for home (diet, home procedures), printed on the A4 treatment sheet.
+   * It belongs to the whole course: later visits add new ones, the old ones stay.
+   */
+  handle('cases:addRecommendation', async (ctx, caseId: unknown, data: Record<string, unknown>) => {
+    const a = actorOf(ctx);
+    const db = getPrismaClient();
+    const c = await db.clinicalCase.findUnique({ where: { id: String(caseId ?? '') } });
+    if (!c || c.status === 'CLOSED') throw new RefusedError('errors.caseUnavailable');
+    const myDoctor = await requireCaseClinician(db, ctx, c);
+    const category = String(data?.category ?? '');
+    const body = text(data?.text);
+    if (!(RECOMMENDATION_CATEGORIES as readonly string[]).includes(category) || !body) {
+      throw new RefusedError('errors.invalidRecommendation');
+    }
+    // Every active one crosses the LAN with each visit and goes on the sheet: keep it bounded.
+    const count = await db.caseRecommendation.count({ where: { caseId: c.id, active: true } });
+    if (count >= MAX_RECOMMENDATIONS) throw new RefusedError('errors.tooManyRecommendations');
+    const row = await db.caseRecommendation.create({
+      data: {
+        id: randomUUID(),
+        caseId: c.id,
+        // The doctor who wrote it; null for an admin without a doctor profile (never the lead
+        // doctor's name on advice they did not give).
+        doctorId: myDoctor,
+        category,
+        text: body,
+        createdBy: a.id,
+      },
+      include: { doctor: { select: { id: true, fullName: true } } },
+    });
+    return ipcSafe(row);
+  });
+
+  /** Take a recommendation off the sheet (it stays in the database): its author or an admin. */
+  handle('cases:removeRecommendation', async (ctx, recommendationId: unknown) => {
+    const a = actorOf(ctx);
+    const db = getPrismaClient();
+    const r = await db.caseRecommendation.findUnique({
+      where: { id: String(recommendationId ?? '') },
+      include: { case: { select: { id: true, doctorId: true, status: true } } },
+    });
+    if (!r || !r.active) throw new RefusedError('errors.notFound');
+    if (r.case.status === 'CLOSED') throw new RefusedError('errors.caseUnavailable');
+    await requireCaseClinician(db, ctx, r.case, r.doctorId);
+    if (!isAdminRole(a.role) && r.createdBy !== a.id) throw new RefusedError('errors.forbidden');
+    const updated = await db.caseRecommendation.update({
+      where: { id: r.id },
+      data: { active: false },
     });
     return ipcSafe(updated);
   });

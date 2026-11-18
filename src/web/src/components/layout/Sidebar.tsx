@@ -16,6 +16,9 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Landmark,
+  Package,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react';
 import { useSidebar } from '@context/SidebarContext';
@@ -206,6 +209,14 @@ export function useNavGroups(): NavGroup[] {
       items: [
         { to: '/reports/daily', icon: BarChart3, label: t('nav.dailyReport') },
         { to: '/reports/monthly', icon: CalendarRange, label: t('nav.monthlyReport') },
+        { to: '/reports/finance', icon: Landmark, label: t('nav.financeReport') },
+      ],
+    },
+    {
+      title: t('nav.stockGroup'),
+      items: [
+        { to: '/stock', icon: Package, label: t('nav.stock') },
+        { to: '/expenses', icon: Receipt, label: t('nav.expenses') },
       ],
     },
     {

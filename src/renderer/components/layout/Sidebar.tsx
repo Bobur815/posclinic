@@ -17,6 +17,9 @@ import {
   TestTube,
   KeyRound,
   Wallet,
+  Package,
+  Receipt,
+  Landmark,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuthStore } from '../../store/auth-store';
@@ -213,21 +216,29 @@ export function Sidebar() {
             lab,
           ];
 
+  // v2.10: everyone sees the stock (nurses write off what they use); money is reception's.
+  const stock = { to: '/stock', icon: <Package size={18} />, label: t('nav.stock') };
   const clinicItems: NavItemConfig[] = isClinical
     ? [
         { to: '/patients', icon: <Users size={18} />, label: t('nav.patients') },
+        stock,
         { to: '/settings/user', icon: <KeyRound size={18} />, label: t('nav.myAccount') },
       ]
     : [
     { to: '/patients', icon: <Users size={18} />, label: t('nav.patients') },
     { to: '/appointments', icon: <Calendar size={18} />, label: t('nav.appointments') },
     { to: '/shifts', icon: <Wallet size={18} />, label: t('nav.shifts') },
+    stock,
+    { to: '/expenses', icon: <Receipt size={18} />, label: t('nav.expenses') },
     { to: '/services', icon: <ClipboardList size={18} />, label: t('nav.services') },
     { to: '/doctors', icon: <Stethoscope size={18} />, label: t('nav.doctors') },
   ];
 
   const reportItems: NavItemConfig[] = [
     { to: '/reports/daily', icon: <BarChart2 size={18} />, label: t('nav.dailyReport') },
+    ...(isAdmin
+      ? [{ to: '/reports/finance', icon: <Landmark size={18} />, label: t('nav.financeReport') }]
+      : []),
   ];
 
   const adminItems: NavItemConfig[] = [

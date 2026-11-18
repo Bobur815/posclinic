@@ -7,6 +7,7 @@
  * Every value from the database or a setting is escaped; images are accepted only as base64
  * image data URLs. The print window runs no JavaScript.
  */
+import { type CourseSourceReferral, caseCourses } from './course';
 import { formatPhone } from './phone';
 
 export type ReceiptLanguage = 'ru' | 'uz';
@@ -170,8 +171,60 @@ export interface PrintableVisit {
   payments: Array<{ method: string; amount: number }>;
   cashierName: string | null;
   fiscalReceiptNo: string | null;
+  /** The visit's diagnosis, else the case's. */
   diagnosis: string | null;
   prescription: string | null;
+  /** The case's latest vitals (A4 sheet). */
+  weightKg: number | null;
+  heightCm: number | null;
+  /** Every treatment course in the case, with its sessions (A4 sheet: the checklist). */
+  courses: PrintableCourse[];
+  /** The doctor's home advice for the whole case; one entry per printed point. */
+  recommendations: PrintableRecommendations;
+}
+
+export interface PrintableCourse {
+  name: string;
+  perDay: number | null;
+  days: number | null;
+  /** By number; `doneAt` set = ticked by the nurse. ISO dates. */
+  sessions: Array<{ number: number; plannedDate: string | null; doneAt: string | null }>;
+}
+
+export interface PrintableRecommendations {
+  dietAllowed: string[];
+  dietAvoid: string[];
+  home: string[];
+}
+
+const hasRecommendations = (r: PrintableRecommendations) =>
+  r.dietAllowed.length + r.dietAvoid.length + r.home.length > 0;
+
+/** Whether a prescription has anything to print (else the till says so instead of printing). */
+export function hasPrescriptionContent(v: PrintableVisit): boolean {
+  return Boolean(
+    v.diagnosis || v.prescription || v.courses.length || hasRecommendations(v.recommendations),
+  );
+}
+
+type Dateish = string | Date | null | undefined;
+
+/** The case data a prescription needs (`PRINTABLE_APPOINTMENT_INCLUDE.case`). */
+export interface PrintSourceCase {
+  diagnosis?: string | null;
+  recommendations?: Array<{ category: string; text: string; active?: boolean }>;
+  /** Course referrals give the course its boxes before reception registers it. */
+  referrals?: CourseSourceReferral[];
+  appointments?: Array<{
+    items: Array<{
+      referralId?: string | null;
+      serviceName: string;
+      status?: string;
+      referral?: { perDay: number | null; days: number | null } | null;
+      sessions?: Array<{ number: number; plannedDate: Dateish; doneAt: Dateish }>;
+    }>;
+  }>;
+  vitals?: Array<{ weightKg: number | string | null; heightCm: number | string | null }>;
 }
 
 /** The shape of `appointments:getById` that the printers read (Decimals already numbers). */
@@ -200,10 +253,50 @@ export interface PrintSourceAppointment {
     amount: number | string;
     createdBy?: { fullName: string } | null;
   }>;
+  case?: PrintSourceCase | null;
 }
 
 const iso = (d: string | Date | null | undefined): string | null =>
   d == null ? null : d instanceof Date ? d.toISOString() : String(d);
+
+const numOrNull = (v: number | string | null | undefined): number | null =>
+  v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v);
+
+/** Each line of an entry is one point on the sheet. */
+function recommendationsOf(c: PrintSourceCase | null | undefined): PrintableRecommendations {
+  const out: PrintableRecommendations = { dietAllowed: [], dietAvoid: [], home: [] };
+  for (const r of c?.recommendations ?? []) {
+    if (r.active === false) continue;
+    // Only the known categories print (a row written some other way is left off).
+    if (!['DIET_ALLOWED', 'DIET_AVOID', 'HOME'].includes(r.category)) continue;
+    const key =
+      r.category === 'DIET_ALLOWED'
+        ? 'dietAllowed'
+        : r.category === 'DIET_AVOID'
+          ? 'dietAvoid'
+          : 'home';
+    for (const line of String(r.text ?? '').split(/\r?\n/)) {
+      const point = line.replace(/^\s*[-•*]\s*/, '').trim();
+      if (point) out[key].push(point);
+    }
+  }
+  return out;
+}
+
+/** Every course of the case, whole from the referral on (boxes not registered yet are empty). */
+function coursesOf(c: PrintSourceCase | null | undefined): PrintableCourse[] {
+  if (!c) return [];
+  return caseCourses(c).map((course) => ({
+    name: course.name,
+    perDay: course.perDay,
+    days: course.days,
+    sessions: course.sessions.map((s, i) => ({
+      number: i + 1,
+      plannedDate: iso(s?.plannedDate),
+      doneAt: iso(s?.doneAt),
+    })),
+  }));
+}
 
 export function toPrintableVisit(a: PrintSourceAppointment): PrintableVisit {
   const payments = a.payments ?? [];
@@ -232,8 +325,12 @@ export function toPrintableVisit(a: PrintSourceAppointment): PrintableVisit {
       ? (payments[payments.length - 1].createdBy?.fullName ?? null)
       : null,
     fiscalReceiptNo: a.fiscalStatus === 'FISCALIZED' ? (a.fiscalReceiptNo ?? null) : null,
-    diagnosis: a.diagnosis ?? null,
+    diagnosis: a.diagnosis || a.case?.diagnosis || null,
     prescription: a.prescription ?? null,
+    weightKg: numOrNull(a.case?.vitals?.[0]?.weightKg),
+    heightCm: numOrNull(a.case?.vitals?.[0]?.heightCm),
+    courses: coursesOf(a.case),
+    recommendations: recommendationsOf(a.case),
   };
 }
 
@@ -269,6 +366,29 @@ const LABELS = {
     diagnosis: 'Диагноз',
     rx: 'Назначение',
     signature: 'Подпись врача',
+    sheetTitle: 'ЛИСТ ЛЕЧЕНИЯ',
+    sheetSub: 'Рецепт и план процедур',
+    fullName: 'Ф.И.О. пациента',
+    code: 'Код',
+    weightHeight: 'Вес / рост',
+    kg: 'кг',
+    cm: 'см',
+    visitNo: 'Визит №',
+    medicines: 'Лекарственные средства',
+    course: 'Курс процедур',
+    procedure: 'Процедура',
+    doneOf: 'выполнено',
+    sessions: 'сеанс.',
+    perDayDays: '{days} дн., {perDay} раз в день',
+    courseHint:
+      'В клетке: вверху — плановая дата, внизу — дата выполнения. Пустую клетку медсестра отмечает вручную.',
+    homeAdvice: 'Рекомендации для дома',
+    dietAllowed: 'Диета: МОЖНО',
+    dietAvoid: 'Диета: НЕЛЬЗЯ',
+    nextVisit: 'Следующий визит / контрольный анализ',
+    patientAck: 'Пациент ознакомлен',
+    stamp: 'М.П.',
+    printedAt: 'Напечатано',
   },
   uz: {
     receipt: 'Chek №',
@@ -299,6 +419,29 @@ const LABELS = {
     diagnosis: 'Tashxis',
     rx: 'Tayinlov',
     signature: 'Shifokor imzosi',
+    sheetTitle: 'DAVOLASH VARAQASI',
+    sheetSub: 'Retsept va muolajalar rejasi',
+    fullName: 'Bemor F.I.Sh.',
+    code: 'Kodi',
+    weightHeight: "Vazn / bo'y",
+    kg: 'kg',
+    cm: 'sm',
+    visitNo: 'Tashrif №',
+    medicines: 'Dori vositalari',
+    course: 'Muolajalar kursi',
+    procedure: 'Muolaja',
+    doneOf: 'bajarildi',
+    sessions: 'seans',
+    perDayDays: '{days} kun, kuniga {perDay} marta',
+    courseHint:
+      "Katakda: yuqorida — reja sanasi, pastda — bajarilgan sana. Bo'sh katakni hamshira qo'lda belgilaydi.",
+    homeAdvice: 'Uyda bajariladigan tavsiyalar',
+    dietAllowed: 'Parhez: MUMKIN',
+    dietAvoid: 'Parhez: MUMKIN EMAS',
+    nextVisit: 'Keyingi tashrif / nazorat tahlili',
+    patientAck: 'Bemor tanishdi',
+    stamp: "M.O'.",
+    printedAt: 'Chop etildi',
   },
 };
 type Labels = Record<keyof (typeof LABELS)['ru'], string>;
@@ -510,14 +653,251 @@ function a4Styles(): string {
   `;
 }
 
-/** The doctor's prescription: on the receipt roll, or A4 on a document printer. */
+// ── The A4 treatment sheet (design: docs/design, "Variant A — rasmiy blank") ──────────────────
+
+function sheetStyles(): string {
+  return `
+    @page { size: A4; margin: 12mm; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, 'Segoe UI', 'Liberation Sans', sans-serif; font-size: 10.5pt;
+      line-height: 1.3; color: #111; background: #fff; -webkit-print-color-adjust: exact;
+      print-color-adjust: exact; }
+    .a-hd { text-align: center; border-bottom: 0.8mm double #111; padding-bottom: 2mm; }
+    .a-hd .in { display: flex; align-items: center; justify-content: center; gap: 4mm; }
+    .a-hd .lg img { max-height: 16mm; max-width: 40mm; display: block; }
+    .a-hd .nm { font-size: 13pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .a-hd .mt { font-size: 9pt; color: #333; }
+    .a-title { margin: 3mm auto 0; text-align: center; font-size: 14pt; font-weight: 800; letter-spacing: 0.12em; }
+    .a-sub { text-align: center; font-size: 9pt; color: #444; margin-bottom: 3mm; }
+    .a-f { display: flex; align-items: flex-end; gap: 2mm; margin-top: 1.6mm; }
+    .a-f .l { flex: none; font-size: 9pt; color: #333; }
+    .a-f .v { flex: 1; border-bottom: 0.3mm solid #111; font-size: 10.5pt; font-weight: 600;
+      padding: 0 1mm 0.4mm; min-height: 5mm; overflow-wrap: anywhere; }
+    .a-f .v.big { font-size: 12pt; }
+    .a-f .v.code { flex: none; width: 26mm; }
+    .a-row { display: flex; gap: 5mm; }
+    .a-row > * { flex: 1; }
+    .a-row > .w2 { flex: 2; }
+    .a-h { margin: 3.5mm 0 1.5mm; font-size: 10pt; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; break-after: avoid; }
+    .a-box { border: 0.3mm solid #111; padding: 1.5mm 2mm; white-space: pre-wrap; overflow-wrap: anywhere; }
+    table.a-t { width: 100%; border-collapse: collapse; }
+    .a-t th, .a-t td { border: 0.3mm solid #111; padding: 1.2mm 1.5mm; text-align: left; vertical-align: top; }
+    .a-t th { font-size: 9pt; font-weight: 700; background: #ececec; }
+    .a-t tr { break-inside: avoid; }
+    .a-m { table-layout: fixed; }
+    .a-m th { text-align: center; }
+    .a-m th.p { width: 38mm; text-align: left; }
+    .a-m td.s { padding: 0; height: 13mm; vertical-align: top; }
+    .a-m td.p { padding: 1mm 1.5mm; overflow-wrap: anywhere; }
+    .a-m .cell { display: flex; flex-direction: column; justify-content: space-between; height: 13mm; padding: 0.8mm 1mm; }
+    .a-m .top { display: flex; justify-content: space-between; align-items: center; font-size: 9pt; }
+    .a-m .ck { width: 3.6mm; height: 3.6mm; border: 0.35mm solid #111; display: inline-flex;
+      align-items: center; justify-content: center; flex: none; }
+    .a-m .ck svg { width: 3mm; height: 3mm; fill: none; stroke: #111; stroke-width: 2.6;
+      stroke-linecap: round; stroke-linejoin: round; }
+    .a-m .dn { font-size: 9pt; font-weight: 700; border-top: 0.26mm dotted #777; min-height: 3.8mm; }
+    .a-m td.done { background: #e4e4e4; }
+    .a-m td.na { background: repeating-linear-gradient(135deg, #fff 0 1.2mm, #ddd 1.2mm 1.5mm); }
+    .a-m .pn { font-weight: 700; font-size: 10.5pt; }
+    .a-m .pd { display: block; font-size: 9pt; color: #444; }
+    .a-m .pr { display: block; font-size: 9pt; font-weight: 700; margin-top: 0.8mm; }
+    .a-note { font-size: 9pt; color: #444; margin-top: 1mm; }
+    .a-list { margin: 0; padding-left: 5mm; }
+    .a-list li { margin: 0.4mm 0; overflow-wrap: anywhere; }
+    .a-sign { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 4mm; break-inside: avoid; }
+    .a-stamp { width: 40mm; height: 40mm; border: 0.3mm dashed #666; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 9pt; color: #555; }
+    .a-foot { display: flex; justify-content: space-between; gap: 4mm; font-size: 9pt; color: #444;
+      border-top: 0.3mm solid #111; margin-top: 2mm; padding-top: 1mm; }
+  `;
+}
+
+const TICK =
+  '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 6.4 5 9 9.8 3.2"></path></svg>';
+const ROMAN = ['I', 'II', 'III', 'IV'];
+/** Session boxes per grid row (the design: 10). */
+const GRID = 10;
+
+function dayMonth(isoDate: string | null): string {
+  return dateOnly(isoDate).slice(0, 5);
+}
+
+/** Full years on `now`; null if the birth date is unknown or in the future. */
+export function ageOn(birthIso: string | null, now: Date): number | null {
+  if (!birthIso) return null;
+  const b = new Date(birthIso);
+  if (Number.isNaN(b.getTime())) return null;
+  let age = now.getFullYear() - b.getFullYear();
+  if (
+    now.getMonth() < b.getMonth() ||
+    (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())
+  ) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+}
+
+function ageText(age: number, lang: ReceiptLanguage): string {
+  if (lang === 'uz') return `${age} yosh`;
+  const n10 = age % 10;
+  const n100 = age % 100;
+  const word =
+    n10 === 1 && n100 !== 11
+      ? 'год'
+      : n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)
+        ? 'года'
+        : 'лет';
+  return `${age} ${word}`;
+}
+
+const field = (label: string, value: string, cls = '') =>
+  `<div class="a-f"><span class="l">${label}:</span><span class="v ${cls}">${value}</span></div>`;
+
+function courseRows(c: PrintableCourse, l: Labels): string {
+  const done = c.sessions.filter((s) => s.doneAt).length;
+  const total = c.sessions.length;
+  const detail =
+    c.perDay && c.days
+      ? l.perDayDays.replace('{days}', String(c.days)).replace('{perDay}', String(c.perDay))
+      : `${total} ${l.sessions}`;
+  const rows: string[] = [];
+  for (let start = 0; start < total; start += GRID) {
+    const chunk = c.sessions.slice(start, start + GRID);
+    const range = total > GRID ? ` (${start + 1}–${start + chunk.length})` : '';
+    const head =
+      start === 0
+        ? `<td class="p"><span class="pn">${escapeHtml(c.name)}</span><span class="pd">${escapeHtml(detail)}</span><span class="pr">${done} / ${total} ${l.doneOf}</span></td>`
+        : `<td class="p"><span class="pn">${escapeHtml(c.name)}</span><span class="pd">${range.trim()}</span></td>`;
+    const cells = chunk.map((s) =>
+      s.doneAt
+        ? `<td class="s done"><div class="cell"><div class="top"><span>${dayMonth(s.plannedDate)}</span><span class="ck">${TICK}</span></div><div class="dn">${dayMonth(s.doneAt)}</div></div></td>`
+        : `<td class="s"><div class="cell"><div class="top"><span>${dayMonth(s.plannedDate)}</span><span class="ck"></span></div><div class="dn"></div></div></td>`,
+    );
+    while (cells.length < GRID) cells.push('<td class="s na"></td>');
+    rows.push(`<tr>${head}${cells.join('')}</tr>`);
+  }
+  return rows.join('');
+}
+
+const bullets = (items: string[]) =>
+  items.length
+    ? `<ul class="a-list">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`
+    : '';
+
+function treatmentSheetHTML(
+  visit: PrintableVisit,
+  layout: ReceiptLayout,
+  l: Labels,
+  now: Date,
+): string {
+  const lang = layout.language;
+  const clinicMeta = [
+    layout.showAddress && layout.address ? escapeHtml(layout.address) : '',
+    layout.showPhone && layout.phone ? `Tel: ${escapeHtml(formatPhone(layout.phone))}` : '',
+    layout.showStir && layout.stir ? `STIR: ${escapeHtml(layout.stir)}` : '',
+  ].filter(Boolean);
+  const logoTop =
+    layout.logoTop && LOGO_DATA_URL_RE.test(layout.logoTop)
+      ? `<div class="lg"><img src="${layout.logoTop}" alt=""></div>`
+      : '';
+  const name =
+    layout.showClinicName && layout.clinicName
+      ? `<div class="nm">${escapeHtml(layout.clinicName)}</div>`
+      : '';
+  const header =
+    logoTop || name || clinicMeta.length || layout.header
+      ? `<div class="a-hd"><div class="in">${logoTop}<div>${name}${
+          clinicMeta.length ? `<div class="mt">${clinicMeta.join(' · ')}</div>` : ''
+        }${layout.header ? `<div class="mt">${escapeHtml(layout.header)}</div>` : ''}</div></div></div>`
+      : '';
+
+  const age = ageOn(visit.patientBirthDate, now);
+  const birth = visit.patientBirthDate
+    ? `${dateOnly(visit.patientBirthDate)}${age === null ? '' : ` (${ageText(age, lang)})`}`
+    : '';
+  const wh = [
+    visit.weightKg === null ? '' : `${visit.weightKg} ${l.kg}`,
+    visit.heightCm === null ? '' : `${visit.heightCm} ${l.cm}`,
+  ];
+  const doctor = visit.doctorName
+    ? `${escapeHtml(visit.doctorName)}${visit.doctorSpecialty ? `, ${escapeHtml(visit.doctorSpecialty)}` : ''}`
+    : '';
+
+  const sections: Array<[string, string]> = [];
+  if (visit.prescription) {
+    // "Rp." (recipe) keeps its case under the upper-case heading.
+    sections.push([
+      `${l.medicines} <span style="text-transform:none">(Rp.)</span>`,
+      `<div class="a-box">${escapeHtml(visit.prescription)}</div>`,
+    ]);
+  }
+  if (visit.courses.length) {
+    const head = Array.from({ length: GRID }, (_, i) => `<th>${i + 1}</th>`).join('');
+    sections.push([
+      l.course,
+      `<table class="a-t a-m"><thead><tr><th class="p">${l.procedure}</th>${head}</tr></thead>
+        <tbody>${visit.courses.map((c) => courseRows(c, l)).join('')}</tbody></table>
+        <div class="a-note">${l.courseHint}</div>`,
+    ]);
+  }
+  const r = visit.recommendations;
+  if (hasRecommendations(r)) {
+    const diet =
+      r.dietAllowed.length || r.dietAvoid.length
+        ? `<table class="a-t"><thead><tr><th style="width:50%">${l.dietAllowed}</th><th>${l.dietAvoid}</th></tr></thead>
+            <tbody><tr><td>${bullets(r.dietAllowed)}</td><td>${bullets(r.dietAvoid)}</td></tr></tbody></table>`
+        : '';
+    const home = r.home.length
+      ? `<div style="margin-top:${diet ? '2mm' : '0'}">${bullets(r.home)}</div>`
+      : '';
+    sections.push([l.homeAdvice, diet + home]);
+  }
+
+  return page(
+    sheetStyles(),
+    `
+    ${header}
+    <div class="a-title">${l.sheetTitle}</div>
+    <div class="a-sub">${l.sheetSub}</div>
+    <div class="a-f"><span class="l">${l.fullName}:</span><span class="v big">${escapeHtml(visit.patientName)}</span>${
+      visit.patientCode
+        ? `<span class="l">${l.code}:</span><span class="v code">${escapeHtml(visit.patientCode)}</span>`
+        : ''
+    }</div>
+    <div class="a-row">${field(l.birthDate, birth)}${field(l.weightHeight, wh.every((x) => !x) ? '' : wh.map((x) => x || '—').join(' / '))}</div>
+    <div class="a-row">${field(l.date, dateOnly(visit.date))}${field(l.visitNo, escapeHtml(visit.appointmentNumber))}<div class="w2">${field(l.doctor, doctor)}</div></div>
+    ${field(l.diagnosis, escapeHtml(visit.diagnosis ?? ''))}
+    ${sections.map(([title, body], i) => `<div class="a-h">${ROMAN[i]}. ${title}</div>${body}`).join('')}
+    <div class="a-f" style="margin-top:3.5mm"><span class="l" style="font-weight:700;color:#111">${l.nextVisit}:</span><span class="v"></span></div>
+    <div class="a-sign">
+      <div style="width:105mm">
+        <div class="a-f"><span class="l">${l.signature}:</span><span class="v"></span>${
+          visit.doctorName ? `<span class="l">${escapeHtml(visit.doctorName)}</span>` : ''
+        }</div>
+        <div class="a-f" style="margin-top:5mm"><span class="l">${l.patientAck}:</span><span class="v"></span></div>
+      </div>
+      <div class="a-stamp">${l.stamp}</div>
+    </div>
+    <div class="a-foot"><span>${l.printedAt}: ${dateTime(now.toISOString(), lang)}</span>${
+      layout.footer ? `<span>${escapeHtml(layout.footer)}</span>` : ''
+    }<span>${escapeHtml(visit.patientCode)}</span></div>`,
+  );
+}
+
+/**
+ * The doctor's prescription. On A4 (a document printer) it is the treatment sheet: medicines,
+ * the course checklist and the home advice. On the receipt roll, a short version.
+ */
 export function buildPrescriptionHTML(
   visit: PrintableVisit,
   layout: ReceiptLayout,
   paper: DocumentPaper,
+  now: Date = new Date(),
 ): string {
   const l = LABELS[layout.language] ?? LABELS.uz;
-  const styles = paper === 'A4' ? a4Styles() : rollStyles(paper === '58' ? 58 : 80);
+  if (paper === 'A4') return treatmentSheetHTML(visit, layout, l, now);
+  const styles = rollStyles(paper === '58' ? 58 : 80);
   const meta = [
     `<span class="k">${l.receipt}</span><span class="v">${escapeHtml(visit.appointmentNumber)}</span>`,
     `<span class="k">${l.date}</span><span class="v">${dateTime(visit.date, layout.language)}</span>`,
@@ -543,6 +923,15 @@ export function buildPrescriptionHTML(
     text
       ? `<div class="section"><div class="k">${title}:</div><div class="text">${escapeHtml(text)}</div></div>`
       : '';
+  const courses = visit.courses
+    .map((c) => {
+      const done = c.sessions.filter((s) => s.doneAt).length;
+      return row(escapeHtml(c.name), `${done} / ${c.sessions.length}`);
+    })
+    .join('');
+  const r = visit.recommendations;
+  const points = (title: string, items: string[]) =>
+    items.length ? section(title, items.map((i) => `• ${i}`).join('\n')) : '';
 
   return page(
     styles,
@@ -555,6 +944,10 @@ export function buildPrescriptionHTML(
     <hr>
     ${section(l.diagnosis, visit.diagnosis)}
     ${section(l.rx, visit.prescription)}
+    ${courses ? `<div class="section"><div class="k">${l.course}:</div>${courses}</div>` : ''}
+    ${points(l.dietAllowed, r.dietAllowed)}
+    ${points(l.dietAvoid, r.dietAvoid)}
+    ${points(l.homeAdvice, r.home)}
     <div class="sign"><span>${l.signature}:</span><span>______________________</span></div>
     <div class="center footer">${escapeHtml(layout.footer || l.thankYou)}</div>`,
   );
@@ -632,6 +1025,45 @@ export function sampleVisit(lang: ReceiptLanguage): PrintableVisit {
     fiscalReceiptNo: null,
     diagnosis: null,
     prescription: null,
+    weightKg: null,
+    heightCm: null,
+    courses: [],
+    recommendations: { dietAllowed: [], dietAvoid: [], home: [] },
+  };
+}
+
+/** A made-up prescription with a course and home advice (tests, preview). */
+export function samplePrescription(lang: ReceiptLanguage): PrintableVisit {
+  const ru = lang === 'ru';
+  const day = (d: number) => new Date(Date.UTC(2026, 10, d, 9)).toISOString();
+  const sessions = (n: number, done: number, step: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      number: i + 1,
+      plannedDate: day(12 + i * step),
+      doneAt: i < done ? day(12 + i * step) : null,
+    }));
+  return {
+    ...sampleVisit(lang),
+    diagnosis: ru ? 'Лямблиоз, хроническая форма' : 'Lyamblioz, surunkali shakl',
+    prescription: ru
+      ? 'Метронидазол 250 мг — 3 раза в день, 7 дней, после еды'
+      : 'Metronidazol 250 mg — kuniga 3 marta, 7 kun, ovqatdan keyin',
+    weightKg: 62,
+    heightCm: 165,
+    courses: [
+      {
+        name: ru ? 'Озонотерапия' : 'Ozon terapiya',
+        perDay: null,
+        days: null,
+        sessions: sessions(10, 3, 2),
+      },
+      { name: ru ? 'Капельница' : 'Tomchi dori', perDay: 1, days: 5, sessions: sessions(5, 5, 1) },
+    ],
+    recommendations: {
+      dietAllowed: ru ? ['Отварные овощи', 'Каши'] : ['Qaynatilgan sabzavotlar', "Bo'tqalar"],
+      dietAvoid: ru ? ['Сладкое, белый хлеб', 'Молоко'] : ['Shirinliklar, oq non', 'Sut'],
+      home: ru ? ['Пить только кипячёную воду'] : ['Ichimlik suvini qaynatib iching'],
+    },
   };
 }
 

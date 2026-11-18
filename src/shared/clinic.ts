@@ -519,6 +519,8 @@ export interface CaseDetailDto {
   referrals: Array<ReferralDto & { service: { id: string; name: string; kind: ServiceKind } }>;
   vitals: VitalsDto[];
   analysisResults: AnalysisResultDto[];
+  /** Active ones, oldest first. */
+  recommendations: RecommendationDto[];
   latestVitals: VitalsDto | null;
   otherCases: Array<{
     id: string;
@@ -535,6 +537,34 @@ export interface CaseUpdateInput {
   diagnosis?: string | null;
   close?: boolean;
   reopen?: boolean;
+}
+
+/** The doctor's home advice on a case (v2.9): diet allowed / to avoid, at home. */
+export type RecommendationCategory = 'DIET_ALLOWED' | 'DIET_AVOID' | 'HOME';
+export const RECOMMENDATION_CATEGORIES: readonly RecommendationCategory[] = [
+  'DIET_ALLOWED',
+  'DIET_AVOID',
+  'HOME',
+];
+
+/** A row of `case_recommendations` (field names from the Prisma model). */
+export interface RecommendationDto {
+  id: string;
+  caseId: string;
+  doctorId: string | null;
+  category: RecommendationCategory;
+  text: string;
+  active: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  doctor?: { id: string; fullName: string } | null;
+}
+
+/** `cases:addRecommendation`. One line of `text` is one point on the printed sheet. */
+export interface RecommendationInput {
+  category: RecommendationCategory;
+  text: string;
 }
 
 /** `cases:addReferral`: an analysis (quantity) or a course (perDay × days). */

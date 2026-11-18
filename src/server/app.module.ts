@@ -5,6 +5,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthController } from './modules/health/health.controller';
 import { ReportsModule } from './modules/reports/reports.module';
+import { StockModule } from './modules/stock/stock.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -21,6 +22,7 @@ import { PrismaModule } from './prisma/prisma.module';
     SyncModule,
     CatalogModule,
     ReportsModule,
+    StockModule,
   ],
   controllers: [HealthController],
 })
