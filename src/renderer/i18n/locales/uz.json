@@ -401,6 +401,8 @@
       "phone": "Klinika egasining telefoni",
       "code": "Aktivlashtirish kodi",
       "codeHint": "Kod 8 belgidan iborat (masalan: AB12-CD34). Bir marta ishlatiladi, 7 kun amal qiladi.",
+      "apiUrl": "Server manzili (ixtiyoriy)",
+      "apiUrlHint": "Server manzilini faqat administrator aytgan bo'lsa kiriting, bo'sh qoldirilsa asosiy server ishlatiladi.",
       "submit": "Ulash",
       "checking": "Tekshirilmoqda...",
       "linked": "Klinika ulandi: {{name}}"
@@ -615,6 +617,7 @@
       "already_setup": "Terminal allaqachon sozlangan",
       "invalid_phone": "Telefon raqam noto'g'ri",
       "invalid_code": "Aktivlashtirish kodi noto'g'ri yoki muddati o'tgan",
+      "invalid_api_url": "Server manzili noto'g'ri: faqat https://…posgro.uz manzillari",
       "store_inactive": "Klinika faol emas. Administratorga murojaat qiling",
       "no_seat": "Tarifdagi terminallar soni tugagan",
       "disabled": "Litsenziya xizmati vaqtincha ishlamayapti",

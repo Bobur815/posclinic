@@ -9,7 +9,7 @@ import {
   reinitializeDatabaseForClinic,
   writeClinicBootstrap,
 } from '../database/sqlite-client';
-import { getLicenseService, licenseApiUrl } from '../license/license-service';
+import { getLicenseService } from '../license/license-service';
 import { log } from '../logger';
 import { errorSummary, handle } from './ipc-safe';
 
@@ -57,20 +57,24 @@ export function setupLicenseHandlers(): void {
    * activation code), then open that clinic's own DB file. Allowed only before setup finished:
    * re-linking a working till to another clinic is a super-admin job.
    */
-  handle('license:activate', async (_ctx, phone: unknown, code: unknown) => {
+  handle('license:activate', async (_ctx, phone: unknown, code: unknown, rawApiUrl: unknown) => {
     if (typeof phone !== 'string' || typeof code !== 'string') {
       return { ok: false, error: 'license.errors.invalid_code' };
     }
+    if (rawApiUrl !== undefined && typeof rawApiUrl !== 'string') {
+      return { ok: false, error: 'license.errors.invalid_api_url' };
+    }
+    const apiUrl = rawApiUrl as string | undefined;
     if (await setupFinished()) {
       // A working till whose licence file was lost or corrupted: re-link, same clinic only.
       const clinicId = readClinicBootstrap();
       if (license.isLinked() || !clinicId) {
         return { ok: false, error: 'license.errors.already_setup' };
       }
-      const result = await license.activate(phone, code, clinicId);
+      const result = await license.activate(phone, code, clinicId, apiUrl);
       return result.ok ? { ...result, recovered: true } : result;
     }
-    const result = await license.activate(phone, code);
+    const result = await license.activate(phone, code, undefined, apiUrl);
     if (!result.ok) return result;
 
     writeClinicBootstrap(result.storeId);
@@ -79,7 +83,7 @@ export function setupLicenseHandlers(): void {
       clinicId: result.storeId,
       clinicName: result.storeName,
       terminalId: license.status().terminalId,
-      apiUrl: licenseApiUrl(),
+      apiUrl: license.apiUrl(),
     };
     await getPrismaClient().localConfig.upsert({
       where: { id: 'config' },

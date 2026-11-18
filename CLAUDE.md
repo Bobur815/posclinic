@@ -83,7 +83,7 @@ Renderer (React) → hooks → ipc-client.ts → preload.ts (contextBridge) → 
 - The PostgreSQL schema is frozen.
 
 ## Environment Files
-- `.env.pos` — baked into the bundle (`electron.vite.config.ts`) and extractable: no secrets. Only `POSCLINIC_API_URL`, honoured only by unpackaged builds; packaged builds always use `https://api.posgro.uz/api`.
+- `.env.pos` — baked into the bundle (`electron.vite.config.ts`) and extractable: no secrets. Only `POSCLINIC_API_URL`, honoured only by unpackaged builds; packaged builds default to `https://api.posgro.uz/api`. The setup wizard's optional "server address" can point any build at another `https://*.posgro.uz` server (e.g. staging); it is kept in `license-state.json` (`apiUrl`) for check-ins.
 - posgro needs `POSCLINIC_ENABLED=true` and `POSCLINIC_LICENSE_SIGNING_KEY` (private half of the key in `src/main/license/license-public-key.ts`; never in any repo).
 - See `.env.example` for all required variables
 

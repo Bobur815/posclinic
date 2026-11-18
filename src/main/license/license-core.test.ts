@@ -6,6 +6,7 @@ import {
   DAY_MS,
   type GateFacts,
   type LicensePayload,
+  normalizeApiUrl,
   readLicense,
   refusal,
   tillState,
@@ -167,7 +168,12 @@ describe('refusal', () => {
     // The registration itself is not limited (an order inside an open case is no new visit);
     // the handler asks 'cases:open' when it really opens one.
     assert.equal(
-      await refusal('appointments:create', [{ caseId: true }], s, facts({ visitsThisMonth: async () => 300 })),
+      await refusal(
+        'appointments:create',
+        [{ caseId: true }],
+        s,
+        facts({ visitsThisMonth: async () => 300 }),
+      ),
       null,
     );
   });
@@ -270,8 +276,15 @@ describe('review hardening', () => {
 
   it('treats a one-ended or unparsable date range as a report', async () => {
     const s = state(start);
-    for (const range of [{ startDate: iso(NOW) }, { endDate: iso(NOW) }, { startDate: 'x', endDate: 'y' }]) {
-      assert.equal(await refusal('appointments:getAll', [range], s, facts()), 'license.feature.reports');
+    for (const range of [
+      { startDate: iso(NOW) },
+      { endDate: iso(NOW) },
+      { startDate: 'x', endDate: 'y' },
+    ]) {
+      assert.equal(
+        await refusal('appointments:getAll', [range], s, facts()),
+        'license.feature.reports',
+      );
     }
     assert.equal(await refusal('appointments:getAll', [{ date: '2026-11-15' }], s, facts()), null);
     assert.equal(await refusal('appointments:getAll', [{}], s, facts()), null);
@@ -279,5 +292,39 @@ describe('review hardening', () => {
 
   it('rejects a store id that is not a plain token', () => {
     assert.equal(readLicense(token(payload({ storeId: '../evil' })), publicKey), null);
+  });
+});
+
+describe('normalizeApiUrl', () => {
+  it('accepts posgro servers over https and drops trailing slashes', () => {
+    assert.equal(
+      normalizeApiUrl(' https://api.posgro.uz/api/ ', false),
+      'https://api.posgro.uz/api',
+    );
+    assert.equal(
+      normalizeApiUrl('https://dev.api.posgro.uz/api', false),
+      'https://dev.api.posgro.uz/api',
+    );
+    assert.equal(normalizeApiUrl('https://posgro.uz/api', false), 'https://posgro.uz/api');
+  });
+
+  it('refuses other hosts, plain http and look-alike domains', () => {
+    for (const raw of [
+      'http://api.posgro.uz/api',
+      'https://evil.uz/api',
+      'https://posgro.uz.evil.com/api',
+      'https://evilposgro.uz/api',
+      'https://user:pw@api.posgro.uz/api',
+      'https://api.posgro.uz/api?x=1',
+      'not a url',
+      '',
+    ]) {
+      assert.equal(normalizeApiUrl(raw, false), null, raw);
+    }
+  });
+
+  it('allows http://localhost only when asked (dev builds)', () => {
+    assert.equal(normalizeApiUrl('http://localhost:3000/api', false), null);
+    assert.equal(normalizeApiUrl('http://localhost:3000/api', true), 'http://localhost:3000/api');
   });
 });

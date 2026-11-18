@@ -239,8 +239,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   license: {
     status: () => ipcRenderer.invoke('license:status'),
     checkNow: () => ipcRenderer.invoke('license:checkNow'),
-    activate: (phone: string, code: string) =>
-      ipcRenderer.invoke('license:activate', phone, code),
+    /** `apiUrl`: blank or omitted = the default licence server. */
+    activate: (phone: string, code: string, apiUrl?: string) =>
+      ipcRenderer.invoke('license:activate', phone, code, apiUrl),
     onChanged: (callback: () => void) => {
       ipcRenderer.on('license:changed', callback);
       return () => ipcRenderer.removeListener('license:changed', callback);
@@ -475,7 +476,7 @@ declare global {
       license: {
         status: () => Promise<LicenseStatusDto>;
         checkNow: () => Promise<LicenseStatusDto>;
-        activate: (phone: string, code: string) => Promise<ActivateResult>;
+        activate: (phone: string, code: string, apiUrl?: string) => Promise<ActivateResult>;
         onChanged: (callback: () => void) => () => void;
         onRefused: (callback: (key: string) => void) => () => void;
       };

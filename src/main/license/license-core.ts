@@ -103,6 +103,27 @@ export interface TillState {
 }
 
 /**
+ * A licence server address typed in the setup wizard, normalised (no trailing slash), or null if
+ * it is not allowed. Only https on posgro.uz or a subdomain (production, staging), so a till
+ * cannot be talked into sending the owner's phone and code to someone else; plus
+ * http://localhost when `allowLocalhost` (unpackaged dev builds).
+ */
+export function normalizeApiUrl(raw: string, allowLocalhost: boolean): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (url.username || url.password || url.search || url.hash) return null;
+  const host = url.hostname.toLowerCase();
+  const posgro = url.protocol === 'https:' && (host === 'posgro.uz' || host.endsWith('.posgro.uz'));
+  const local = allowLocalhost && url.protocol === 'http:' && host === 'localhost';
+  if (!posgro && !local) return null;
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}
+
+/**
  * Where this till stands at `now` (trusted clock). No licence = setup: posclinic has no
  * pre-licensing installs, so there is no unlinked allowance. Blocked outranks an overdue check-in.
  */

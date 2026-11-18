@@ -325,6 +325,8 @@ export function SetupWizard() {
   // Step 1
   const [ownerPhone, setOwnerPhone] = useState('');
   const [code, setCode] = useState('');
+  /** Licence server; blank = default (production). For linking to e.g. staging. */
+  const [apiUrl, setApiUrl] = useState('');
 
   // Step 2
   const [fullName, setFullName] = useState('');
@@ -348,7 +350,7 @@ export function SetupWizard() {
     setError('');
     setIsLoading(true);
     try {
-      const result = await window.electronAPI.license.activate(ownerPhone, code);
+      const result = await window.electronAPI.license.activate(ownerPhone, code, apiUrl.trim());
       if (!result.ok) {
         setError(t(result.error, t('license.errors.unknown')));
         return;
@@ -607,7 +609,23 @@ export function SetupWizard() {
               />
             </FormGroup>
 
-            <HintBox>{t('setup.link.codeHint')}</HintBox>
+            <FormGroup>
+              <Label>{t('setup.link.apiUrl')}</Label>
+              <Input
+                type="url"
+                placeholder="https://api.posgro.uz/api"
+                value={apiUrl}
+                onChange={(e) => {
+                  setError('');
+                  setApiUrl(e.target.value);
+                }}
+                spellCheck={false}
+              />
+            </FormGroup>
+
+            <HintBox>
+              {t('setup.link.codeHint')} {t('setup.link.apiUrlHint')}
+            </HintBox>
 
             {error && <ErrorMsg>{error}</ErrorMsg>}
 

@@ -10,6 +10,7 @@ import { log } from '../logger';
 import {
   type GateFacts,
   type LicensePayload,
+  normalizeApiUrl,
   publicKeyFrom,
   type Refusal,
   readLicense,
@@ -41,7 +42,11 @@ const CHECK_MIN_INTERVAL_MS = 30_000;
 const STATE_FILE = 'license-state.json';
 const CLOCK_FILE = 'license-clock.bin';
 
-/** Packaged builds always talk to production; a dev build may point at staging or localhost. */
+/**
+ * The default server: production, or in a dev build `POSCLINIC_API_URL` (staging or localhost).
+ * The setup wizard may name another posgro server (`normalizeApiUrl`); the till then keeps
+ * checking in there (`LicenseState.apiUrl`).
+ */
 export function licenseApiUrl(): string {
   const override = process.env.POSCLINIC_API_URL?.trim();
   if (!app.isPackaged && override && /^(https:\/\/|http:\/\/localhost[:/])/.test(override)) {
@@ -60,6 +65,8 @@ const stateSchema = z.object({
   lastCheckinAt: z.string().nullable().default(null),
   lastError: z.string().max(100).nullable().default(null),
   clockMark: z.number().nullable().default(null),
+  /** Server named in the setup wizard (e.g. staging); null = `licenseApiUrl()`. */
+  apiUrl: z.string().max(200).nullable().default(null),
 });
 type LicenseState = z.infer<typeof stateSchema>;
 
@@ -138,6 +145,11 @@ function errorKey(e: unknown): string {
   return 'license.errors.offline';
 }
 
+/** For the log: the key plus, for an HTTP answer, its status (a 404 from a server without the module). */
+function failure(e: unknown): string {
+  return e instanceof HttpError ? `${errorKey(e)} (HTTP ${e.status})` : errorKey(e);
+}
+
 // ── Service ────────────────────────────────────────────────────────────────────────────────
 
 export class LicenseService {
@@ -190,6 +202,11 @@ export class LicenseService {
     this.timer = null;
     this.clock.stop();
     void this.clock.persist();
+  }
+
+  /** The licence server this till talks to. */
+  apiUrl(): string {
+    return this.state.apiUrl ?? licenseApiUrl();
   }
 
   isLinked(): boolean {
@@ -263,16 +280,29 @@ export class LicenseService {
    * Setup wizard: link this till to a clinic the posgro super admin created. `onlyStoreId`
    * (recovering a set-up till whose licence file was lost) refuses a grant for any other
    * clinic before it is stored, so a working till can never be re-pointed at another clinic.
+   * `rawApiUrl` (blank = the current server) names the posgro server, e.g. staging; it is kept
+   * for check-ins once the link succeeds.
    */
-  async activate(rawPhone: string, rawCode: string, onlyStoreId?: string): Promise<ActivateResult> {
+  async activate(
+    rawPhone: string,
+    rawCode: string,
+    onlyStoreId?: string,
+    rawApiUrl?: string,
+  ): Promise<ActivateResult> {
     const phone = normalizePhone(rawPhone);
     if (!phone) return { ok: false, error: 'license.errors.invalid_phone' };
     const activationCode = rawCode.replace(/[\s-]/g, '').toUpperCase();
     if (!/^[A-Z0-9]{8}$/.test(activationCode)) {
       return { ok: false, error: 'license.errors.invalid_code' };
     }
+    let base = this.apiUrl();
+    if (rawApiUrl?.trim()) {
+      const typed = normalizeApiUrl(rawApiUrl, !app.isPackaged);
+      if (!typed) return { ok: false, error: 'license.errors.invalid_api_url' };
+      base = typed;
+    }
     try {
-      const grant = await this.post('/posclinic/activate', {
+      const grant = await this.post(base, '/posclinic/activate', {
         phone,
         activationCode,
         terminal: this.terminalInfo(),
@@ -281,7 +311,9 @@ export class LicenseService {
         throw new Error('license.errors.other_clinic');
       }
       await this.accept(grant, { allowRelink: true });
-      log.info(`[license] linked to store ${grant.storeId}`);
+      this.state = { ...this.state, apiUrl: base === DEFAULT_API_URL ? null : base };
+      this.save();
+      log.info(`[license] linked to store ${grant.storeId} via ${base}`);
       return {
         ok: true,
         storeId: grant.storeId,
@@ -289,7 +321,7 @@ export class LicenseService {
         ownerName: grant.ownerName ?? null,
       };
     } catch (e) {
-      log.warn(`[license] activate failed: ${errorKey(e)}`);
+      log.warn(`[license] activate failed via ${base}: ${failure(e)}`);
       return { ok: false, error: errorKey(e) };
     }
   }
@@ -301,7 +333,7 @@ export class LicenseService {
     if (now - this.lastCheckStartedAt < CHECK_MIN_INTERVAL_MS) return this.status();
     this.lastCheckStartedAt = now;
     try {
-      const grant = await this.post('/posclinic/licenses/renew', {
+      const grant = await this.post(this.apiUrl(), '/posclinic/licenses/renew', {
         license: this.state.token,
         terminal: this.terminalInfo(),
       });
@@ -309,7 +341,7 @@ export class LicenseService {
     } catch (e) {
       this.state = { ...this.state, lastError: errorKey(e) };
       this.save();
-      log.warn(`[license] check-in failed: ${this.state.lastError}`);
+      log.warn(`[license] check-in failed via ${this.apiUrl()}: ${failure(e)}`);
       this.broadcast();
     }
     return this.status();
@@ -348,8 +380,12 @@ export class LicenseService {
     this.broadcast();
   }
 
-  private async post(route: string, body: unknown): Promise<z.infer<typeof grantSchema>> {
-    const res = await fetch(`${licenseApiUrl()}${route}`, {
+  private async post(
+    base: string,
+    route: string,
+    body: unknown,
+  ): Promise<z.infer<typeof grantSchema>> {
+    const res = await fetch(`${base}${route}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
